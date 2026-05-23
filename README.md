@@ -57,4 +57,26 @@ The architecture is designed to evolve into a broader membership and loyalty eco
   roadmap.md
   vision.md
 
-  
+---
+
+# Fluxo de desenvolvimento
+1. Limpar boilerplate do Next
+
+Remover:
+
+página default
+SVGs
+textos padrão
+2. Setup shadcn/ui
+3. Definir arquitetura oficial
+
+Completar:
+
+domain.md
+architecture.md
+business-rules.md
+4. Prisma + PostgreSQL
+5. Auth + roles
+6. Primeiro módulo:
+Membership Plans
+
