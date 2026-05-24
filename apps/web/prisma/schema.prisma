@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Clinic {
+  id         String   @id @default(cuid())
+  name       String
+  brandName  String?
+  logoUrl    String?
+  slug       String   @unique
+  document   String
+  email      String
+  phone      String
+  zipCode    String
+  city       String
+  state      String
+  address    String
+  status     ClinicStatus @default(ACTIVE)
+  createdAt  DateTime @default(now())
+
+  patients         Patient[]
+  membershipPlans  MembershipPlan[]
+}
+
+model Patient {
+  id         String   @id @default(cuid())
+  clinicId   String
+
+  fullName   String
+  email      String
+  phone      String
+  birthDate  DateTime
+  document   String
+
+  zipCode    String
+  city       String
+  state      String
+  address    String
+
+  status     PatientStatus @default(ACTIVE)
+
+  createdAt  DateTime @default(now())
+
+  clinic         Clinic @relation(fields: [clinicId], references: [id])
+
+  subscriptions  Subscription[]
+}
+
+model MembershipPlan {
+  id            String   @id @default(cuid())
+  clinicId      String
+
+  name          String
+  description   String?
+
+  monthlyPrice  Float?
+  annualPrice   Float?
+
+  active        Boolean @default(true)
+
+  createdAt     DateTime @default(now())
+
+  clinic         Clinic @relation(fields: [clinicId], references: [id])
+
+  benefits       MembershipBenefit[]
+  subscriptions  Subscription[]
+}
+
+model MembershipBenefit {
+  id                    String   @id @default(cuid())
+  membershipPlanId      String
+
+  type                  BenefitType
+
+  title                 String
+  description           String?
+
+  discountPercentage    Float?
+  discountAmount        Float?
+
+  usageLimit            Int?
+
+  resetPeriod           ResetPeriod?
+
+  createdAt             DateTime @default(now())
+
+  membershipPlan        MembershipPlan @relation(fields: [membershipPlanId], references: [id])
+
+  usages                BenefitUsage[]
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+
+  patientId         String
+  membershipPlanId  String
+
+  status            SubscriptionStatus @default(PENDING)
+
+  startedAt         DateTime
+  expiresAt         DateTime?
+  canceledAt        DateTime?
+
+  patient           Patient @relation(fields: [patientId], references: [id])
+
+  membershipPlan    MembershipPlan @relation(fields: [membershipPlanId], references: [id])
+
+  benefitUsages     BenefitUsage[]
+}
+
+model BenefitUsage {
+  id                    String   @id @default(cuid())
+
+  subscriptionId        String
+  membershipBenefitId   String
+
+  usedBy                String
+
+  usedAt                DateTime @default(now())
+
+  notes                 String?
+
+  subscription          Subscription @relation(fields: [subscriptionId], references: [id])
+
+  membershipBenefit     MembershipBenefit @relation(fields: [membershipBenefitId], references: [id])
+}
+
+enum ClinicStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PatientStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PENDING
+  OVERDUE
+  CANCELED
+  EXPIRED
+}
+
+enum BenefitType {
+  FREE
+  PERCENTAGE_DISCOUNT
+  FIXED_DISCOUNT
+  LIMITED
+}
+
+enum ResetPeriod {
+  MONTHLY
+  YEARLY
+}
