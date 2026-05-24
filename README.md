@@ -80,3 +80,25 @@ business-rules.md
 6. Primeiro módulo:
 Membership Plans
 
+
+
+---------------------
+reinicie TS Server
+CTRL + SHIFT + P
+TypeScript: Restart TS Server
+
+---------------------
+O fluxo atual é excelente:
+Input
+↓
+RHF
+↓
+Zod
+↓
+Server Action
+↓
+Prisma
+↓
+PostgreSQL
+
+------------------------
