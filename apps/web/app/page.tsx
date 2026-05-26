@@ -1,5 +1,5 @@
-import { MembershipPlansPage } from "@/features/membership-plans/components/membership-plans-page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <MembershipPlansPage />;
+  redirect("/dashboard");
 }

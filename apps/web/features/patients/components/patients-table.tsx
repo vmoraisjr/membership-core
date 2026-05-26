@@ -1,3 +1,5 @@
+import { EmptyState } from "@/components/dashboard/empty-state";
+import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import {
   Table,
   TableBody,
@@ -27,7 +29,10 @@ export function PatientsTable({
   patients,
 }: Props) {
   return (
-    <div className="border rounded-xl">
+    <DataTableContainer
+      title="Patient Directory"
+      description="A tenant-scoped list of patients registered under the current clinic."
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -64,16 +69,16 @@ export function PatientsTable({
 
           {patients.length === 0 && (
             <TableRow>
-              <TableCell
-                colSpan={4}
-                className="text-center py-10 text-muted-foreground"
-              >
-                No patients found.
+              <TableCell colSpan={4} className="p-0">
+                <EmptyState
+                  title="No patients yet"
+                  description="Create the first patient record for this clinic to start linking subscriptions and benefit usage."
+                />
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
-    </div>
+    </DataTableContainer>
   );
 }

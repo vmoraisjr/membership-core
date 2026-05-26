@@ -26,32 +26,23 @@ export async function createPatient(
   const clinic = await getCurrentClinic();
 
   await prisma.patient.create({
-  data: {
-    clinicId: clinic.id,
+    data: {
+      clinicId: clinic.id,
+      fullName: parsed.data.fullName,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      birthDate: new Date(
+        parsed.data.birthDate
+      ),
+      document: parsed.data.document,
+      zipCode: parsed.data.zipCode,
+      city: parsed.data.city,
+      state: parsed.data.state,
+      address: parsed.data.address,
+      status: PatientStatus.ACTIVE,
+    },
+  });
 
-    fullName: parsed.data.fullName,
-
-    email: parsed.data.email,
-
-    phone: parsed.data.phone,
-
-    birthDate: new Date(
-      parsed.data.birthDate
-    ),
-
-    document: parsed.data.document,
-
-    zipCode: parsed.data.zipCode,
-
-    city: parsed.data.city,
-
-    state: parsed.data.state,
-
-    address: parsed.data.address,
-
-    status: PatientStatus.ACTIVE,
-  },
-});
-
-  revalidatePath("/patients");
+  revalidatePath("/dashboard/patients");
+  revalidatePath("/dashboard");
 }

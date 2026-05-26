@@ -1,12 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
-export async function getMembershipPlans() {
+export async function getMembershipBenefits() {
   const clinic = await getCurrentClinic();
 
-  return prisma.membershipPlan.findMany({
+  return prisma.membershipBenefit.findMany({
     where: {
-      clinicId: clinic.id,
+      membershipPlan: {
+        clinicId: clinic.id,
+      },
+    },
+    include: {
+      membershipPlan: true,
     },
     orderBy: {
       createdAt: "desc",

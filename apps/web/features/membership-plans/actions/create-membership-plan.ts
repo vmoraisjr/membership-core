@@ -38,5 +38,6 @@ export async function createMembershipPlan(
     },
   });
 
-  revalidatePath("/plans");
+  revalidatePath("/dashboard/plans");
+  revalidatePath("/dashboard");
 }

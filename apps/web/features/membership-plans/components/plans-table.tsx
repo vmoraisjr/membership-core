@@ -1,3 +1,5 @@
+import { DataTableContainer } from "@/components/dashboard/data-table-container";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import {
   Table,
   TableBody,
@@ -6,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatCurrency } from "@/lib/formatters";
 
 type Plan = {
   id: string;
@@ -22,7 +25,10 @@ export function PlansTable({
   plans,
 }: Props) {
   return (
-    <div className="border rounded-xl">
+    <DataTableContainer
+      title="Plans Catalog"
+      description="Commercial plans available for the current clinic tenant."
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -46,23 +52,25 @@ export function PlansTable({
               </TableCell>
 
               <TableCell>
-                R$ {plan.monthlyPrice}
+                {formatCurrency(
+                  plan.monthlyPrice
+                )}
               </TableCell>
             </TableRow>
           ))}
 
           {plans.length === 0 && (
             <TableRow>
-              <TableCell
-                colSpan={3}
-                className="text-center py-10 text-muted-foreground"
-              >
-                No plans found.
+              <TableCell colSpan={3} className="p-0">
+                <EmptyState
+                  title="No plans yet"
+                  description="Create the first membership plan for this clinic so subscriptions and benefits can be attached to it."
+                />
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
-    </div>
+    </DataTableContainer>
   );
 }
