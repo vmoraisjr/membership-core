@@ -9,6 +9,9 @@ import {
   type MembershipPlanSchema,
 } from "../schemas/membership-plan.schema";
 
+import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+
+
 export async function createMembershipPlan(
   data: MembershipPlanSchema
 ) {
@@ -19,11 +22,7 @@ export async function createMembershipPlan(
     throw new Error("Invalid form data.");
   }
 
-  const clinic = await prisma.clinic.findFirst();
-
-  if (!clinic) {
-    throw new Error("Clinic not found.");
-  }
+  const clinic = await getCurrentClinic();
 
   await prisma.membershipPlan.create({
     data: {
