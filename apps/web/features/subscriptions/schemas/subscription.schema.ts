@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
   SubscriptionStatus,
 } from "@prisma/client";
@@ -24,3 +25,20 @@ export const subscriptionSchema = z.object({
 export type SubscriptionSchema = z.infer<
   typeof subscriptionSchema
 >;
+=======
+import { z } from "zod";
+
+export const subscriptionSchema =
+  z.object({
+    patientId: z.string(),
+
+    membershipPlanId: z.string(),
+
+    startedAt: z.string(),
+
+    expiresAt: z.string(),
+  });
+
+export type SubscriptionSchema =
+  z.infer<typeof subscriptionSchema>;
+>>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)

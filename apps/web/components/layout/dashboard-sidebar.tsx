@@ -15,9 +15,14 @@ import { cn } from "@/lib/utils";
 
 const items = [
   {
+<<<<<<< HEAD
     label: "Overview",
     href: "/dashboard",
     icon: LayoutDashboard,
+=======
+    label: "Dashboard",
+    href: "/dashboard",
+>>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
   },
   {
     label: "Membership Plans",
@@ -38,6 +43,10 @@ const items = [
     label: "Benefits",
     href: "/dashboard/benefits",
     icon: BadgePercent,
+  },
+  {
+    label: "Subscriptions",
+    href: "/dashboard/subscriptions",
   },
 ];
 

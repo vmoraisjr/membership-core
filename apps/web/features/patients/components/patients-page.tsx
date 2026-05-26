@@ -8,8 +8,7 @@ import { PatientsTable } from "./patients-table";
 import { CreatePatientDialog } from "./create-patient-dialog";
 
 export async function PatientsPage() {
-  const patients =
-    await getPatients();
+  const patients = await getPatients();
 
   return (
     <DashboardPage>

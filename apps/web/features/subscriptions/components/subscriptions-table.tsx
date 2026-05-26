@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
+=======
+>>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
 import {
   Table,
   TableBody,
@@ -8,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+<<<<<<< HEAD
 import {
   formatCurrency,
   formatDate,
@@ -30,10 +34,16 @@ type SubscriptionRow = {
 
 type SubscriptionsTableProps = {
   subscriptions: SubscriptionRow[];
+=======
+
+type Props = {
+  subscriptions: any[];
+>>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
 };
 
 export function SubscriptionsTable({
   subscriptions,
+<<<<<<< HEAD
 }: SubscriptionsTableProps) {
   return (
     <DataTableContainer
@@ -49,6 +59,29 @@ export function SubscriptionsTable({
             <TableHead>Started</TableHead>
             <TableHead>Expires</TableHead>
             <TableHead>Monthly Value</TableHead>
+=======
+}: Props) {
+  return (
+    <div className="border rounded-2xl">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>
+              Patient
+            </TableHead>
+
+            <TableHead>
+              Plan
+            </TableHead>
+
+            <TableHead>
+              Status
+            </TableHead>
+
+            <TableHead>
+              Expires At
+            </TableHead>
+>>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
           </TableRow>
         </TableHeader>
 
@@ -58,7 +91,11 @@ export function SubscriptionsTable({
               <TableRow
                 key={subscription.id}
               >
+<<<<<<< HEAD
                 <TableCell className="font-medium">
+=======
+                <TableCell>
+>>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
                   {
                     subscription.patient
                       .fullName
@@ -73,6 +110,7 @@ export function SubscriptionsTable({
                 </TableCell>
 
                 <TableCell>
+<<<<<<< HEAD
                   {formatEnumLabel(
                     subscription.status
                   )}
@@ -96,10 +134,20 @@ export function SubscriptionsTable({
                       .membershipPlan
                       .monthlyPrice
                   )}
+=======
+                  {subscription.status}
+                </TableCell>
+
+                <TableCell>
+                  {new Date(
+                    subscription.expiresAt
+                  ).toLocaleDateString()}
+>>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
                 </TableCell>
               </TableRow>
             )
           )}
+<<<<<<< HEAD
 
           {subscriptions.length === 0 ? (
             <TableRow>
@@ -119,3 +167,10 @@ export function SubscriptionsTable({
     </DataTableContainer>
   );
 }
+=======
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+>>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
