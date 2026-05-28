@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 
 import { PlansTable } from "./plans-table";
 
-import { CreatePlanDialog } from "./create-plan-dialog";
+import { MembershipPlanDialog } from "./membership-plan-dialog";
 
 export async function MembershipPlansPage() {
   const plans =
@@ -15,8 +15,8 @@ export async function MembershipPlansPage() {
     <DashboardPage>
       <PageHeader
         title="Membership Plans"
-        description="Configure the plans your clinic sells, along with pricing foundations that downstream subscriptions can reference."
-        action={<CreatePlanDialog />}
+        description="Manage clinic membership plans."
+        action={<MembershipPlanDialog  />}
       />
       <PlansTable plans={plans} />
     </DashboardPage>

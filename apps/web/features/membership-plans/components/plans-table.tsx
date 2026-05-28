@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/formatters";
+import { MembershipPlanRowActions } from "./membership-plan-row-actions";
 
 type Plan = {
   id: string;
@@ -37,6 +38,10 @@ export function PlansTable({
             <TableHead>Description</TableHead>
 
             <TableHead>Monthly Price</TableHead>
+
+            <TableHead>
+              Actions
+            </TableHead>
           </TableRow>
         </TableHeader>
 
@@ -56,12 +61,28 @@ export function PlansTable({
                   plan.monthlyPrice
                 )}
               </TableCell>
+              <TableCell>
+  <MembershipPlanRowActions
+    plan={{
+  id: plan.id,
+
+  name: plan.name,
+
+  description:
+    plan.description,
+
+  monthlyPrice: Number(
+    plan.monthlyPrice
+  ),
+}}
+  />
+</TableCell>
             </TableRow>
           ))}
 
           {plans.length === 0 && (
             <TableRow>
-              <TableCell colSpan={3} className="p-0">
+              <TableCell colSpan={4} className="p-0">
                 <EmptyState
                   title="No plans yet"
                   description="Create the first membership plan for this clinic so subscriptions and benefits can be attached to it."

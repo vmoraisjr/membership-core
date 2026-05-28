@@ -9,7 +9,8 @@ import {
   type MembershipBenefitSchema,
 } from "../schemas/membership-benefit.schema";
 
-export async function createMembershipBenefit(
+export async function updateMembershipBenefit(
+  id: string,
   data: MembershipBenefitSchema
 ) {
   const parsed =
@@ -21,7 +22,11 @@ export async function createMembershipBenefit(
     throw new Error("Invalid data.");
   }
 
-  await prisma.membershipBenefit.create({
+  await prisma.membershipBenefit.update({
+    where: {
+      id,
+    },
+
     data: {
       membershipPlanId:
         parsed.data.membershipPlanId,

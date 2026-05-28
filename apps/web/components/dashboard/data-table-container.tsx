@@ -1,28 +1,35 @@
-import type { ReactNode } from "react";
+type Props = {
+  title?: string;
 
-import { SectionCard } from "@/components/dashboard/section-card";
+  description?: string;
 
-type DataTableContainerProps = {
-  title: string;
-  description: string;
-  action?: ReactNode;
-  children: ReactNode;
+  children: React.ReactNode;
 };
 
 export function DataTableContainer({
   title,
   description,
-  action,
   children,
-}: DataTableContainerProps) {
+}: Props) {
   return (
-    <SectionCard
-      title={title}
-      description={description}
-      action={action}
-      contentClassName="overflow-hidden"
-    >
-      {children}
-    </SectionCard>
+    <div className="rounded-2xl border">
+      {(title || description) && (
+        <div className="border-b p-6">
+          {title && (
+            <h2 className="font-semibold">
+              {title}
+            </h2>
+          )}
+
+          {description && (
+            <p className="text-sm text-muted-foreground">
+              {description}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div>{children}</div>
+    </div>
   );
 }

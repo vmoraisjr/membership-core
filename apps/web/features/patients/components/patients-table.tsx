@@ -8,18 +8,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PatientRowActions } from "./patient-row-actions";
 
-type Patient = {
-  id: string;
-
-  fullName: string;
-
-  email: string;
-
-  city: string;
-
-  state: string;
-};
+import type {
+  Patient,
+} from "@prisma/client";
 
 type Props = {
   patients: Patient[];
@@ -43,6 +36,8 @@ export function PatientsTable({
             <TableHead>City</TableHead>
 
             <TableHead>State</TableHead>
+
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -64,12 +59,30 @@ export function PatientsTable({
               <TableCell>
                 {patient.state}
               </TableCell>
+
+              <TableCell className="text-right">
+  <PatientRowActions
+    patient={{
+      id: patient.id,
+      fullName:patient.fullName,
+      email: patient.email,
+      phone: patient.phone,
+      birthDate:  patient.birthDate,
+      document: patient.document,
+      zipCode: patient.zipCode,
+      city: patient.city,
+      state: patient.state,
+      address: patient.address,
+    }}
+  />
+</TableCell>
+
             </TableRow>
           ))}
 
           {patients.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} className="p-0">
+              <TableCell colSpan={5} className="p-0">
                 <EmptyState
                   title="No patients yet"
                   description="Create the first patient record for this clinic to start linking subscriptions and benefit usage."

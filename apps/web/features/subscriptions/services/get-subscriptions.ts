@@ -1,15 +1,32 @@
 import { prisma } from "@/lib/prisma";
 
 export async function getSubscriptions() {
-  return prisma.subscription.findMany({
-    include: {
-      patient: true,
+  const subscriptions =
+    await prisma.subscription.findMany(
+      {
+        include: {
+          patient: true,
 
-      membershipPlan: true,
-    },
+          membershipPlan: true,
+        },
 
-    orderBy: {
-      startedAt: "desc",
-    },
-  });
+        orderBy: {
+          startedAt: "desc",
+        },
+      }
+    );
+
+  return subscriptions.map(
+    (subscription) => ({
+      ...subscription,
+
+    startedAt: String(
+  subscription.startedAt
+),
+
+expiresAt: String(
+  subscription.expiresAt
+),
+    })
+  );
 }

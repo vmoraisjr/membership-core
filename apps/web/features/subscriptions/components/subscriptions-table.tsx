@@ -1,3 +1,9 @@
+import type {
+  MembershipPlan,
+  Patient,
+  Subscription,
+} from "@prisma/client";
+
 import {
   Table,
   TableBody,
@@ -7,15 +13,45 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { DataTableContainer } from "@/components/dashboard/data-table-container";
+
+import { SubscriptionRowActions } from "./subscription-row-actions";
+
+type SubscriptionWithRelations =
+  Omit<
+    Subscription,
+    "startedAt" | "expiresAt"
+  > & {
+    startedAt:
+      string | Date;
+
+    expiresAt:
+      string | Date;
+
+    patient: Patient;
+
+    membershipPlan: MembershipPlan;
+  };
+
 type Props = {
-  subscriptions: any[];
+  subscriptions:
+    SubscriptionWithRelations[];
+
+  patients: Patient[];
+
+  plans: MembershipPlan[];
 };
 
 export function SubscriptionsTable({
   subscriptions,
+  patients,
+  plans,
 }: Props) {
   return (
-    <div className="border rounded-2xl">
+    <DataTableContainer
+      title="Subscriptions"
+      description="Track active memberships and subscription lifecycle."
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -33,6 +69,10 @@ export function SubscriptionsTable({
 
             <TableHead>
               Expires At
+            </TableHead>
+
+            <TableHead>
+              Actions
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -66,6 +106,28 @@ export function SubscriptionsTable({
                     subscription.expiresAt
                   ).toLocaleDateString()}
                 </TableCell>
+
+                <TableCell className="text-right">
+                  <SubscriptionRowActions
+                    subscription={{
+                      id: subscription.id,
+
+                      patientId:
+                        subscription.patientId,
+
+                      membershipPlanId:
+                        subscription.membershipPlanId,
+
+                      startedAt:
+                        subscription.startedAt,
+
+                      expiresAt:
+                        subscription.expiresAt,
+                    }}
+                    patients={patients}
+                    plans={plans}
+                  />
+                </TableCell>
               </TableRow>
             )
           )}
@@ -74,7 +136,7 @@ export function SubscriptionsTable({
             0 && (
             <TableRow>
               <TableCell
-                colSpan={4}
+                colSpan={5}
                 className="py-10 text-center text-muted-foreground"
               >
                 No subscriptions found.
@@ -83,6 +145,6 @@ export function SubscriptionsTable({
           )}
         </TableBody>
       </Table>
-    </div>
+    </DataTableContainer>
   );
 }

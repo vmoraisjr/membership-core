@@ -1,19 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useForm } from "react-hook-form";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import type {
+  MembershipPlan,
+  Patient,
+  Subscription,
+} from "@prisma/client";
+
 import { toast } from "sonner";
+
+import { createSubscription } from "../actions/create-subscription";
+
+import { updateSubscription } from "../actions/update-subscription";
 
 import {
   subscriptionSchema,
   type SubscriptionSchema,
 } from "../schemas/subscription.schema";
-
-import { createSubscription } from "../actions/create-subscription";
 
 import { Button } from "@/components/ui/button";
 
@@ -27,29 +35,44 @@ import {
 
 import { Input } from "@/components/ui/input";
 
-import type {
-  MembershipPlan,
-  Patient,
-} from "@prisma/client";
-
 type Props = {
+  mode?: "create" | "edit";
+
   patients: Patient[];
 
   plans: MembershipPlan[];
+
+  initialData?: {
+    id: string;
+
+    patientId: string;
+
+    membershipPlanId: string;
+
+    startedAt: Date | string;
+
+    expiresAt: Date | string;
+  };
+
+  trigger?: React.ReactNode;
 };
 
-export function CreateSubscriptionDialog({
+export function SubscriptionDialog({
+  mode = "create",
   patients,
   plans,
+  initialData,
+  trigger,
 }: Props) {
   const [open, setOpen] =
     useState(false);
 
   const form =
     useForm<SubscriptionSchema>({
-      resolver: zodResolver(
-        subscriptionSchema
-      ),
+      resolver:
+        zodResolver(
+          subscriptionSchema
+        ),
 
       defaultValues: {
         patientId: "",
@@ -62,22 +85,70 @@ export function CreateSubscriptionDialog({
       },
     });
 
+  useEffect(() => {
+    if (
+      mode === "edit" &&
+      initialData
+    ) {
+      form.reset({
+        patientId:
+          initialData.patientId,
+
+        membershipPlanId:
+          initialData
+            .membershipPlanId,
+
+        startedAt: new Date(
+  initialData.startedAt
+)
+  .toISOString()
+  .split("T")[0],
+
+        expiresAt: new Date(
+  initialData.expiresAt
+)
+  .toISOString()
+  .split("T")[0],
+      });
+    }
+  }, [
+    form,
+    initialData,
+    mode,
+  ]);
+
   async function onSubmit(
     values: SubscriptionSchema
   ) {
     try {
-      await createSubscription(values);
+      if (
+        mode === "edit" &&
+        initialData
+      ) {
+        await updateSubscription(
+          initialData.id,
+          values
+        );
 
-      toast.success(
-        "Subscription created."
-      );
+        toast.success(
+          "Subscription updated."
+        );
+      } else {
+        await createSubscription(
+          values
+        );
+
+        toast.success(
+          "Subscription created."
+        );
+      }
 
       form.reset();
 
       setOpen(false);
     } catch {
       toast.error(
-        "Failed to create subscription."
+        "Failed to save subscription."
       );
     }
   }
@@ -88,15 +159,19 @@ export function CreateSubscriptionDialog({
       onOpenChange={setOpen}
     >
       <DialogTrigger asChild>
-        <Button>
-          New Subscription
-        </Button>
+        {trigger ?? (
+          <Button>
+            New Subscription
+          </Button>
+        )}
       </DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            Create Subscription
+            {mode === "edit"
+              ? "Edit Subscription"
+              : "Create Subscription"}
           </DialogTitle>
         </DialogHeader>
 
@@ -116,14 +191,16 @@ export function CreateSubscriptionDialog({
               Select patient
             </option>
 
-            {patients.map((patient) => (
-              <option
-                key={patient.id}
-                value={patient.id}
-              >
-                {patient.fullName}
-              </option>
-            ))}
+            {patients.map(
+              (patient) => (
+                <option
+                  key={patient.id}
+                  value={patient.id}
+                >
+                  {patient.fullName}
+                </option>
+              )
+            )}
           </select>
 
           <select
@@ -161,7 +238,9 @@ export function CreateSubscriptionDialog({
           />
 
           <Button type="submit">
-            Create Subscription
+            {mode === "edit"
+              ? "Save Changes"
+              : "Create Subscription"}
           </Button>
         </form>
       </DialogContent>

@@ -2,9 +2,13 @@ import { prisma } from "@/lib/prisma";
 
 import { getSubscriptions } from "../services/get-subscriptions";
 
+import { DashboardPage } from "@/components/dashboard/dashboard-page";
+
+import { PageHeader } from "@/components/dashboard/page-header";
+
 import { SubscriptionsTable } from "./subscriptions-table";
 
-import { CreateSubscriptionDialog } from "./create-subscription-dialog";
+import { SubscriptionDialog } from "./subscription-dialog";
 
 export async function SubscriptionsPage() {
   const subscriptions =
@@ -17,27 +21,25 @@ export async function SubscriptionsPage() {
     await prisma.membershipPlan.findMany();
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
-            Subscriptions
-          </h1>
-
-          <p className="text-muted-foreground">
-            Manage active subscriptions.
-          </p>
-        </div>
-
-        <CreateSubscriptionDialog
-          patients={patients}
-          plans={plans}
-        />
-      </div>
+    <DashboardPage>
+      <PageHeader
+        title="Subscriptions"
+        description="Manage patient memberships and lifecycle states."
+        action={
+          <SubscriptionDialog
+            patients={patients}
+            plans={plans}
+          />
+        }
+      />
 
       <SubscriptionsTable
-        subscriptions={subscriptions}
+        subscriptions={
+          subscriptions
+        }
+        patients={patients}
+        plans={plans}
       />
-    </div>
+    </DashboardPage>
   );
 }
