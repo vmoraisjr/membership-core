@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { SubscriptionStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -65,30 +64,3 @@ export async function getDashboardMetrics() {
     mockedMonthlyRevenue,
   };
 }
-=======
-import { prisma } from "@/lib/prisma";
-
-export async function getDashboardMetrics() {
-  const [
-    totalPatients,
-    totalPlans,
-    totalSubscriptions,
-  ] = await Promise.all([
-    prisma.patient.count(),
-
-    prisma.membershipPlan.count(),
-
-    prisma.subscription.count(),
-  ]);
-
-  return {
-    totalPatients,
-
-    totalPlans,
-
-    totalSubscriptions,
-
-    monthlyRevenue: 12450,
-  };
-}
->>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)

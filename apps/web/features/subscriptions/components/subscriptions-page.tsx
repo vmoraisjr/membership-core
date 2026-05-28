@@ -1,35 +1,3 @@
-<<<<<<< HEAD
-import { PageHeader } from "@/components/dashboard/page-header";
-import { DashboardPage } from "@/components/layout/dashboard-page";
-
-import { getSubscriptionFormOptions } from "../services/get-subscription-form-options";
-import { getSubscriptions } from "../services/get-subscriptions";
-
-import { CreateSubscriptionDialog } from "./create-subscription-dialog";
-import { SubscriptionsTable } from "./subscriptions-table";
-
-export async function SubscriptionsPage() {
-  const [subscriptions, formOptions] =
-    await Promise.all([
-      getSubscriptions(),
-      getSubscriptionFormOptions(),
-    ]);
-
-  return (
-    <DashboardPage>
-      <PageHeader
-        title="Subscriptions"
-        description="Connect patients to membership plans and establish the lifecycle records that future billing and benefit modules depend on."
-        action={
-          <CreateSubscriptionDialog
-            patients={formOptions.patients}
-            membershipPlans={
-              formOptions.membershipPlans
-            }
-          />
-        }
-      />
-=======
 import { prisma } from "@/lib/prisma";
 
 import { getSubscriptions } from "../services/get-subscriptions";
@@ -57,7 +25,7 @@ export async function SubscriptionsPage() {
           </h1>
 
           <p className="text-muted-foreground">
-            Manage subscriptions.
+            Manage active subscriptions.
           </p>
         </div>
 
@@ -66,17 +34,10 @@ export async function SubscriptionsPage() {
           plans={plans}
         />
       </div>
->>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
 
       <SubscriptionsTable
         subscriptions={subscriptions}
       />
-<<<<<<< HEAD
-    </DashboardPage>
-  );
-}
-=======
     </div>
   );
 }
->>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)

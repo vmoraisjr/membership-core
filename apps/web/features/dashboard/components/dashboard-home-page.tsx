@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import {
   BadgeDollarSign,
   CreditCard,
@@ -14,18 +13,11 @@ import { formatCurrency } from "@/lib/formatters";
 
 import { getDashboardMetrics } from "../services/get-dashboard-metrics";
 
-=======
-import { getDashboardMetrics } from "../services/get-dashboard-metrics";
-
-import { MetricCard } from "./metric-card";
-
->>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
 export async function DashboardHomePage() {
   const metrics =
     await getDashboardMetrics();
 
   return (
-<<<<<<< HEAD
     <DashboardPage>
       <PageHeader
         title="Dashboard"
@@ -106,56 +98,3 @@ export async function DashboardHomePage() {
     </DashboardPage>
   );
 }
-=======
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold">
-          Dashboard
-        </h1>
-
-        <p className="text-muted-foreground">
-          Overview of your membership platform.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard
-          title="Patients"
-          value={metrics.totalPatients}
-          description="Registered patients"
-        />
-
-        <MetricCard
-          title="Plans"
-          value={metrics.totalPlans}
-          description="Membership plans"
-        />
-
-        <MetricCard
-          title="Subscriptions"
-          value={
-            metrics.totalSubscriptions
-          }
-          description="Active subscriptions"
-        />
-
-        <MetricCard
-          title="Revenue"
-          value={`$ ${metrics.monthlyRevenue}`}
-          description="Monthly recurring revenue"
-        />
-      </div>
-
-      <div className="border rounded-2xl p-6">
-        <h2 className="text-xl font-semibold mb-2">
-          Recent Activity
-        </h2>
-
-        <p className="text-muted-foreground">
-          Activity feed coming soon.
-        </p>
-      </div>
-    </div>
-  );
-}
->>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)

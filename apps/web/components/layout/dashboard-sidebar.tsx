@@ -9,44 +9,40 @@ import {
   SquareStack,
   Users,
 } from "lucide-react";
+
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
 const items = [
   {
-<<<<<<< HEAD
     label: "Overview",
     href: "/dashboard",
     icon: LayoutDashboard,
-=======
-    label: "Dashboard",
-    href: "/dashboard",
->>>>>>> 6c2fa94 (feat: implement dashboard foundation and subscriptions module)
   },
+
   {
     label: "Membership Plans",
     href: "/dashboard/plans",
     icon: SquareStack,
   },
+
   {
     label: "Patients",
     href: "/dashboard/patients",
     icon: Users,
   },
+
   {
     label: "Subscriptions",
     href: "/dashboard/subscriptions",
     icon: CreditCard,
   },
+
   {
     label: "Benefits",
     href: "/dashboard/benefits",
     icon: BadgePercent,
-  },
-  {
-    label: "Subscriptions",
-    href: "/dashboard/subscriptions",
   },
 ];
 
@@ -70,9 +66,10 @@ export function DashboardSidebar() {
           {items.map((item) => {
             const active =
               pathname === item.href ||
-              pathname.startsWith(
-                `${item.href}/`
-              );
+              (item.href !== "/dashboard" &&
+                pathname.startsWith(
+                  `${item.href}/`
+                ));
 
             const Icon = item.icon;
 
@@ -88,6 +85,7 @@ export function DashboardSidebar() {
                 )}
               >
                 <Icon className="size-4" />
+
                 {item.label}
               </Link>
             );
