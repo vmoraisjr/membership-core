@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
 type Props = {
   trigger: React.ReactNode;
@@ -19,7 +22,15 @@ type Props = {
 
   description: string;
 
-  onConfirm: () => void;
+  onConfirm: (typedValue?: string) => void;
+
+  confirmValue?: string;
+
+  confirmLabel?: string;
+
+  confirmPlaceholder?: string;
+
+  actionLabel?: string;
 };
 
 export function ConfirmDialog({
@@ -27,7 +38,21 @@ export function ConfirmDialog({
   title,
   description,
   onConfirm,
+  confirmValue,
+  confirmLabel,
+  confirmPlaceholder,
+  actionLabel = "Continue",
 }: Props) {
+  const [typedValue, setTypedValue] =
+    useState("");
+
+  const requiresExactMatch =
+    Boolean(confirmValue);
+
+  const canConfirm =
+    !requiresExactMatch ||
+    typedValue === confirmValue;
+
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -43,6 +68,28 @@ export function ConfirmDialog({
           <AlertDialogDescription>
             {description}
           </AlertDialogDescription>
+
+          {requiresExactMatch && (
+            <div className="mt-4 w-full space-y-2">
+              <label className="block text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {confirmLabel ??
+                  "Type to confirm"}
+              </label>
+
+              <Input
+                value={typedValue}
+                onChange={(event) =>
+                  setTypedValue(
+                    event.target.value
+                  )
+                }
+                placeholder={
+                  confirmPlaceholder ??
+                  confirmValue
+                }
+              />
+            </div>
+          )}
         </AlertDialogHeader>
 
         <AlertDialogFooter>
@@ -51,9 +98,12 @@ export function ConfirmDialog({
           </AlertDialogCancel>
 
           <AlertDialogAction
-            onClick={onConfirm}
+            onClick={() =>
+              onConfirm(typedValue)
+            }
+            disabled={!canConfirm}
           >
-            Continue
+            {actionLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

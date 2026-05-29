@@ -1,3 +1,5 @@
+"use client";
+
 import type {
   MembershipBenefit,
   MembershipPlan,
@@ -13,6 +15,7 @@ import {
 } from "@/components/ui/table";
 
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
+import { EmptyState } from "@/components/dashboard/empty-state";
 
 import { MembershipBenefitRowActions } from "./membership-benefit-row-action";
 
@@ -24,17 +27,36 @@ type BenefitWithPlan =
 type Props = {
   benefits: BenefitWithPlan[];
 
-  plans: MembershipPlan[];
+  plans: Array<{
+    id: string;
+    name: string;
+  }>;
+
+  selectedPlanId?: string;
 };
 
 export function MembershipBenefitsTable({
   benefits,
   plans,
+  selectedPlanId,
 }: Props) {
+  const visibleBenefits =
+    selectedPlanId
+      ? benefits.filter(
+          (benefit) =>
+            benefit.membershipPlanId ===
+            selectedPlanId
+        )
+      : benefits;
+
   return (
     <DataTableContainer
       title="Benefits Catalog"
-      description="Plan-linked benefits."
+      description={
+        selectedPlanId
+          ? "Showing only benefits from the selected plan."
+          : "Plan-linked benefits kept for support and history."
+      }
     >
       <Table>
         <TableHeader>
@@ -48,6 +70,10 @@ export function MembershipBenefitsTable({
             </TableHead>
 
             <TableHead>
+              Status
+            </TableHead>
+
+            <TableHead>
               Type
             </TableHead>
 
@@ -58,7 +84,7 @@ export function MembershipBenefitsTable({
         </TableHeader>
 
         <TableBody>
-          {benefits.map((benefit) => (
+          {visibleBenefits.map((benefit) => (
             <TableRow
               key={benefit.id}
             >
@@ -74,6 +100,12 @@ export function MembershipBenefitsTable({
               </TableCell>
 
               <TableCell>
+                {benefit.active
+                  ? "Active"
+                  : "Inactive"}
+              </TableCell>
+
+              <TableCell>
                 {benefit.type}
               </TableCell>
 
@@ -81,10 +113,29 @@ export function MembershipBenefitsTable({
                 <MembershipBenefitRowActions
                   benefit={benefit}
                   plans={plans}
+                  planIsActive={
+                    benefit.membershipPlan
+                      .active
+                  }
                 />
               </TableCell>
             </TableRow>
           ))}
+
+          {visibleBenefits.length ===
+            0 && (
+            <TableRow>
+              <TableCell
+                colSpan={5}
+                className="p-0"
+              >
+                <EmptyState
+                  title="No benefits found"
+                  description="No benefits match the current plan context."
+                />
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </DataTableContainer>

@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 
-import { useForm } from "react-hook-form";
+import {
+  useForm,
+  useWatch,
+} from "react-hook-form";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
   BenefitType,
-  MembershipPlan,
   ResetPeriod,
   type MembershipBenefit,
 } from "@prisma/client";
@@ -39,9 +41,14 @@ import { Input } from "@/components/ui/input";
 type Props = {
   mode?: "create" | "edit";
 
-  plans: MembershipPlan[];
+  plans: Array<{
+    id: string;
+    name: string;
+  }>;
 
   initialData?: MembershipBenefit;
+
+  defaultMembershipPlanId?: string;
 
   trigger?: React.ReactNode;
 };
@@ -50,10 +57,10 @@ export function MembershipBenefitDialog({
   mode = "create",
   plans,
   initialData,
+  defaultMembershipPlanId,
   trigger,
 }: Props) {
-  const [open, setOpen] =
-    useState(false);
+  const [open, setOpen] = useState(false);
 
   const form =
     useForm<MembershipBenefitSchema>({
@@ -114,15 +121,33 @@ export function MembershipBenefitDialog({
           initialData.resetPeriod ??
           "",
       });
+
+      return;
     }
+
+    form.reset({
+      membershipPlanId:
+        defaultMembershipPlanId ?? "",
+      type:
+        BenefitType.PERCENTAGE_DISCOUNT,
+      title: "",
+      description: "",
+      discountPercentage: 0,
+      discountAmount: 0,
+      usageLimit: 1,
+      resetPeriod: "",
+    });
   }, [
+    defaultMembershipPlanId,
     form,
     initialData,
     mode,
   ]);
 
-  const type =
-    form.watch("type");
+  const type = useWatch({
+    control: form.control,
+    name: "type",
+  });
 
   async function onSubmit(
     values: MembershipBenefitSchema
@@ -188,117 +213,157 @@ export function MembershipBenefitDialog({
           )}
           className="flex flex-col gap-4"
         >
-          <select
-            {...form.register(
-              "membershipPlanId"
-            )}
-            className="h-10 rounded-md border px-3"
-          >
-            <option value="">
-              Select plan
-            </option>
-
-            {plans.map((plan) => (
-              <option
-                key={plan.id}
-                value={plan.id}
-              >
-                {plan.name}
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Membership plan
+            </label>
+            <select
+              {...form.register(
+                "membershipPlanId"
+              )}
+              className="h-10 rounded-md border px-3"
+            >
+              <option value="">
+                Select plan
               </option>
-            ))}
-          </select>
 
-          <select
-            {...form.register("type")}
-            className="h-10 rounded-md border px-3"
-          >
-            {Object.values(
-              BenefitType
-            ).map((type) => (
-              <option
-                key={type}
-                value={type}
-              >
-                {type}
-              </option>
-            ))}
-          </select>
+              {plans.map((plan) => (
+                <option
+                  key={plan.id}
+                  value={plan.id}
+                >
+                  {plan.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <Input
-            placeholder="Benefit title"
-            {...form.register("title")}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Benefit type
+            </label>
+            <select
+              {...form.register("type")}
+              className="h-10 rounded-md border px-3"
+            >
+              {Object.values(
+                BenefitType
+              ).map((type) => (
+                <option
+                  key={type}
+                  value={type}
+                >
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <Input
-            placeholder="Description"
-            {...form.register(
-              "description"
-            )}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Benefit title
+            </label>
+            <Input
+              placeholder="Benefit title"
+              {...form.register("title")}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Description
+            </label>
+            <Input
+              placeholder="Description"
+              {...form.register(
+                "description"
+              )}
+            />
+          </div>
 
           {type ===
             BenefitType.PERCENTAGE_DISCOUNT && (
-            <Input
-              type="number"
-              placeholder="Discount percentage"
-              {...form.register(
-                "discountPercentage",
-                {
-                  valueAsNumber: true,
-                }
-              )}
-            />
-          )}
-
-          {type ===
-            BenefitType.FIXED_DISCOUNT && (
-            <Input
-              type="number"
-              placeholder="Discount amount"
-              {...form.register(
-                "discountAmount",
-                {
-                  valueAsNumber: true,
-                }
-              )}
-            />
-          )}
-
-          {type ===
-            BenefitType.LIMITED && (
-            <>
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">
+                Discount percentage
+              </label>
               <Input
                 type="number"
-                placeholder="Usage limit"
+                placeholder="Discount percentage"
                 {...form.register(
-                  "usageLimit",
+                  "discountPercentage",
                   {
                     valueAsNumber: true,
                   }
                 )}
               />
+            </div>
+          )}
 
-              <select
+          {type ===
+            BenefitType.FIXED_DISCOUNT && (
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">
+                Discount amount
+              </label>
+              <Input
+                type="number"
+                placeholder="Discount amount"
                 {...form.register(
-                  "resetPeriod"
+                  "discountAmount",
+                  {
+                    valueAsNumber: true,
+                  }
                 )}
-                className="h-10 rounded-md border px-3"
-              >
-                <option value="">
-                  Select reset period
-                </option>
+              />
+            </div>
+          )}
 
-                {Object.values(
-                  ResetPeriod
-                ).map((period) => (
-                  <option
-                    key={period}
-                    value={period}
-                  >
-                    {period}
+          {type ===
+            BenefitType.LIMITED && (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  Usage limit
+                </label>
+                <Input
+                  type="number"
+                  placeholder="Usage limit"
+                  {...form.register(
+                    "usageLimit",
+                    {
+                      valueAsNumber: true,
+                    }
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  Reset period
+                </label>
+                <select
+                  {...form.register(
+                    "resetPeriod"
+                  )}
+                  className="h-10 rounded-md border px-3"
+                >
+                  <option value="">
+                    Select reset period
                   </option>
-                ))}
-              </select>
+
+                  {Object.values(
+                    ResetPeriod
+                  ).map((period) => (
+                    <option
+                      key={period}
+                      value={period}
+                    >
+                      {period}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </>
           )}
 

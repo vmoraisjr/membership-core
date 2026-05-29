@@ -1,5 +1,19 @@
 import { MembershipBenefitsPage } from "@/features/membership-benefits/components/membership-benefit-page";
 
-export default function DashboardBenefitsPage() {
-  return <MembershipBenefitsPage />;
+type Props = {
+  searchParams: Promise<{
+    planId?: string;
+  }>;
+};
+
+export default async function DashboardBenefitsPage({
+  searchParams,
+}: Props) {
+  const params = await searchParams;
+
+  return (
+    <MembershipBenefitsPage
+      contextPlanId={params.planId}
+    />
+  );
 }

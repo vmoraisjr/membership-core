@@ -1,8 +1,9 @@
 "use client";
 
 import {
+  CircleOff,
   Pencil,
-  Trash2,
+  UserPlus,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -11,7 +12,8 @@ import { Button } from "@/components/ui/button";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
-import { deletePatient } from "../actions/delete-patient";
+import { suspendPatient } from "../actions/suspend-patient";
+import { SubscriptionDialog } from "@/features/subscriptions/components/subscription-dialog";
 
 import { PatientDialog } from "./patient-dialog";
 
@@ -36,24 +38,32 @@ type Props = {
     state: string;
 
     address: string;
+
+    status?: "ACTIVE" | "INACTIVE";
   };
+
+  plans: Array<{
+    id: string;
+    name: string;
+  }>;
 };
 
 export function PatientRowActions({
   patient,
+  plans,
 }: Props) {
-  async function handleDelete() {
+  async function handleSuspend() {
     try {
-      await deletePatient(
+      await suspendPatient(
         patient.id
       );
 
       toast.success(
-        "Patient deleted."
+        "Patient suspended and subscriptions canceled."
       );
     } catch {
       toast.error(
-        "Failed to delete patient."
+        "Failed to suspend patient."
       );
     }
   }
@@ -73,19 +83,47 @@ export function PatientRowActions({
         }
       />
 
-      <ConfirmDialog
-        title="Delete patient?"
-        description="This action cannot be undone."
-        onConfirm={handleDelete}
-        trigger={
-          <Button
-            size="icon"
-            variant="destructive"
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        }
-      />
+      {patient.status !==
+        "INACTIVE" && (
+        <>
+          <SubscriptionDialog
+            patients={[
+              {
+                id: patient.id,
+                fullName:
+                  patient.fullName,
+              },
+            ]}
+            plans={plans}
+            defaultPatientId={
+              patient.id
+            }
+            trigger={
+              <Button
+                size="icon"
+                variant="outline"
+              >
+                <UserPlus className="size-4" />
+              </Button>
+            }
+          />
+
+          <ConfirmDialog
+            title="Suspend patient?"
+            description="The patient record will become inactive and active subscriptions will be canceled."
+            onConfirm={handleSuspend}
+            actionLabel="Suspend patient"
+            trigger={
+              <Button
+                size="icon"
+                variant="destructive"
+              >
+                <CircleOff className="size-4" />
+              </Button>
+            }
+          />
+        </>
+      )}
     </div>
   );
 }

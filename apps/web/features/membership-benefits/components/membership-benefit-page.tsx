@@ -1,30 +1,42 @@
-import { prisma } from "@/lib/prisma";
-
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 
 import { getMembershipBenefits } from "../services/get-membership-benefits";
+import { getMembershipBenefitFormOptions } from "../services/get-membership-benefit-form-options";
 
 import { MembershipBenefitsTable } from "./membership-benefit-table";
 
 import { MembershipBenefitDialog } from "./membership-benefit-dialog";
 
-export async function MembershipBenefitsPage() {
-  const benefits =
-    await getMembershipBenefits();
+type Props = {
+  contextPlanId?: string;
+};
 
-  const plans =
-    await prisma.membershipPlan.findMany();
+export async function MembershipBenefitsPage({
+  contextPlanId,
+}: Props) {
+  const [benefits, plans] =
+    await Promise.all([
+      getMembershipBenefits(),
+      getMembershipBenefitFormOptions(),
+    ]);
 
   return (
     <DashboardPage>
       <PageHeader
         title="Benefits"
-        description="Manage membership benefits."
+        description={
+          contextPlanId
+            ? "Support screen filtered by the selected plan context."
+            : "Support screen for plan-linked benefits."
+        }
         action={
           <MembershipBenefitDialog
             plans={plans}
+            defaultMembershipPlanId={
+              contextPlanId
+            }
           />
         }
       />
@@ -32,6 +44,7 @@ export async function MembershipBenefitsPage() {
       <MembershipBenefitsTable
         benefits={benefits}
         plans={plans}
+        selectedPlanId={contextPlanId}
       />
     </DashboardPage>
   );

@@ -5,11 +5,6 @@ import {
   XCircle,
 } from "lucide-react";
 
-import type {
-  MembershipPlan,
-  Patient,
-} from "@prisma/client";
-
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -33,9 +28,15 @@ type Props = {
     expiresAt: string | Date;
   };
 
-  patients: Patient[];
+  patients: Array<{
+    id: string;
+    fullName: string;
+  }>;
 
-  plans: MembershipPlan[];
+  plans: Array<{
+    id: string;
+    name: string;
+  }>;
 };
 
 export function SubscriptionRowActions({
@@ -64,20 +65,13 @@ export function SubscriptionRowActions({
       <SubscriptionDialog
         mode="edit"
         initialData={{
-  id: subscription.id,
-
-  patientId:
-    subscription.patientId,
-
-  membershipPlanId:
-    subscription.membershipPlanId,
-
-  startedAt:
-    subscription.startedAt,
-
-  expiresAt:
-    subscription.expiresAt,
-}}
+          id: subscription.id,
+          patientId: subscription.patientId,
+          membershipPlanId:
+            subscription.membershipPlanId,
+          startedAt: subscription.startedAt,
+          expiresAt: subscription.expiresAt,
+        }}
         patients={patients}
         plans={plans}
         trigger={
@@ -92,7 +86,7 @@ export function SubscriptionRowActions({
 
       <ConfirmDialog
         title="Cancel subscription?"
-        description="The subscription will become inactive."
+        description="The subscription record is kept for history and will become inactive."
         onConfirm={handleCancel}
         trigger={
           <Button

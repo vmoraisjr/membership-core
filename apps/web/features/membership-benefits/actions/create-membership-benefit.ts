@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
 import {
   membershipBenefitSchema,
@@ -21,10 +22,29 @@ export async function createMembershipBenefit(
     throw new Error("Invalid data.");
   }
 
+  const clinic = await getCurrentClinic();
+
+  const plan =
+    await prisma.membershipPlan.findFirst({
+      where: {
+        id: parsed.data.membershipPlanId,
+        clinicId: clinic.id,
+        active: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  if (!plan) {
+    throw new Error(
+      "Only active clinic plans can receive benefits."
+    );
+  }
+
   await prisma.membershipBenefit.create({
     data: {
-      membershipPlanId:
-        parsed.data.membershipPlanId,
+      membershipPlanId: plan.id,
 
       type: parsed.data.type,
 
@@ -32,6 +52,8 @@ export async function createMembershipBenefit(
 
       description:
         parsed.data.description,
+
+      active: true,
 
       discountPercentage:
         parsed.data

@@ -92,7 +92,15 @@ export function MembershipPlanDialog({
         monthlyPrice: Number(
   initialData.monthlyPrice),
       });
+
+      return;
     }
+
+    form.reset({
+      name: "",
+      description: "",
+      monthlyPrice: 0,
+    });
   }, [
     form,
     initialData,
@@ -163,29 +171,44 @@ export function MembershipPlanDialog({
           )}
           className="flex flex-col gap-4"
         >
-          <Input
-            placeholder="Plan name"
-            {...form.register("name")}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Plan name
+            </label>
+            <Input
+              placeholder="Plan name"
+              {...form.register("name")}
+            />
+          </div>
 
-          <Textarea
-            placeholder="Description"
-            {...form.register(
-              "description"
-            )}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Description
+            </label>
+            <Textarea
+              placeholder="Description"
+              {...form.register(
+                "description"
+              )}
+            />
+          </div>
 
-          <Input
-            type="number"
-            step="0.01"
-            placeholder="Monthly price"
-            {...form.register(
-              "monthlyPrice",
-              {
-                valueAsNumber: true,
-              }
-            )}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Monthly price
+            </label>
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="Monthly price"
+              {...form.register(
+                "monthlyPrice",
+                {
+                  valueAsNumber: true,
+                }
+              )}
+            />
+          </div>
 
           <Button type="submit">
             {mode === "edit"

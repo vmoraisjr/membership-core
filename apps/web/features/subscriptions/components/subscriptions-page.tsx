@@ -1,6 +1,5 @@
-import { prisma } from "@/lib/prisma";
-
 import { getSubscriptions } from "../services/get-subscriptions";
+import { getSubscriptionFormOptions } from "../services/get-subscription-form-options";
 
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
 
@@ -10,25 +9,49 @@ import { SubscriptionsTable } from "./subscriptions-table";
 
 import { SubscriptionDialog } from "./subscription-dialog";
 
-export async function SubscriptionsPage() {
-  const subscriptions =
-    await getSubscriptions();
+type Props = {
+  contextPlanId?: string;
+  contextPatientId?: string;
+};
+
+export async function SubscriptionsPage({
+  contextPlanId,
+  contextPatientId,
+}: Props) {
+  const [
+    subscriptions,
+    subscriptionFormOptions,
+  ] = await Promise.all([
+    getSubscriptions(),
+    getSubscriptionFormOptions(),
+  ]);
 
   const patients =
-    await prisma.patient.findMany();
+    subscriptionFormOptions.patients;
 
   const plans =
-    await prisma.membershipPlan.findMany();
+    subscriptionFormOptions.membershipPlans;
 
   return (
     <DashboardPage>
       <PageHeader
         title="Subscriptions"
-        description="Manage patient memberships and lifecycle states."
+        description={
+          contextPlanId ||
+          contextPatientId
+            ? "Support screen filtered by the selected plan or patient context."
+            : "Support screen for patient memberships and lifecycle states."
+        }
         action={
           <SubscriptionDialog
             patients={patients}
             plans={plans}
+            defaultPatientId={
+              contextPatientId
+            }
+            defaultMembershipPlanId={
+              contextPlanId
+            }
           />
         }
       />
@@ -39,6 +62,10 @@ export async function SubscriptionsPage() {
         }
         patients={patients}
         plans={plans}
+        selectedPlanId={contextPlanId}
+        selectedPatientId={
+          contextPatientId
+        }
       />
     </DashboardPage>
   );

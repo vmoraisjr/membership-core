@@ -14,7 +14,7 @@ export async function getMembershipBenefits() {
       membershipPlan: true,
     },
     orderBy: {
-      createdAt: "desc",
+      title: "asc",
     },
   });
 }

@@ -6,8 +6,6 @@ import { useForm } from "react-hook-form";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import type { Patient } from "@prisma/client";
-
 import { toast } from "sonner";
 
 import { createPatient } from "../actions/create-patient";
@@ -18,6 +16,7 @@ import {
   patientSchema,
   type PatientSchema,
 } from "../schemas/patient.schema";
+import { formatDateForInput } from "@/features/shared/utils/format-date-for-input";
 
 import { Button } from "@/components/ui/button";
 
@@ -64,81 +63,60 @@ export function PatientDialog({
   initialData,
   trigger,
 }: Props) {
-  const [open, setOpen] =
-    useState(false);
+  const [open, setOpen] = useState(false);
 
-  const form =
-    useForm<PatientSchema>({
-      resolver:
-        zodResolver(patientSchema),
-
-      defaultValues: {
-        fullName: "",
-
-        email: "",
-
-        phone: "",
-
-        birthDate: "",
-
-        document: "",
-
-        zipCode: "",
-
-        city: "",
-
-        state: "",
-
-        address: "",
-      },
-    });
+  const form = useForm<PatientSchema>({
+    resolver: zodResolver(patientSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      phone: "",
+      birthDate: "",
+      document: "",
+      zipCode: "",
+      city: "",
+      state: "",
+      address: "",
+    },
+  });
 
   useEffect(() => {
-    if (
-      mode === "edit" &&
-      initialData
-    ) {
+    if (mode === "edit" && initialData) {
       form.reset({
-        fullName:
-          initialData.fullName,
-
+        fullName: initialData.fullName,
         email: initialData.email,
-
         phone: initialData.phone,
-
-        birthDate:
+        birthDate: formatDateForInput(
           initialData.birthDate
-            .toISOString()
-            .split("T")[0],
-
-        document:
-          initialData.document,
-
-        zipCode:
-          initialData.zipCode,
-
+        ),
+        document: initialData.document,
+        zipCode: initialData.zipCode,
         city: initialData.city,
-
         state: initialData.state,
-
-        address:
-          initialData.address,
+        address: initialData.address,
       });
+
+      return;
     }
-  }, [
-    form,
-    initialData,
-    mode,
-  ]);
+
+    form.reset({
+      fullName: "",
+      email: "",
+      phone: "",
+      birthDate: "",
+      document: "",
+      zipCode: "",
+      city: "",
+      state: "",
+      address: "",
+    });
+  }, [form, initialData, mode]);
 
   async function onSubmit(
     values: PatientSchema
   ) {
     try {
-      if (
-        mode === "edit" &&
-        initialData
-      ) {
+      if (mode === "edit" && initialData) {
         await updatePatient(
           initialData.id,
           values
@@ -172,9 +150,7 @@ export function PatientDialog({
     >
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button>
-            New Patient
-          </Button>
+          <Button>New Patient</Button>
         )}
       </DialogTrigger>
 
@@ -193,61 +169,105 @@ export function PatientDialog({
           )}
           className="grid grid-cols-2 gap-4"
         >
-          <Input
-            placeholder="Full name"
-            {...form.register(
-              "fullName"
-            )}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Full name
+            </label>
+            <Input
+              placeholder="Full name"
+              {...form.register(
+                "fullName"
+              )}
+            />
+          </div>
 
-          <Input
-            placeholder="Email"
-            {...form.register("email")}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Email
+            </label>
+            <Input
+              placeholder="Email"
+              {...form.register("email")}
+            />
+          </div>
 
-          <Input
-            placeholder="Phone"
-            {...form.register("phone")}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Phone
+            </label>
+            <Input
+              placeholder="Phone"
+              {...form.register("phone")}
+            />
+          </div>
 
-          <Input
-            type="date"
-            {...form.register(
-              "birthDate"
-            )}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Birth date
+            </label>
+            <Input
+              type="date"
+              {...form.register(
+                "birthDate"
+              )}
+            />
+          </div>
 
-          <Input
-            placeholder="Document"
-            {...form.register(
-              "document"
-            )}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Document
+            </label>
+            <Input
+              placeholder="Document"
+              {...form.register(
+                "document"
+              )}
+            />
+          </div>
 
-          <Input
-            placeholder="ZIP code"
-            {...form.register(
-              "zipCode"
-            )}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              ZIP code
+            </label>
+            <Input
+              placeholder="ZIP code"
+              {...form.register(
+                "zipCode"
+              )}
+            />
+          </div>
 
-          <Input
-            placeholder="City"
-            {...form.register("city")}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              City
+            </label>
+            <Input
+              placeholder="City"
+              {...form.register("city")}
+            />
+          </div>
 
-          <Input
-            placeholder="State"
-            {...form.register("state")}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              State
+            </label>
+            <Input
+              placeholder="State"
+              {...form.register("state")}
+            />
+          </div>
 
-          <Input
-            placeholder="Address"
-            className="col-span-2"
-            {...form.register(
-              "address"
-            )}
-          />
+          <div className="col-span-2 space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Address
+            </label>
+            <Input
+              placeholder="Address"
+              {...form.register(
+                "address"
+              )}
+            />
+          </div>
 
           <Button
             type="submit"

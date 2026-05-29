@@ -79,6 +79,7 @@ model MembershipBenefit {
 
   title                 String
   description           String?
+  active                Boolean  @default(true)
 
   discountPercentage    Float?
   discountAmount        Float?

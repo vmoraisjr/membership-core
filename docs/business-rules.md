@@ -259,3 +259,52 @@ Tenant
  │             └── Dependents
  │             └── Payments
  │             └── BenefitUsage
+
+
+ 12. REGRAS DE FLUXO
+
+membership plan:
+ao criar membership plan fica disponível para adicionar benefits e criar subscription com patitents;
+ao cancelar membership plan, desativa todos os benefits atrelados a ele e todos os subscription;
+uma vez cancelado, só pode ser concultado na sessão histórico;
+membership plan não pode ser reativado, mas pode ser clonado como um novo plan herdando os mesmos benefitis;
+se os benefits do plan clonado estiverem cancelados, também poderão ser reativados;
+para cancelar um plan, precisa de confirmação adicional, por exemplo, digitar o nome do plano exatamente como esta escrito;
+
+as mesmas regras se aplicam aos benefits e subscription;
+
+patient:
+após cadastrar o cliente ele fica disponivel para subscricao;
+ao cancelar, por qualquer motivo, o cadastro do cliente, a subscription dele fica suspensa, depenedendo do motivo;
+o cadastro do cliente pode ser reativado ao satisfazer as regras de pagamento (pedencias), cadastrais (documento), assinatura do contrato, carência ou outra que se fizer necessária;
+
+13. TELAS
+
+todos os campos precisam ter uma lable discreta para ficar claro a sua função;
+
+overview(dashboard):
+os cards devem mostrar somente os cadastros ativos de planos, beneficios, patients, subscriptions, etc.
+sidebar: plan, patients, pagamento, settings
+
+plan:
+exibir total de planos ativos;
+filtros (ativos, inativos, todos);
+pesquisa por plano ou beneficio
+exibir tabela (ou cards) de planos e seus beneficios cadastrados em subnivel;
+ação novo plano em destaque;
+na linha ou card do plano cadastrato exibir as ações (editar, cancelar, adicinoar beneficio, adicionar subscription)
+para adicionar beneficio, abre formulario de cadastro do beneficio;
+no registro do beneficio exibir as ações (editar, cancelar)
+
+patient:
+exibir total de patients ativos;
+filtros (ativos, inativos, todos);
+pesquisa por patient (nome ou documento)
+exibir tabela (ou cards) de patients e o plan que esta inscrito com status, carencia
+na linha ou card do patient cadastrato exibir as ações (editar, cancelar, adicionar subscription)
+
+as telas benefits e subscription não precisam, pois as funções são gerenciadas nas telas plan e patients.
+
+
+
+

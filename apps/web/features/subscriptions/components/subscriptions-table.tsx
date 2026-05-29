@@ -1,3 +1,5 @@
+"use client";
+
 import type {
   MembershipPlan,
   Patient,
@@ -26,7 +28,7 @@ type SubscriptionWithRelations =
       string | Date;
 
     expiresAt:
-      string | Date;
+      string | Date | null;
 
     patient: Patient;
 
@@ -37,20 +39,60 @@ type Props = {
   subscriptions:
     SubscriptionWithRelations[];
 
-  patients: Patient[];
+  patients: Array<{
+    id: string;
+    fullName: string;
+  }>;
 
-  plans: MembershipPlan[];
+  plans: Array<{
+    id: string;
+    name: string;
+  }>;
+
+  selectedPlanId?: string;
+
+  selectedPatientId?: string;
 };
 
 export function SubscriptionsTable({
   subscriptions,
   patients,
   plans,
+  selectedPlanId,
+  selectedPatientId,
 }: Props) {
+  const visibleSubscriptions =
+    subscriptions.filter(
+      (subscription) => {
+        if (
+          selectedPlanId &&
+          subscription.membershipPlanId !==
+            selectedPlanId
+        ) {
+          return false;
+        }
+
+        if (
+          selectedPatientId &&
+          subscription.patientId !==
+            selectedPatientId
+        ) {
+          return false;
+        }
+
+        return true;
+      }
+    );
+
   return (
     <DataTableContainer
       title="Subscriptions"
-      description="Track active memberships and subscription lifecycle."
+      description={
+        selectedPlanId ||
+        selectedPatientId
+          ? "Showing subscriptions for the selected context."
+          : "Track active, pending, overdue, canceled, and expired memberships."
+      }
     >
       <Table>
         <TableHeader>
@@ -78,7 +120,7 @@ export function SubscriptionsTable({
         </TableHeader>
 
         <TableBody>
-          {subscriptions.map(
+          {visibleSubscriptions.map(
             (subscription) => (
               <TableRow
                 key={subscription.id}
@@ -102,27 +144,26 @@ export function SubscriptionsTable({
                 </TableCell>
 
                 <TableCell>
-                  {new Date(
-                    subscription.expiresAt
-                  ).toLocaleDateString()}
+                  {subscription.expiresAt
+                    ? new Date(
+                        subscription.expiresAt
+                      ).toLocaleDateString()
+                    : "No expiration"}
                 </TableCell>
 
                 <TableCell className="text-right">
                   <SubscriptionRowActions
                     subscription={{
                       id: subscription.id,
-
                       patientId:
                         subscription.patientId,
-
                       membershipPlanId:
                         subscription.membershipPlanId,
-
                       startedAt:
                         subscription.startedAt,
-
                       expiresAt:
-                        subscription.expiresAt,
+                        subscription.expiresAt ??
+                        subscription.startedAt,
                     }}
                     patients={patients}
                     plans={plans}
@@ -132,7 +173,7 @@ export function SubscriptionsTable({
             )
           )}
 
-          {subscriptions.length ===
+          {visibleSubscriptions.length ===
             0 && (
             <TableRow>
               <TableCell

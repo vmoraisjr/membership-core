@@ -6,12 +6,6 @@ import { useForm } from "react-hook-form";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import type {
-  MembershipPlan,
-  Patient,
-  Subscription,
-} from "@prisma/client";
-
 import { toast } from "sonner";
 
 import { createSubscription } from "../actions/create-subscription";
@@ -22,6 +16,7 @@ import {
   subscriptionSchema,
   type SubscriptionSchema,
 } from "../schemas/subscription.schema";
+import { formatDateForInput } from "@/features/shared/utils/format-date-for-input";
 
 import { Button } from "@/components/ui/button";
 
@@ -38,9 +33,15 @@ import { Input } from "@/components/ui/input";
 type Props = {
   mode?: "create" | "edit";
 
-  patients: Patient[];
+  patients: Array<{
+    id: string;
+    fullName: string;
+  }>;
 
-  plans: MembershipPlan[];
+  plans: Array<{
+    id: string;
+    name: string;
+  }>;
 
   initialData?: {
     id: string;
@@ -54,6 +55,10 @@ type Props = {
     expiresAt: Date | string;
   };
 
+  defaultPatientId?: string;
+
+  defaultMembershipPlanId?: string;
+
   trigger?: React.ReactNode;
 };
 
@@ -62,56 +67,51 @@ export function SubscriptionDialog({
   patients,
   plans,
   initialData,
+  defaultPatientId,
+  defaultMembershipPlanId,
   trigger,
 }: Props) {
-  const [open, setOpen] =
-    useState(false);
+  const [open, setOpen] = useState(false);
 
-  const form =
-    useForm<SubscriptionSchema>({
-      resolver:
-        zodResolver(
-          subscriptionSchema
-        ),
-
-      defaultValues: {
-        patientId: "",
-
-        membershipPlanId: "",
-
-        startedAt: "",
-
-        expiresAt: "",
-      },
-    });
+  const form = useForm<SubscriptionSchema>({
+    resolver: zodResolver(
+      subscriptionSchema
+    ),
+    defaultValues: {
+      patientId: "",
+      membershipPlanId: "",
+      startedAt: "",
+      expiresAt: "",
+    },
+  });
 
   useEffect(() => {
-    if (
-      mode === "edit" &&
-      initialData
-    ) {
+    if (mode === "edit" && initialData) {
       form.reset({
-        patientId:
-          initialData.patientId,
-
+        patientId: initialData.patientId,
         membershipPlanId:
-          initialData
-            .membershipPlanId,
-
-        startedAt: new Date(
-  initialData.startedAt
-)
-  .toISOString()
-  .split("T")[0],
-
-        expiresAt: new Date(
-  initialData.expiresAt
-)
-  .toISOString()
-  .split("T")[0],
+          initialData.membershipPlanId,
+        startedAt: formatDateForInput(
+          initialData.startedAt
+        ),
+        expiresAt: formatDateForInput(
+          initialData.expiresAt
+        ),
       });
+
+      return;
     }
+
+    form.reset({
+      patientId: defaultPatientId ?? "",
+      membershipPlanId:
+        defaultMembershipPlanId ?? "",
+      startedAt: "",
+      expiresAt: "",
+    });
   }, [
+    defaultMembershipPlanId,
+    defaultPatientId,
     form,
     initialData,
     mode,
@@ -121,10 +121,7 @@ export function SubscriptionDialog({
     values: SubscriptionSchema
   ) {
     try {
-      if (
-        mode === "edit" &&
-        initialData
-      ) {
+      if (mode === "edit" && initialData) {
         await updateSubscription(
           initialData.id,
           values
@@ -181,61 +178,81 @@ export function SubscriptionDialog({
           )}
           className="flex flex-col gap-4"
         >
-          <select
-            {...form.register(
-              "patientId"
-            )}
-            className="h-10 rounded-md border px-3"
-          >
-            <option value="">
-              Select patient
-            </option>
-
-            {patients.map(
-              (patient) => (
-                <option
-                  key={patient.id}
-                  value={patient.id}
-                >
-                  {patient.fullName}
-                </option>
-              )
-            )}
-          </select>
-
-          <select
-            {...form.register(
-              "membershipPlanId"
-            )}
-            className="h-10 rounded-md border px-3"
-          >
-            <option value="">
-              Select plan
-            </option>
-
-            {plans.map((plan) => (
-              <option
-                key={plan.id}
-                value={plan.id}
-              >
-                {plan.name}
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Patient
+            </label>
+            <select
+              {...form.register(
+                "patientId"
+              )}
+              className="h-10 rounded-md border px-3"
+            >
+              <option value="">
+                Select patient
               </option>
-            ))}
-          </select>
 
-          <Input
-            type="date"
-            {...form.register(
-              "startedAt"
-            )}
-          />
+              {patients.map(
+                (patient) => (
+                  <option
+                    key={patient.id}
+                    value={patient.id}
+                  >
+                    {patient.fullName}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
 
-          <Input
-            type="date"
-            {...form.register(
-              "expiresAt"
-            )}
-          />
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Membership plan
+            </label>
+            <select
+              {...form.register(
+                "membershipPlanId"
+              )}
+              className="h-10 rounded-md border px-3"
+            >
+              <option value="">
+                Select plan
+              </option>
+
+              {plans.map((plan) => (
+                <option
+                  key={plan.id}
+                  value={plan.id}
+                >
+                  {plan.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Start date
+            </label>
+            <Input
+              type="date"
+              {...form.register(
+                "startedAt"
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Expiration date
+            </label>
+            <Input
+              type="date"
+              {...form.register(
+                "expiresAt"
+              )}
+            />
+          </div>
 
           <Button type="submit">
             {mode === "edit"

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
 import {
   membershipBenefitSchema,
@@ -22,14 +23,52 @@ export async function updateMembershipBenefit(
     throw new Error("Invalid data.");
   }
 
+  const clinic = await getCurrentClinic();
+
+  const benefit =
+    await prisma.membershipBenefit.findFirst({
+      where: {
+        id,
+        membershipPlan: {
+          clinicId: clinic.id,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  if (!benefit) {
+    throw new Error(
+      "Membership benefit not found."
+    );
+  }
+
+  const plan =
+    await prisma.membershipPlan.findFirst({
+      where: {
+        id: parsed.data.membershipPlanId,
+        clinicId: clinic.id,
+        active: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  if (!plan) {
+    throw new Error(
+      "Only active clinic plans can receive benefits."
+    );
+  }
+
   await prisma.membershipBenefit.update({
     where: {
-      id,
+      id: benefit.id,
     },
 
     data: {
-      membershipPlanId:
-        parsed.data.membershipPlanId,
+      membershipPlanId: plan.id,
 
       type: parsed.data.type,
 
