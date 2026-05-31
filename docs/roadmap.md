@@ -1,104 +1,42 @@
-ROADMAP PROPOSTO
-SEMANA 1
-Foundation & Architecture
-Objetivo
+# Current Status
 
-Criar base sólida.
+## Completed
 
-Entregas
-criar monorepo
-configurar stack
-configurar Prisma
-configurar PostgreSQL
-configurar auth
-criar /docs
-definir entities
-definir boundaries
-definir roles
-Resultado
+- Monorepo
+- Next.js
+- Prisma
+- PostgreSQL
+- Design System
+- Membership Plans
+- Patients
+- Benefits
+- Subscriptions
+- CRUD Layer
 
-Projeto estruturado corretamente.
+## Current Sprint
 
-SEMANA 2
-Design System & Layout
-Entregas
-setup shadcn
-layout admin
-layout patient
-navegação
-tema
-componentes base
-Resultado
+Benefit Usage Engine
 
-Frontend consistente.
+- usage validation
+- consumption
+- history
+- limits
 
-SEMANA 3
-Membership Core
-Entregas
-Plans
-Benefits
-CRUDs
-relacionamentos
-regras básicas
-Resultado
+## Next Sprint
 
-Clínica consegue configurar planos.
+Subscription Lifecycle
 
-SEMANA 4
-Subscriptions & Dependents
-Entregas
-assinatura
-dependentes
-status
-validade
-renovação
-Resultado
+- renew
+- pause
+- expire
+- reactivate
 
-Paciente pode aderir ao plano.
+## Future
 
-SEMANA 5
-Usage & Redemption Engine
-Entregas
-registrar uso
-validar benefícios
-histórico
-limites
-consumo
-Resultado
+Dashboard Metrics
 
-Core operacional funcionando.
+Clinic Management
 
-SEMANA 6
-Financial Module
-Entregas
-pagamentos
-PIX/manual/boleto
-status financeiro
-histórico
-Resultado
+RBAC
 
-Fluxo financeiro funcional.
-
-SEMANA 7
-Patient Portal
-Entregas
-dashboard paciente
-QR Code
-histórico
-benefícios
-dependentes
-Resultado
-
-Experiência mínima do paciente pronta.
-
-SEMANA 8
-Polish & Deploy
-Entregas
-ajustes UX
-testes
-deploy
-refinamento
-validação com clínica
-Resultado
-
-MVP apresentável/comercializável.
+CRM Foundation
