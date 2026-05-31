@@ -5,40 +5,46 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
-export async function deactivateMembershipBenefit(
+export async function reactivateMembershipPlan(
   id: string
 ) {
   const clinic = await getCurrentClinic();
 
-  const benefit =
-    await prisma.membershipBenefit.findFirst({
+  const plan =
+    await prisma.membershipPlan.findFirst({
       where: {
         id,
-        membershipPlan: {
-          clinicId: clinic.id,
-        },
+        clinicId: clinic.id,
       },
       select: {
         id: true,
+        active: true,
       },
     });
 
-  if (!benefit) {
+  if (!plan) {
     throw new Error(
-      "Membership benefit not found."
+      "Membership plan not found."
     );
   }
 
-  await prisma.membershipBenefit.update({
+  if (plan.active) {
+    throw new Error(
+      "Membership plan is already active."
+    );
+  }
+
+  await prisma.membershipPlan.update({
     where: {
-      id: benefit.id,
+      id: plan.id,
     },
     data: {
-      active: false,
+      active: true,
     },
   });
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/plans");
   revalidatePath("/dashboard/benefits");
+  revalidatePath("/dashboard/subscriptions");
 }

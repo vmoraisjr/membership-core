@@ -1,11 +1,11 @@
-import { DashboardPage } from "@/components/dashboard/dashboard-page";
+import { DashboardPage } from "@/components/layout/dashboard-page";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 
 import { getMembershipBenefits } from "../services/get-membership-benefits";
 import { getMembershipBenefitFormOptions } from "../services/get-membership-benefit-form-options";
 
-import { MembershipBenefitsTable } from "./membership-benefit-table";
+import { MembershipBenefitsTable } from "./membership-benefits-table";
 
 import { MembershipBenefitDialog } from "./membership-benefit-dialog";
 

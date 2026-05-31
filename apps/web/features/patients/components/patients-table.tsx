@@ -15,30 +15,50 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import type {
-  MembershipPlan,
-  Patient,
-  Subscription,
-} from "@prisma/client";
-
 import { PatientRowActions } from "./patient-row-actions";
 
-type PatientWithCurrentSubscription =
-  Patient & {
-    currentSubscription:
-      | (Subscription & {
-          membershipPlan: MembershipPlan;
-        })
-      | null;
-  };
+type PatientWithCurrentSubscription = {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  birthDate: Date;
+  document: string;
+  zipCode: string;
+  city: string;
+  state: string;
+  address: string;
+  status: "ACTIVE" | "INACTIVE";
+  currentSubscription:
+    | {
+        status: string;
+        membershipPlan: {
+          name: string;
+        };
+      }
+    | null;
+};
 
 type Props = {
   patients: PatientWithCurrentSubscription[];
-  plans: Array<{
-    id: string;
-    name: string;
-  }>;
+
+  plans: Array<{ id: string; name: string }>;
 };
+
+function maskDocument(doc: string) {
+  if (!doc) return "";
+  const cleaned = String(doc);
+  if (cleaned.length <= 4) return cleaned;
+  const middle = '*'.repeat(Math.max(0, cleaned.length - 4));
+  return `${cleaned.slice(0,2)}${middle}${cleaned.slice(-2)}`;
+}
+
+function formatBirthDate(value: Date | string) {
+  if (!value) return "";
+  const d = new Date(value);
+  return d.toLocaleDateString();
+}
+
 
 export function PatientsTable({
   patients,
@@ -136,13 +156,11 @@ export function PatientsTable({
         <TableHeader>
           <TableRow>
             <TableHead>Patient</TableHead>
+            <TableHead>Birth date</TableHead>
             <TableHead>Document</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>
               Current Plan
-            </TableHead>
-            <TableHead>
-              Subscription
             </TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -166,7 +184,11 @@ export function PatientsTable({
                 </TableCell>
 
                 <TableCell className="align-top">
-                  {patient.document}
+                  {formatBirthDate(patient.birthDate)}
+                </TableCell>
+
+                <TableCell className="align-top">
+                  {maskDocument(patient.document)}
                 </TableCell>
 
                 <TableCell className="align-top">
@@ -176,33 +198,16 @@ export function PatientsTable({
                 </TableCell>
 
                 <TableCell className="align-top">
-                  {patient.currentSubscription ? (
+                  {patient.currentSubscription && patient.currentSubscription.status === 'ACTIVE' ? (
                     <Link
                       href={`/dashboard/subscriptions?patientId=${patient.id}`}
                       className="text-primary underline-offset-4 hover:underline"
                     >
-                      {
-                        patient
-                          .currentSubscription
-                          .membershipPlan
-                          .name
-                      }
+                      {patient.currentSubscription.membershipPlan.name}
                     </Link>
                   ) : (
                     <span className="text-sm text-muted-foreground">
                       No subscription
-                    </span>
-                  )}
-                </TableCell>
-
-                <TableCell className="align-top">
-                  {patient.currentSubscription ? (
-                    patient
-                      .currentSubscription
-                      .status
-                  ) : (
-                    <span className="text-sm text-muted-foreground">
-                      Not subscribed
                     </span>
                   )}
                 </TableCell>

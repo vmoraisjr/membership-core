@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { PatientStatus } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 

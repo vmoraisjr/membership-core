@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
-export async function deactivateMembershipBenefit(
+export async function reactivateMembershipBenefit(
   id: string
 ) {
   const clinic = await getCurrentClinic();
@@ -20,6 +20,12 @@ export async function deactivateMembershipBenefit(
       },
       select: {
         id: true,
+        active: true,
+        membershipPlan: {
+          select: {
+            active: true,
+          },
+        },
       },
     });
 
@@ -29,12 +35,26 @@ export async function deactivateMembershipBenefit(
     );
   }
 
+  if (benefit.active) {
+    throw new Error(
+      "Membership benefit is already active."
+    );
+  }
+
+  if (
+    !benefit.membershipPlan.active
+  ) {
+    throw new Error(
+      "Reactivate the membership plan before reactivating this benefit."
+    );
+  }
+
   await prisma.membershipBenefit.update({
     where: {
       id: benefit.id,
     },
     data: {
-      active: false,
+      active: true,
     },
   });
 

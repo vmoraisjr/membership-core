@@ -43,6 +43,7 @@ model Patient {
   address    String
 
   status     PatientStatus @default(ACTIVE)
+  inactiveReason String?
 
   createdAt  DateTime @default(now())
 

@@ -12,7 +12,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   BenefitType,
   ResetPeriod,
-  type MembershipBenefit,
 } from "@prisma/client";
 
 import { toast } from "sonner";
@@ -38,6 +37,18 @@ import {
 
 import { Input } from "@/components/ui/input";
 
+type MembershipBenefitDialogInitialData = {
+  id: string;
+  membershipPlanId: string;
+  type: BenefitType;
+  title: string;
+  description?: string | null;
+  discountPercentage?: number | null;
+  discountAmount?: number | null;
+  usageLimit?: number | null;
+  resetPeriod?: ResetPeriod | null;
+};
+
 type Props = {
   mode?: "create" | "edit";
 
@@ -46,7 +57,7 @@ type Props = {
     name: string;
   }>;
 
-  initialData?: MembershipBenefit;
+  initialData?: MembershipBenefitDialogInitialData;
 
   defaultMembershipPlanId?: string;
 

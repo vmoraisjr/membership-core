@@ -1,22 +1,23 @@
 "use client";
 
-import { toast } from "sonner";
 import {
-  Copy,
   Pencil,
   Plus,
-  UserPlus,
+  RotateCcw,
+  Trash2,
   XCircle,
 } from "lucide-react";
+
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
 import { deactivateMembershipPlan } from "../actions/deactivate-membership-plan";
-import { cloneMembershipPlan } from "../actions/clone-membership-plan";
+import { reactivateMembershipPlan } from "../actions/reactivate-membership-plan";
+import { deleteMembershipPlanPermanently } from "../actions/delete-membership-plan-permanently";
 import { MembershipBenefitDialog } from "@/features/membership-benefits/components/membership-benefit-dialog";
-import { SubscriptionDialog } from "@/features/subscriptions/components/subscription-dialog";
 
 import { MembershipPlanDialog } from "./membership-plan-dialog";
 
@@ -37,54 +38,75 @@ type Props = {
     id: string;
     name: string;
   }>;
-
-  subscriptionPatients: Array<{
-    id: string;
-    fullName: string;
-  }>;
 };
 
 export function MembershipPlanRowActions({
   plan,
   benefitPlans,
-  subscriptionPatients,
 }: Props) {
-  async function handleDeactivate(
-    typedValue?: string
-  ) {
+  async function handleDeactivate({
+    typedValue,
+  }: {
+    typedValue: string;
+    detailsValue: string;
+  }) {
     try {
       await deactivateMembershipPlan(
         plan.id,
-        typedValue ?? ""
+        typedValue
       );
 
       toast.success(
-        "Plan canceled and related records updated."
+        "Plan deactivated and related records updated."
       );
-    } catch {
+    } catch (error) {
       toast.error(
-        "Failed to cancel plan."
+        error instanceof Error
+          ? error.message
+          : "Failed to deactivate plan."
       );
     }
   }
 
-  async function handleClone() {
+  async function handleReactivate() {
     try {
-      await cloneMembershipPlan(plan.id);
+      await reactivateMembershipPlan(
+        plan.id
+      );
 
       toast.success(
-        "Plan cloned as a new active plan."
+        "Plan reactivated."
       );
-    } catch {
+    } catch (error) {
       toast.error(
-        "Failed to clone plan."
+        error instanceof Error
+          ? error.message
+          : "Failed to reactivate plan."
+      );
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      await deleteMembershipPlanPermanently(
+        plan.id
+      );
+
+      toast.success(
+        "Plan permanently deleted."
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to permanently delete plan."
       );
     }
   }
 
   return (
     <div className="flex items-center gap-2">
-      {plan.active && (
+      {plan.active ? (
         <>
           <MembershipPlanDialog
             mode="edit"
@@ -122,52 +144,60 @@ export function MembershipPlanRowActions({
             }
           />
 
-          <SubscriptionDialog
-            patients={
-              subscriptionPatients
+          <ConfirmDialog
+            title="Deactivate membership plan?"
+            description="Deactivating this plan also deactivates related benefits and cancels active subscriptions."
+            confirmValue={plan.name}
+            confirmLabel="Type the plan name exactly"
+            confirmPlaceholder={plan.name}
+            actionLabel="Deactivate plan"
+            onConfirm={handleDeactivate}
+            trigger={
+              <Button
+                size="icon"
+                variant="destructive"
+              >
+                <XCircle className="size-4" />
+              </Button>
             }
-            plans={benefitPlans}
-            defaultMembershipPlanId={
-              plan.id
+          />
+        </>
+      ) : (
+        <>
+          <ConfirmDialog
+            title="Reactivate membership plan?"
+            description="The plan will become available again for benefits and new subscriptions."
+            onConfirm={() =>
+              handleReactivate()
             }
+            actionLabel="Reactivate plan"
             trigger={
               <Button
                 size="icon"
                 variant="outline"
               >
-                <UserPlus className="size-4" />
+                <RotateCcw className="size-4" />
+              </Button>
+            }
+          />
+
+          <ConfirmDialog
+            title="Delete plan permanently?"
+            description="This permanently removes the inactive plan record. This action cannot be undone."
+            onConfirm={() =>
+              handleDelete()
+            }
+            actionLabel="Delete permanently"
+            trigger={
+              <Button
+                size="icon"
+                variant="destructive"
+              >
+                <Trash2 className="size-4" />
               </Button>
             }
           />
         </>
-      )}
-
-      <Button
-        size="icon"
-        variant="outline"
-        onClick={handleClone}
-      >
-        <Copy className="size-4" />
-      </Button>
-
-      {plan.active && (
-        <ConfirmDialog
-          title="Cancel membership plan?"
-          description="Canceling this plan deactivates all related benefits and cancels active subscriptions. This action cannot be undone."
-          confirmValue={plan.name}
-          confirmLabel="Type the plan name exactly"
-          confirmPlaceholder={plan.name}
-          actionLabel="Cancel plan"
-          onConfirm={handleDeactivate}
-          trigger={
-            <Button
-              size="icon"
-              variant="destructive"
-            >
-              <XCircle className="size-4" />
-            </Button>
-          }
-        />
       )}
     </div>
   );

@@ -26,25 +26,25 @@ export async function DashboardHomePage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Total Patients"
-          value={metrics.totalPatients.toString()}
-          hint="Patients registered for this clinic"
+          label="Active Patients"
+          value={metrics.activePatients.toString()}
+          hint="Patients currently available for membership operations"
           icon={<Users className="size-5" />}
         />
 
         <MetricCard
-          label="Membership Plans"
-          value={metrics.totalMembershipPlans.toString()}
-          hint="Plans currently configured"
+          label="Active Plans"
+          value={metrics.activeMembershipPlans.toString()}
+          hint="Plans currently available for enrollment"
           icon={
             <FileStack className="size-5" />
           }
         />
 
         <MetricCard
-          label="Subscriptions"
-          value={metrics.totalSubscriptions.toString()}
-          hint="Patient-plan relationships created"
+          label="Active Subscriptions"
+          value={metrics.activeSubscriptionsCount.toString()}
+          hint="Subscriptions currently in force"
           icon={
             <CreditCard className="size-5" />
           }

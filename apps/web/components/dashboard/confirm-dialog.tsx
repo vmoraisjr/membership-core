@@ -14,6 +14,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = {
   trigger: React.ReactNode;
@@ -22,8 +23,6 @@ type Props = {
 
   description: string;
 
-  onConfirm: (typedValue?: string) => void;
-
   confirmValue?: string;
 
   confirmLabel?: string;
@@ -31,6 +30,19 @@ type Props = {
   confirmPlaceholder?: string;
 
   actionLabel?: string;
+
+  detailsLabel?: string;
+
+  detailsPlaceholder?: string;
+
+  detailsRequired?: boolean;
+
+  detailsInput?: "input" | "textarea";
+
+  onConfirm: (values: {
+    typedValue: string;
+    detailsValue: string;
+  }) => void;
 };
 
 export function ConfirmDialog({
@@ -42,19 +54,52 @@ export function ConfirmDialog({
   confirmLabel,
   confirmPlaceholder,
   actionLabel = "Continue",
+  detailsLabel,
+  detailsPlaceholder,
+  detailsRequired = false,
+  detailsInput = "input",
 }: Props) {
+  const [open, setOpen] =
+    useState(false);
   const [typedValue, setTypedValue] =
+    useState("");
+  const [detailsValue, setDetailsValue] =
     useState("");
 
   const requiresExactMatch =
     Boolean(confirmValue);
+  const requiresDetails =
+    detailsRequired ||
+    Boolean(detailsLabel) ||
+    Boolean(detailsPlaceholder);
 
   const canConfirm =
-    !requiresExactMatch ||
-    typedValue === confirmValue;
+    (!requiresExactMatch ||
+      typedValue === confirmValue) &&
+    (!detailsRequired ||
+      detailsValue.trim().length > 0);
+
+  const DetailsField =
+    detailsInput === "textarea"
+      ? Textarea
+      : Input;
+
+  function handleOpenChange(
+    nextOpen: boolean
+  ) {
+    setOpen(nextOpen);
+
+    if (!nextOpen) {
+      setTypedValue("");
+      setDetailsValue("");
+    }
+  }
 
   return (
-    <AlertDialog>
+    <AlertDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
       <AlertDialogTrigger asChild>
         {trigger}
       </AlertDialogTrigger>
@@ -90,6 +135,27 @@ export function ConfirmDialog({
               />
             </div>
           )}
+
+          {requiresDetails && (
+            <div className="mt-4 w-full space-y-2">
+              <label className="block text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {detailsLabel ??
+                  "Details"}
+              </label>
+
+              <DetailsField
+                value={detailsValue}
+                onChange={(event) =>
+                  setDetailsValue(
+                    event.target.value
+                  )
+                }
+                placeholder={
+                  detailsPlaceholder
+                }
+              />
+            </div>
+          )}
         </AlertDialogHeader>
 
         <AlertDialogFooter>
@@ -99,7 +165,10 @@ export function ConfirmDialog({
 
           <AlertDialogAction
             onClick={() =>
-              onConfirm(typedValue)
+              onConfirm({
+                typedValue,
+                detailsValue,
+              })
             }
             disabled={!canConfirm}
           >

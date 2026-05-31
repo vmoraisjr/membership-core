@@ -1,7 +1,7 @@
 import { getSubscriptions } from "../services/get-subscriptions";
 import { getSubscriptionFormOptions } from "../services/get-subscription-form-options";
 
-import { DashboardPage } from "@/components/dashboard/dashboard-page";
+import { DashboardPage } from "@/components/layout/dashboard-page";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 

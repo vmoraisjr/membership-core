@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
-export async function deactivateMembershipBenefit(
+export async function deleteMembershipBenefitPermanently(
   id: string
 ) {
   const clinic = await getCurrentClinic();
@@ -20,6 +20,12 @@ export async function deactivateMembershipBenefit(
       },
       select: {
         id: true,
+        active: true,
+        _count: {
+          select: {
+            usages: true,
+          },
+        },
       },
     });
 
@@ -29,12 +35,23 @@ export async function deactivateMembershipBenefit(
     );
   }
 
-  await prisma.membershipBenefit.update({
+  if (benefit.active) {
+    throw new Error(
+      "Only inactive benefits can be permanently deleted."
+    );
+  }
+
+  if (
+    benefit._count.usages > 0
+  ) {
+    throw new Error(
+      "This benefit has usage history and cannot be permanently deleted."
+    );
+  }
+
+  await prisma.membershipBenefit.delete({
     where: {
       id: benefit.id,
-    },
-    data: {
-      active: false,
     },
   });
 

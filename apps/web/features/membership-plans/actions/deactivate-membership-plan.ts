@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { SubscriptionStatus } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
 import { MANAGEABLE_SUBSCRIPTION_STATUSES } from "@/features/subscriptions/constants/manageable-subscription-statuses";
@@ -42,7 +42,7 @@ export async function deactivateMembershipPlan(
 
   if (!plan.active) {
     throw new Error(
-      "Canceled plans cannot be reactivated. Clone the plan instead."
+      "Membership plan is already inactive."
     );
   }
 

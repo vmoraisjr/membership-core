@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -50,9 +50,9 @@ type Props = {
 
     membershipPlanId: string;
 
-    startedAt: Date | string;
+    startedAt: Date;
 
-    expiresAt: Date | string;
+    expiresAt: Date;
   };
 
   defaultPatientId?: string;
@@ -73,17 +73,49 @@ export function SubscriptionDialog({
 }: Props) {
   const [open, setOpen] = useState(false);
 
+  const today = useMemo(() => new Date(), []);
+  const defaultStartedAt = useMemo(
+    () => formatDateForInput(today),
+    [today]
+  );
+  const defaultExpiresAt = useMemo(
+    () =>
+      formatDateForInput(
+        new Date(
+          today.getTime() +
+            30 * 24 * 60 * 60 * 1000
+        )
+      ),
+    [today]
+  );
+
   const form = useForm<SubscriptionSchema>({
     resolver: zodResolver(
       subscriptionSchema
     ),
     defaultValues: {
-      patientId: "",
-      membershipPlanId: "",
-      startedAt: "",
-      expiresAt: "",
+      patientId: defaultPatientId ?? "",
+      membershipPlanId: defaultMembershipPlanId ?? "",
+      startedAt: defaultStartedAt,
+      expiresAt: defaultExpiresAt,
     },
   });
+
+  const filteredPatients = patients;
+
+  const patientId = useWatch({
+    control: form.control,
+    name: "patientId",
+  });
+
+  const startedAt = useWatch({
+    control: form.control,
+    name: "startedAt",
+  });
+
+  const selectedPatient = patients.find(
+    (p) => p.id === patientId
+  );
 
   useEffect(() => {
     if (mode === "edit" && initialData) {
@@ -106,16 +138,33 @@ export function SubscriptionDialog({
       patientId: defaultPatientId ?? "",
       membershipPlanId:
         defaultMembershipPlanId ?? "",
-      startedAt: "",
-      expiresAt: "",
+      startedAt: defaultStartedAt,
+      expiresAt: defaultExpiresAt,
     });
   }, [
     defaultMembershipPlanId,
     defaultPatientId,
+    defaultStartedAt,
+    defaultExpiresAt,
     form,
     initialData,
     mode,
   ]);
+
+  // Auto-calculate expiration date when start date changes
+  useEffect(() => {
+    if (startedAt) {
+      const startDate = new Date(startedAt);
+      const expirationDate = new Date(
+        startDate.getTime() + 30 * 24 * 60 * 60 * 1000
+      );
+      form.setValue(
+        "expiresAt",
+        formatDateForInput(expirationDate)
+      );
+    }
+  }, [form, startedAt]);
+
 
   async function onSubmit(
     values: SubscriptionSchema
@@ -140,7 +189,13 @@ export function SubscriptionDialog({
         );
       }
 
-      form.reset();
+      form.reset({
+        patientId: defaultPatientId ?? "",
+        membershipPlanId:
+          defaultMembershipPlanId ?? "",
+        startedAt: defaultStartedAt,
+        expiresAt: defaultExpiresAt,
+      });
 
       setOpen(false);
     } catch {
@@ -182,27 +237,33 @@ export function SubscriptionDialog({
             <label className="text-sm text-muted-foreground">
               Patient
             </label>
-            <select
-              {...form.register(
-                "patientId"
-              )}
-              className="h-10 rounded-md border px-3"
-            >
-              <option value="">
-                Select patient
-              </option>
+            {defaultPatientId ? (
+              <div className="rounded-md border px-3 py-2 bg-muted text-sm">
+                {selectedPatient?.fullName}
+              </div>
+            ) : (
+              <select
+                {...form.register(
+                  "patientId"
+                )}
+                className="h-10 rounded-md border px-3"
+              >
+                <option value="">
+                  Select patient
+                </option>
 
-              {patients.map(
-                (patient) => (
-                  <option
-                    key={patient.id}
-                    value={patient.id}
-                  >
-                    {patient.fullName}
-                  </option>
-                )
-              )}
-            </select>
+                {filteredPatients.map(
+                  (patient) => (
+                    <option
+                      key={patient.id}
+                      value={patient.id}
+                    >
+                      {patient.fullName}
+                    </option>
+                  )
+                )}
+              </select>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -251,6 +312,8 @@ export function SubscriptionDialog({
               {...form.register(
                 "expiresAt"
               )}
+              readOnly
+              className="cursor-not-allowed bg-muted"
             />
           </div>
 

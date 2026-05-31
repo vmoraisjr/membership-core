@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/formatters";
 
-import { MembershipBenefitRowActions } from "@/features/membership-benefits/components/membership-benefit-row-action";
-
 import { MembershipPlanRowActions } from "./membership-plan-row-actions";
 
 type Plan = {
@@ -57,16 +55,11 @@ type Props = {
     id: string;
     name: string;
   }>;
-  subscriptionPatients: Array<{
-    id: string;
-    fullName: string;
-  }>;
 };
 
-export function PlansTable({
+export function MembershipPlansTable({
   plans,
   benefitPlans,
-  subscriptionPatients,
 }: Props) {
   const [statusFilter, setStatusFilter] =
     useState("active");
@@ -105,6 +98,14 @@ export function PlansTable({
   const activePlansCount =
     plans.filter((plan) => plan.active)
       .length;
+
+  function getActiveBenefitsCount(
+    plan: Plan
+  ) {
+    return plan.benefits.filter(
+      (benefit) => benefit.active
+    ).length;
+  }
 
   return (
     <DataTableContainer
@@ -206,53 +207,17 @@ export function PlansTable({
               </TableCell>
 
               <TableCell className="align-top">
-                <div className="space-y-3">
-                  {plan.benefits.length ===
-                  0 ? (
-                    <div className="text-sm text-muted-foreground">
-                      No benefits yet.
-                    </div>
-                  ) : (
-                    plan.benefits.map(
-                      (benefit) => (
-                        <div
-                          key={benefit.id}
-                          className="rounded-lg border p-3"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                              <div className="font-medium">
-                                {
-                                  benefit.title
-                                }
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {
-                                  benefit.type
-                                }{" "}
-                                /{" "}
-                                {benefit.active
-                                  ? "Active"
-                                  : "Inactive"}
-                              </div>
-                            </div>
-
-                            <MembershipBenefitRowActions
-                              benefit={
-                                benefit
-                              }
-                              plans={
-                                benefitPlans
-                              }
-                              planIsActive={
-                                plan.active
-                              }
-                            />
-                          </div>
-                        </div>
-                      )
-                    )
-                  )}
+                <div className="space-y-1">
+                  <div className="font-medium">
+                    {getActiveBenefitsCount(
+                      plan
+                    )}{" "}
+                    active
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {plan.benefits.length}{" "}
+                    total registered
+                  </div>
                 </div>
               </TableCell>
 
@@ -273,9 +238,6 @@ export function PlansTable({
                     active: plan.active,
                   }}
                   benefitPlans={benefitPlans}
-                  subscriptionPatients={
-                    subscriptionPatients
-                  }
                 />
               </TableCell>
             </TableRow>

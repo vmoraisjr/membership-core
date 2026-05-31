@@ -7,13 +7,15 @@ import {
   SubscriptionStatus,
 } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
 import { MANAGEABLE_SUBSCRIPTION_STATUSES } from "@/features/subscriptions/constants/manageable-subscription-statuses";
+import { patientDeactivationSchema } from "../schemas/patient.schema";
 
 export async function suspendPatient(
-  id: string
+  id: string,
+  inactiveReason: string
 ) {
   const clinic = await getCurrentClinic();
 
@@ -34,6 +36,17 @@ export async function suspendPatient(
     );
   }
 
+  const parsedReason =
+    patientDeactivationSchema.safeParse({
+      inactiveReason,
+    });
+
+  if (!parsedReason.success) {
+    throw new Error(
+      "Suspension reason is required."
+    );
+  }
+
   const canceledAt = new Date();
 
   await prisma.$transaction([
@@ -44,6 +57,9 @@ export async function suspendPatient(
       data: {
         status:
           PatientStatus.INACTIVE,
+        inactiveReason:
+          parsedReason.data
+            .inactiveReason,
       },
     }),
     prisma.subscription.updateMany({

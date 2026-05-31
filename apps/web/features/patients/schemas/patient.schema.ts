@@ -24,6 +24,22 @@ export const patientSchema = z.object({
   address: z.string(),
 });
 
+export const patientDeactivationSchema =
+  z.object({
+    inactiveReason: z
+      .string()
+      .trim()
+      .min(
+        3,
+        "Deactivation reason is required"
+      ),
+  });
+
 export type PatientSchema = z.infer<
   typeof patientSchema
 >;
+
+export type PatientDeactivationSchema =
+  z.infer<
+    typeof patientDeactivationSchema
+  >;

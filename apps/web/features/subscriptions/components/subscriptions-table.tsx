@@ -1,10 +1,6 @@
 "use client";
 
-import type {
-  MembershipPlan,
-  Patient,
-  Subscription,
-} from "@prisma/client";
+import { useState } from "react";
 
 import {
   Table,
@@ -19,25 +15,25 @@ import { DataTableContainer } from "@/components/dashboard/data-table-container"
 
 import { SubscriptionRowActions } from "./subscription-row-actions";
 
-type SubscriptionWithRelations =
-  Omit<
-    Subscription,
-    "startedAt" | "expiresAt"
-  > & {
-    startedAt:
-      string | Date;
-
-    expiresAt:
-      string | Date | null;
-
-    patient: Patient;
-
-    membershipPlan: MembershipPlan;
+type SubscriptionWithRelations = {
+  id: string;
+  patientId: string;
+  membershipPlanId: string;
+  status: string;
+  startedAt: Date;
+  expiresAt: Date | null;
+  patient: {
+    id: string;
+    fullName: string;
   };
+  membershipPlan: {
+    id: string;
+    name: string;
+  };
+};
 
 type Props = {
-  subscriptions:
-    SubscriptionWithRelations[];
+  subscriptions: SubscriptionWithRelations[];
 
   patients: Array<{
     id: string;
@@ -61,6 +57,14 @@ export function SubscriptionsTable({
   selectedPlanId,
   selectedPatientId,
 }: Props) {
+  const [statusFilter, setStatusFilter] =
+    useState("all");
+  const [patientSearch, setPatientSearch] =
+    useState("");
+
+  const normalizedPatientSearch =
+    patientSearch.trim().toLowerCase();
+
   const visibleSubscriptions =
     subscriptions.filter(
       (subscription) => {
@@ -80,6 +84,26 @@ export function SubscriptionsTable({
           return false;
         }
 
+        if (
+          statusFilter !== "all" &&
+          subscription.status !==
+            statusFilter
+        ) {
+          return false;
+        }
+
+        if (
+          normalizedPatientSearch.length >
+            0 &&
+          !subscription.patient.fullName
+            .toLowerCase()
+            .includes(
+              normalizedPatientSearch
+            )
+        ) {
+          return false;
+        }
+
         return true;
       }
     );
@@ -94,6 +118,58 @@ export function SubscriptionsTable({
           : "Track active, pending, overdue, canceled, and expired memberships."
       }
     >
+      <div className="flex flex-col gap-4 border-b p-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="grid gap-2">
+          <label className="text-sm text-muted-foreground">
+            Status filter
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(
+                event.target.value
+              )
+            }
+            className="h-10 rounded-md border px-3"
+          >
+            <option value="all">
+              All
+            </option>
+            <option value="ACTIVE">
+              Active
+            </option>
+            <option value="PENDING">
+              Pending
+            </option>
+            <option value="OVERDUE">
+              Overdue
+            </option>
+            <option value="CANCELED">
+              Canceled
+            </option>
+            <option value="EXPIRED">
+              Expired
+            </option>
+          </select>
+        </div>
+
+        <div className="grid gap-2 sm:min-w-80">
+          <label className="text-sm text-muted-foreground">
+            Filter by patient name
+          </label>
+          <input
+            value={patientSearch}
+            onChange={(event) =>
+              setPatientSearch(
+                event.target.value
+              )
+            }
+            placeholder="Search patient name"
+            className="h-10 rounded-md border px-3"
+          />
+        </div>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -164,6 +240,7 @@ export function SubscriptionsTable({
                       expiresAt:
                         subscription.expiresAt ??
                         subscription.startedAt,
+                      status: subscription.status,
                     }}
                     patients={patients}
                     plans={plans}

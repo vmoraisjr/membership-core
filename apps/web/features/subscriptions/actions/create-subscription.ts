@@ -7,7 +7,7 @@ import {
   SubscriptionStatus,
 } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
 import {
@@ -63,19 +63,26 @@ export async function createSubscription(
     );
   }
 
+  const startDate = new Date(
+    parsed.data.startedAt
+  );
+  const expiresDate =
+    parsed.data.expiresAt
+      ? new Date(parsed.data.expiresAt)
+      : new Date(
+          startDate.getTime() +
+            30 * 24 * 60 * 60 * 1000
+        );
+
   await prisma.subscription.create({
     data: {
       patientId: patient.id,
 
       membershipPlanId: plan.id,
 
-      startedAt: new Date(
-        parsed.data.startedAt
-      ),
+      startedAt: startDate,
 
-      expiresAt: new Date(
-        parsed.data.expiresAt
-      ),
+      expiresAt: expiresDate,
 
       status:
         SubscriptionStatus.ACTIVE,

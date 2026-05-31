@@ -1,7 +1,7 @@
 import { getPatients } from "../services/get-patients";
-import { getSubscriptionFormOptions } from "@/features/subscriptions/services/get-subscription-form-options";
+import { getMembershipPlans } from "@/features/membership-plans/services/get-membership-plans";
 
-import { DashboardPage } from "@/components/dashboard/dashboard-page";
+import { DashboardPage } from "@/components/layout/dashboard-page";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 
@@ -10,11 +10,10 @@ import { PatientsTable } from "./patients-table";
 import { PatientDialog } from "./patient-dialog";
 
 export async function PatientsPage() {
-  const [patients, subscriptionFormOptions] =
-    await Promise.all([
-      getPatients(),
-      getSubscriptionFormOptions(),
-    ]);
+  const [patients, plans] = await Promise.all([
+    getPatients(),
+    getMembershipPlans(),
+  ]);
 
   return (
     <DashboardPage>
@@ -26,9 +25,7 @@ export async function PatientsPage() {
 
       <PatientsTable
         patients={patients}
-        plans={
-          subscriptionFormOptions.membershipPlans
-        }
+        plans={plans.map((p) => ({ id: p.id, name: p.name }))}
       />
     </DashboardPage>
   );

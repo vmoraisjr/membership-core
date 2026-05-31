@@ -1,29 +1,32 @@
 import { SubscriptionStatus } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
 export async function getDashboardMetrics() {
   const clinic = await getCurrentClinic();
 
   const [
-    totalPatients,
-    totalMembershipPlans,
-    totalSubscriptions,
+    activePatients,
+    activeMembershipPlans,
+    activeSubscriptionsCount,
     activeSubscriptions,
   ] = await Promise.all([
     prisma.patient.count({
       where: {
         clinicId: clinic.id,
+        status: "ACTIVE",
       },
     }),
     prisma.membershipPlan.count({
       where: {
         clinicId: clinic.id,
+        active: true,
       },
     }),
     prisma.subscription.count({
       where: {
+        status: SubscriptionStatus.ACTIVE,
         patient: {
           clinicId: clinic.id,
         },
@@ -58,9 +61,9 @@ export async function getDashboardMetrics() {
   return {
     clinicName:
       clinic.brandName ?? clinic.name,
-    totalPatients,
-    totalMembershipPlans,
-    totalSubscriptions,
+    activePatients,
+    activeMembershipPlans,
+    activeSubscriptionsCount,
     mockedMonthlyRevenue,
   };
 }

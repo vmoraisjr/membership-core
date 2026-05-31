@@ -1,4 +1,4 @@
-import { MembershipBenefitsPage } from "@/features/membership-benefits/components/membership-benefit-page";
+import { MembershipBenefitsPage } from "@/features/membership-benefits/components/membership-benefits-page";
 
 type Props = {
   searchParams: Promise<{
