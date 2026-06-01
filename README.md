@@ -102,3 +102,9 @@ Prisma
 PostgreSQL
 
 ------------------------
+
+Read:
+docs/ai-context.md
+docs/codex-workflow.md
+tasks/backlog/001-benefit-usage-engine.md
+Execute the task.

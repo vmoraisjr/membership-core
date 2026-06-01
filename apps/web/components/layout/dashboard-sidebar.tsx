@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   BadgePercent,
   CreditCard,
+  History,
   LayoutDashboard,
   SquareStack,
   Users,
@@ -43,6 +44,12 @@ const items = [
     label: "Benefits",
     href: "/dashboard/benefits",
     icon: BadgePercent,
+  },
+
+  {
+    label: "Benefit Usage",
+    href: "/dashboard/benefit-usage",
+    icon: History,
   },
 ];
 

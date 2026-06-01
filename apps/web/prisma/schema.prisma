@@ -121,6 +121,7 @@ model BenefitUsage {
   subscriptionId        String
   membershipBenefitId   String
 
+  quantity              Int      @default(1)
   usedBy                String
 
   usedAt                DateTime @default(now())
