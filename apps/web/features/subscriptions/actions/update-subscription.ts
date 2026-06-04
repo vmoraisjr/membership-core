@@ -1,8 +1,13 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
-import { PatientStatus } from "@prisma/client";
+import {
+  PatientStatus,
+  SubscriptionStatus,
+} from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
@@ -11,11 +16,17 @@ import {
   subscriptionSchema,
   type SubscriptionSchema,
 } from "../schemas/subscription.schema";
+import { getEvaluatedSubscriptionStatus } from "../services/evaluate-subscription-status";
 
 export async function updateSubscription(
   id: string,
   data: SubscriptionSchema
 ) {
+  await assertPermission(
+    "subscriptions",
+    "manage"
+  );
+
   const parsed =
     subscriptionSchema.safeParse(
       data
@@ -104,6 +115,13 @@ export async function updateSubscription(
       startedAt: startDate,
 
       expiresAt: expiresDate,
+      status:
+        getEvaluatedSubscriptionStatus({
+          startedAt: startDate,
+          expiresAt: expiresDate,
+          status:
+            SubscriptionStatus.ACTIVE,
+        }),
     },
   });
 

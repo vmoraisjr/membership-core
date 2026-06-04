@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import { SubscriptionStatus } from "@prisma/client";
@@ -13,6 +15,11 @@ export async function deactivateMembershipPlan(
   id: string,
   confirmationName: string
 ) {
+  await assertPermission(
+    "plans",
+    "manage"
+  );
+
   const clinic = await getCurrentClinic();
 
   const plan =

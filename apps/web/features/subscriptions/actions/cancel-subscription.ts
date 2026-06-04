@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import {
@@ -12,6 +14,11 @@ import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 export async function cancelSubscription(
   id: string
 ) {
+  await assertPermission(
+    "subscriptions",
+    "manage"
+  );
+
   const clinic = await getCurrentClinic();
 
   const subscription =
@@ -24,12 +31,22 @@ export async function cancelSubscription(
       },
       select: {
         id: true,
+        status: true,
       },
     });
 
   if (!subscription) {
     throw new Error(
       "Subscription not found."
+    );
+  }
+
+  if (
+    subscription.status ===
+    SubscriptionStatus.CANCELED
+  ) {
+    throw new Error(
+      "Subscription is already canceled."
     );
   }
 
@@ -46,10 +63,6 @@ export async function cancelSubscription(
     },
   });
 
-  revalidatePath(
-    "/dashboard/patients"
-  );
-  revalidatePath("/dashboard/plans");
   revalidatePath(
     "/dashboard/subscriptions"
   );

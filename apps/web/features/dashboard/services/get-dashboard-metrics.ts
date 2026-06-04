@@ -1,7 +1,11 @@
-import { SubscriptionStatus } from "@prisma/client";
-
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+
+import { getBenefitConsumptionMetrics } from "./get-benefit-consumption-metrics";
+import { getActivePatients } from "./get-active-patients";
+import { getActiveSubscriptions } from "./get-active-subscriptions";
+import { getMonthlyRevenue } from "./get-monthly-revenue";
+import { getExpiringSubscriptions } from "../../subscriptions/services/get-expiring-subscriptions";
 
 export async function getDashboardMetrics() {
   const clinic = await getCurrentClinic();
@@ -10,53 +14,22 @@ export async function getDashboardMetrics() {
     activePatients,
     activeMembershipPlans,
     activeSubscriptionsCount,
-    activeSubscriptions,
+    revenueMetrics,
+    benefitConsumptionMetrics,
+    expiringSubscriptions,
   ] = await Promise.all([
-    prisma.patient.count({
-      where: {
-        clinicId: clinic.id,
-        status: "ACTIVE",
-      },
-    }),
+    getActivePatients(),
     prisma.membershipPlan.count({
       where: {
         clinicId: clinic.id,
         active: true,
       },
     }),
-    prisma.subscription.count({
-      where: {
-        status: SubscriptionStatus.ACTIVE,
-        patient: {
-          clinicId: clinic.id,
-        },
-      },
-    }),
-    prisma.subscription.findMany({
-      where: {
-        status: SubscriptionStatus.ACTIVE,
-        patient: {
-          clinicId: clinic.id,
-        },
-      },
-      select: {
-        membershipPlan: {
-          select: {
-            monthlyPrice: true,
-          },
-        },
-      },
-    }),
+    getActiveSubscriptions(),
+    getMonthlyRevenue(),
+    getBenefitConsumptionMetrics(),
+    getExpiringSubscriptions(),
   ]);
-
-  const mockedMonthlyRevenue =
-    activeSubscriptions.reduce(
-      (total, subscription) =>
-        total +
-        (subscription.membershipPlan
-          .monthlyPrice ?? 0),
-      0
-    );
 
   return {
     clinicName:
@@ -64,6 +37,15 @@ export async function getDashboardMetrics() {
     activePatients,
     activeMembershipPlans,
     activeSubscriptionsCount,
-    mockedMonthlyRevenue,
+    monthlyRevenue:
+      revenueMetrics.monthlyRevenue,
+    annualRevenue:
+      revenueMetrics.annualRevenue,
+    benefitsConsumed:
+      benefitConsumptionMetrics.consumedThisMonth,
+    benefitUsageEvents:
+      benefitConsumptionMetrics.totalUsageEvents,
+    expiringSubscriptionsCount:
+      expiringSubscriptions.length,
   };
 }

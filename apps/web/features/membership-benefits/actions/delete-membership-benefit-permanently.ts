@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
@@ -8,6 +10,11 @@ import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 export async function deleteMembershipBenefitPermanently(
   id: string
 ) {
+  await assertPermission(
+    "benefits",
+    "manage"
+  );
+
   const clinic = await getCurrentClinic();
 
   const benefit =

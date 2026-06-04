@@ -55,11 +55,15 @@ type Props = {
     id: string;
     name: string;
   }>;
+  canManagePlans?: boolean;
+  canManageBenefits?: boolean;
 };
 
 export function MembershipPlansTable({
   plans,
   benefitPlans,
+  canManagePlans = true,
+  canManageBenefits = true,
 }: Props) {
   const [statusFilter, setStatusFilter] =
     useState("active");
@@ -238,6 +242,12 @@ export function MembershipPlansTable({
                     active: plan.active,
                   }}
                   benefitPlans={benefitPlans}
+                  canManagePlans={
+                    canManagePlans
+                  }
+                  canManageBenefits={
+                    canManageBenefits
+                  }
                 />
               </TableCell>
             </TableRow>

@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
@@ -15,6 +17,11 @@ import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 export async function createMembershipPlan(
   data: MembershipPlanSchema
 ) {
+  await assertPermission(
+    "plans",
+    "manage"
+  );
+
   const parsed =
     membershipPlanSchema.safeParse(data);
 

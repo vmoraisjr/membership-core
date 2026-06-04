@@ -48,12 +48,14 @@ type Props = {
   }>;
 
   selectedPlanId?: string;
+  canManageBenefits?: boolean;
 };
 
 export function MembershipBenefitsTable({
   benefits,
   plans,
   selectedPlanId,
+  canManageBenefits = true,
 }: Props) {
   const [statusFilter, setStatusFilter] =
     useState("all");
@@ -246,6 +248,9 @@ export function MembershipBenefitsTable({
                   planIsActive={
                     benefit.membershipPlan
                       .active
+                  }
+                  canManageBenefits={
+                    canManageBenefits
                   }
                 />
               </TableCell>

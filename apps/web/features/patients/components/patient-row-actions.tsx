@@ -46,11 +46,15 @@ type Props = {
     status?: "ACTIVE" | "INACTIVE";
   };
   plans?: Array<{ id: string; name: string }>;
+  canManagePatients?: boolean;
+  canManageSubscriptions?: boolean;
 };
 
 export function PatientRowActions({
   patient,
   plans = [],
+  canManagePatients = true,
+  canManageSubscriptions = true,
 }: Props) {
   async function handleSuspend({
     detailsValue,
@@ -112,88 +116,110 @@ export function PatientRowActions({
     }
   }
 
+  const canShowActions =
+    canManagePatients ||
+    canManageSubscriptions;
+
+  if (!canShowActions) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        Read only
+      </span>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       {patient.status === "ACTIVE" ? (
         <>
-          <PatientDialog
-            mode="edit"
-            initialData={patient}
-            trigger={
-              <Button
-                size="icon"
-                variant="outline"
-              >
-                <Pencil className="size-4" />
-              </Button>
-            }
-          />
+          {canManagePatients ? (
+            <PatientDialog
+              mode="edit"
+              initialData={patient}
+              trigger={
+                <Button
+                  size="icon"
+                  variant="outline"
+                >
+                  <Pencil className="size-4" />
+                </Button>
+              }
+            />
+          ) : null}
 
-          <SubscriptionDialog
-            patients={[{ id: patient.id, fullName: patient.fullName }]}
-            plans={plans}
-            defaultPatientId={patient.id}
-            trigger={
-              <Button size="icon" variant="outline">
-                <Plus className="size-4" />
-              </Button>
-            }
-          />
+          {canManageSubscriptions ? (
+            <SubscriptionDialog
+              patients={[{ id: patient.id, fullName: patient.fullName }]}
+              plans={plans}
+              defaultPatientId={patient.id}
+              trigger={
+                <Button size="icon" variant="outline">
+                  <Plus className="size-4" />
+                </Button>
+              }
+            />
+          ) : null}
 
-          <ConfirmDialog
-            title="Deactivate patient?"
-            description="The patient record will become inactive, active subscriptions will be canceled, and you must provide a reason."
-            onConfirm={handleSuspend}
-            actionLabel="Deactivate patient"
-            detailsLabel="Reason"
-            detailsPlaceholder="Describe why this patient is being deactivated"
-            detailsRequired
-            detailsInput="textarea"
-            trigger={
-              <Button
-                size="icon"
-                variant="destructive"
-              >
-                <CircleOff className="size-4" />
-              </Button>
-            }
-          />
+          {canManagePatients ? (
+            <ConfirmDialog
+              title="Deactivate patient?"
+              description="The patient record will become inactive, active subscriptions will be canceled, and you must provide a reason."
+              onConfirm={handleSuspend}
+              actionLabel="Deactivate patient"
+              detailsLabel="Reason"
+              detailsPlaceholder="Describe why this patient is being deactivated"
+              detailsRequired
+              detailsInput="textarea"
+              trigger={
+                <Button
+                  size="icon"
+                  variant="destructive"
+                >
+                  <CircleOff className="size-4" />
+                </Button>
+              }
+            />
+          ) : null}
         </>
       ) : (
         <>
-          <ConfirmDialog
-            title="Reactivate patient?"
-            description="The patient record will become active again and available for new subscriptions."
-            onConfirm={() =>
-              handleReactivate()
-            }
-            actionLabel="Reactivate patient"
-            trigger={
-              <Button
-                size="icon"
-                variant="outline"
-              >
-                <RotateCcw className="size-4" />
-              </Button>
-            }
-          />
+          {canManagePatients ? (
+            <>
+              <ConfirmDialog
+                title="Reactivate patient?"
+                description="The patient record will become active again and available for new subscriptions."
+                onConfirm={() =>
+                  handleReactivate()
+                }
+                actionLabel="Reactivate patient"
+                trigger={
+                  <Button
+                    size="icon"
+                    variant="outline"
+                  >
+                    <RotateCcw className="size-4" />
+                  </Button>
+                }
+              />
 
-          <ConfirmDialog
-            title="Delete patient permanently?"
-            description="This permanently removes the inactive patient record. This action cannot be undone."
-            onConfirm={() =>
-              handleDelete()
-            }
-            actionLabel="Delete permanently"
-            trigger={
-              <Button
-                size="icon"
-                variant="destructive"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            }
-          />
+              <ConfirmDialog
+                title="Delete patient permanently?"
+                description="This permanently removes the inactive patient record. This action cannot be undone."
+                onConfirm={() =>
+                  handleDelete()
+                }
+                actionLabel="Delete permanently"
+                trigger={
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                }
+              />
+            </>
+          ) : null}
         </>
       )}
     </div>

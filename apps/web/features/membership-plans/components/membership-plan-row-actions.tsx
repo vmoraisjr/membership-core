@@ -38,12 +38,24 @@ type Props = {
     id: string;
     name: string;
   }>;
+  canManagePlans?: boolean;
+  canManageBenefits?: boolean;
 };
 
 export function MembershipPlanRowActions({
   plan,
   benefitPlans,
+  canManagePlans = true,
+  canManageBenefits = true,
 }: Props) {
+  if (!canManagePlans) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        Read only
+      </span>
+    );
+  }
+
   async function handleDeactivate({
     typedValue,
   }: {
@@ -129,20 +141,22 @@ export function MembershipPlanRowActions({
             }
           />
 
-          <MembershipBenefitDialog
-            plans={benefitPlans}
-            defaultMembershipPlanId={
-              plan.id
-            }
-            trigger={
-              <Button
-                size="icon"
-                variant="outline"
-              >
-                <Plus className="size-4" />
-              </Button>
-            }
-          />
+          {canManageBenefits ? (
+            <MembershipBenefitDialog
+              plans={benefitPlans}
+              defaultMembershipPlanId={
+                plan.id
+              }
+              trigger={
+                <Button
+                  size="icon"
+                  variant="outline"
+                >
+                  <Plus className="size-4" />
+                </Button>
+              }
+            />
+          ) : null}
 
           <ConfirmDialog
             title="Deactivate membership plan?"

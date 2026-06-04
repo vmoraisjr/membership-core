@@ -49,13 +49,23 @@ type Props = {
   }>;
 
   planIsActive?: boolean;
+  canManageBenefits?: boolean;
 };
 
 export function MembershipBenefitRowActions({
   benefit,
   plans,
   planIsActive = true,
+  canManageBenefits = true,
 }: Props) {
+  if (!canManageBenefits) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        Read only
+      </span>
+    );
+  }
+
   async function handleDeactivate() {
     try {
       await deactivateMembershipBenefit(

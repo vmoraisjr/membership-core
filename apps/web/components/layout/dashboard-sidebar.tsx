@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import {
   BadgePercent,
+  Building2,
   CreditCard,
   History,
   LayoutDashboard,
@@ -13,6 +14,8 @@ import {
 
 import { usePathname } from "next/navigation";
 
+import type { AppRole } from "@/features/auth/constants/roles";
+import { hasPermission, type AppResource } from "@/features/rbac/permissions";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -20,41 +23,73 @@ const items = [
     label: "Overview",
     href: "/dashboard",
     icon: LayoutDashboard,
+    resource: "dashboard",
+  },
+
+  {
+    label: "Clinics",
+    href: "/dashboard/clinics",
+    icon: Building2,
+    resource: "clinic",
   },
 
   {
     label: "Membership Plans",
     href: "/dashboard/plans",
     icon: SquareStack,
+    resource: "plans",
   },
 
   {
     label: "Patients",
     href: "/dashboard/patients",
     icon: Users,
+    resource: "patients",
   },
 
   {
     label: "Subscriptions",
     href: "/dashboard/subscriptions",
     icon: CreditCard,
+    resource: "subscriptions",
   },
 
   {
     label: "Benefits",
     href: "/dashboard/benefits",
     icon: BadgePercent,
+    resource: "benefits",
   },
 
   {
     label: "Benefit Usage",
     href: "/dashboard/benefit-usage",
     icon: History,
+    resource: "benefitUsage",
   },
-];
+].map((item) => item as {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  resource: AppResource;
+});
 
-export function DashboardSidebar() {
+type Props = {
+  role: AppRole;
+};
+
+export function DashboardSidebar({
+  role,
+}: Props) {
   const pathname = usePathname();
+  const visibleItems = items.filter(
+    (item) =>
+      hasPermission(
+        role,
+        item.resource,
+        "view"
+      )
+  );
 
   return (
     <aside className="border-b border-border/60 bg-muted/30 p-4 lg:w-72 lg:border-r lg:border-b-0 lg:p-6">
@@ -70,7 +105,7 @@ export function DashboardSidebar() {
         </div>
 
         <nav className="flex flex-wrap gap-1.5 lg:flex-col">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const active =
               pathname === item.href ||
               (item.href !== "/dashboard" &&

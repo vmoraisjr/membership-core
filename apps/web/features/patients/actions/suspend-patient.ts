@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import {
@@ -17,6 +19,11 @@ export async function suspendPatient(
   id: string,
   inactiveReason: string
 ) {
+  await assertPermission(
+    "patients",
+    "manage"
+  );
+
   const clinic = await getCurrentClinic();
 
   const patient =

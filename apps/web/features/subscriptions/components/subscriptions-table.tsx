@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { SubscriptionStatus } from "@prisma/client";
+
 import {
   Table,
   TableBody,
@@ -14,12 +16,13 @@ import {
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 
 import { SubscriptionRowActions } from "./subscription-row-actions";
+import { SubscriptionStatusBadge } from "./subscription-status-badge";
 
 type SubscriptionWithRelations = {
   id: string;
   patientId: string;
   membershipPlanId: string;
-  status: string;
+  status: SubscriptionStatus;
   startedAt: Date;
   expiresAt: Date | null;
   patient: {
@@ -48,6 +51,7 @@ type Props = {
   selectedPlanId?: string;
 
   selectedPatientId?: string;
+  canManageSubscriptions?: boolean;
 };
 
 export function SubscriptionsTable({
@@ -56,6 +60,7 @@ export function SubscriptionsTable({
   plans,
   selectedPlanId,
   selectedPatientId,
+  canManageSubscriptions = true,
 }: Props) {
   const [statusFilter, setStatusFilter] =
     useState("all");
@@ -138,8 +143,11 @@ export function SubscriptionsTable({
             <option value="ACTIVE">
               Active
             </option>
-            <option value="PENDING">
+          <option value="PENDING">
               Pending
+            </option>
+            <option value="PAUSED">
+              Paused
             </option>
             <option value="OVERDUE">
               Overdue
@@ -216,7 +224,11 @@ export function SubscriptionsTable({
                 </TableCell>
 
                 <TableCell>
-                  {subscription.status}
+                  <SubscriptionStatusBadge
+                    status={
+                      subscription.status
+                    }
+                  />
                 </TableCell>
 
                 <TableCell>
@@ -244,6 +256,9 @@ export function SubscriptionsTable({
                     }}
                     patients={patients}
                     plans={plans}
+                    canManageSubscriptions={
+                      canManageSubscriptions
+                    }
                   />
                 </TableCell>
               </TableRow>

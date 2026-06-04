@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import { PatientStatus } from "@prisma/client";
@@ -16,6 +18,11 @@ import {
 export async function createPatient(
   data: PatientSchema
 ) {
+  await assertPermission(
+    "patients",
+    "manage"
+  );
+
   const parsed =
     patientSchema.safeParse(data);
 

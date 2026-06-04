@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
@@ -13,6 +15,11 @@ export async function updatePatient(
   id: string,
   data: PatientSchema
 ) {
+  await assertPermission(
+    "patients",
+    "manage"
+  );
+
   const parsed =
     patientSchema.safeParse(data);
 

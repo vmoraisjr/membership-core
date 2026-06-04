@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import {
@@ -14,10 +16,16 @@ import {
   subscriptionSchema,
   type SubscriptionSchema,
 } from "../schemas/subscription.schema";
+import { getEvaluatedSubscriptionStatus } from "../services/evaluate-subscription-status";
 
 export async function createSubscription(
   data: SubscriptionSchema
 ) {
+  await assertPermission(
+    "subscriptions",
+    "manage"
+  );
+
   const parsed =
     subscriptionSchema.safeParse(data);
 
@@ -85,7 +93,12 @@ export async function createSubscription(
       expiresAt: expiresDate,
 
       status:
-        SubscriptionStatus.ACTIVE,
+        getEvaluatedSubscriptionStatus({
+          startedAt: startDate,
+          expiresAt: expiresDate,
+          status:
+            SubscriptionStatus.ACTIVE,
+        }),
     },
   });
 

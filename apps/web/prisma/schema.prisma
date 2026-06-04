@@ -145,6 +145,7 @@ enum PatientStatus {
 
 enum SubscriptionStatus {
   ACTIVE
+  PAUSED
   PENDING
   OVERDUE
   CANCELED

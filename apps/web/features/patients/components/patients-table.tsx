@@ -41,28 +41,34 @@ type PatientWithCurrentSubscription = {
 
 type Props = {
   patients: PatientWithCurrentSubscription[];
-
   plans: Array<{ id: string; name: string }>;
+  canManagePatients?: boolean;
+  canManageSubscriptions?: boolean;
 };
 
 function maskDocument(doc: string) {
   if (!doc) return "";
   const cleaned = String(doc);
   if (cleaned.length <= 4) return cleaned;
-  const middle = '*'.repeat(Math.max(0, cleaned.length - 4));
-  return `${cleaned.slice(0,2)}${middle}${cleaned.slice(-2)}`;
+  const middle = "*".repeat(
+    Math.max(0, cleaned.length - 4)
+  );
+  return `${cleaned.slice(0, 2)}${middle}${cleaned.slice(-2)}`;
 }
 
-function formatBirthDate(value: Date | string) {
+function formatBirthDate(
+  value: Date | string
+) {
   if (!value) return "";
   const d = new Date(value);
   return d.toLocaleDateString();
 }
 
-
 export function PatientsTable({
   patients,
   plans,
+  canManagePatients = true,
+  canManageSubscriptions = true,
 }: Props) {
   const [statusFilter, setStatusFilter] =
     useState("active");
@@ -198,7 +204,7 @@ export function PatientsTable({
                 </TableCell>
 
                 <TableCell className="align-top">
-                  {patient.currentSubscription && patient.currentSubscription.status === 'ACTIVE' ? (
+                  {patient.currentSubscription && patient.currentSubscription.status === "ACTIVE" ? (
                     <Link
                       href={`/dashboard/subscriptions?patientId=${patient.id}`}
                       className="text-primary underline-offset-4 hover:underline"
@@ -237,6 +243,12 @@ export function PatientsTable({
                         patient.status,
                     }}
                     plans={plans}
+                    canManagePatients={
+                      canManagePatients
+                    }
+                    canManageSubscriptions={
+                      canManageSubscriptions
+                    }
                   />
                 </TableCell>
               </TableRow>

@@ -1,7 +1,9 @@
 import {
   BadgeDollarSign,
+  CalendarClock,
   CreditCard,
   FileStack,
+  HeartPulse,
   Users,
 } from "lucide-react";
 
@@ -9,11 +11,34 @@ import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { DashboardPage } from "@/components/layout/dashboard-page";
+import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
+import { AccessDenied } from "@/features/rbac/components/access-denied";
+import { hasPermission } from "@/features/rbac/permissions";
 import { formatCurrency } from "@/lib/formatters";
 
 import { getDashboardMetrics } from "../services/get-dashboard-metrics";
 
 export async function DashboardHomePage() {
+  const role =
+    await getCurrentUserRole();
+
+  if (
+    !hasPermission(
+      role,
+      "dashboard",
+      "view"
+    )
+  ) {
+    return (
+      <DashboardPage>
+        <AccessDenied
+          title="Dashboard access denied"
+          description="The current role cannot view dashboard metrics."
+        />
+      </DashboardPage>
+    );
+  }
+
   const metrics =
     await getDashboardMetrics();
 
@@ -24,7 +49,7 @@ export async function DashboardHomePage() {
         description={`A high-level view of ${metrics.clinicName}'s membership operation across patients, plans, and subscriptions.`}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <MetricCard
           label="Active Patients"
           value={metrics.activePatients.toString()}
@@ -51,46 +76,75 @@ export async function DashboardHomePage() {
         />
 
         <MetricCard
-          label="Mocked Monthly Revenue"
+          label="Monthly Revenue"
           value={formatCurrency(
-            metrics.mockedMonthlyRevenue
+            metrics.monthlyRevenue
           )}
-          hint="Derived from active subscriptions and plan pricing"
+          hint="Derived from active subscriptions and current monthly plan pricing"
           icon={
             <BadgeDollarSign className="size-5" />
+          }
+        />
+
+        <MetricCard
+          label="Annual Revenue"
+          value={formatCurrency(
+            metrics.annualRevenue
+          )}
+          hint="Annual plan pricing plus monthly plan fallback projections"
+          icon={
+            <FileStack className="size-5" />
+          }
+        />
+
+        <MetricCard
+          label="Benefits Consumed"
+          value={metrics.benefitsConsumed.toString()}
+          hint="Benefit quantities consumed during the current month"
+          icon={
+            <HeartPulse className="size-5" />
+          }
+        />
+
+        <MetricCard
+          label="Expiring Subscriptions"
+          value={metrics.expiringSubscriptionsCount.toString()}
+          hint="Active or overdue subscriptions expiring in the next 7 days"
+          icon={
+            <CalendarClock className="size-5" />
           }
         />
       </div>
 
       <SectionCard
-        title="Platform Snapshot"
-        description="This dashboard intentionally stays lightweight and tenant-scoped. It gives each clinic a quick operational summary without moving orchestration out of feature modules."
+        title="Operational Snapshot"
+        description="Real tenant-scoped counts from the current clinic help leadership spot enrollment, revenue, and usage pressure at a glance."
       >
         <div className="grid gap-4 p-4 md:grid-cols-3">
           <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
             <p className="text-sm font-medium">
-              Patient growth foundation
+              Active plan catalog
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Patient records are already isolated by clinic and now feed subscription creation.
+              {metrics.activeMembershipPlans} active membership plans are currently available for new enrollments.
             </p>
           </div>
 
           <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
             <p className="text-sm font-medium">
-              Commercial catalog foundation
+              Benefit usage activity
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Plans and benefits stay attached to the current tenant, keeping future billing and redemption flows aligned.
+              {metrics.benefitUsageEvents} total benefit usage events have been recorded for this clinic so far.
             </p>
           </div>
 
           <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
             <p className="text-sm font-medium">
-              Subscription foundation
+              Revenue baseline
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              The new relational layer now connects patients and plans so later modules can evolve from real platform state.
+              Current active subscriptions represent {formatCurrency(metrics.monthlyRevenue)} in monthly recurring revenue.
             </p>
           </div>
         </div>

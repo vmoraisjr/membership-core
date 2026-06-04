@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import { PatientStatus } from "@prisma/client";
@@ -10,6 +12,11 @@ import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 export async function reactivatePatient(
   id: string
 ) {
+  await assertPermission(
+    "patients",
+    "manage"
+  );
+
   const clinic = await getCurrentClinic();
 
   const patient =

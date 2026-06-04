@@ -1,5 +1,7 @@
 "use server";
 
+import { assertPermission } from "@/features/rbac/services/assert-permission";
+
 import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
@@ -13,6 +15,11 @@ import { validateBenefitUsage } from "../services/validate-benefit-usage";
 export async function consumeBenefit(
   data: BenefitUsageSchema
 ) {
+  await assertPermission(
+    "benefitUsage",
+    "manage"
+  );
+
   const parsed =
     benefitUsageSchema.safeParse(data);
 
