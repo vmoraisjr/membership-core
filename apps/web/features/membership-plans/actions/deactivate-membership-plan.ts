@@ -4,10 +4,18 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
-import { SubscriptionStatus } from "@prisma/client";
+import {
+  AuditAction,
+  AuditEntity,
+  SubscriptionStatus,
+} from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 import { MANAGEABLE_SUBSCRIPTION_STATUSES } from "@/features/subscriptions/constants/manageable-subscription-statuses";
 
@@ -21,6 +29,8 @@ export async function deactivateMembershipPlan(
   );
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
   const plan =
     await prisma.membershipPlan.findFirst({
@@ -55,39 +65,62 @@ export async function deactivateMembershipPlan(
 
   const canceledAt = new Date();
 
-  await prisma.$transaction([
-    prisma.membershipPlan.update({
-      where: {
-        id: plan.id,
-      },
-      data: {
-        active: false,
-      },
-    }),
-    prisma.membershipBenefit.updateMany({
-      where: {
-        membershipPlanId: plan.id,
-      },
-      data: {
-        active: false,
-      },
-    }),
-    prisma.subscription.updateMany({
-      where: {
-        membershipPlanId: plan.id,
-        status: {
-          in: [
-            ...MANAGEABLE_SUBSCRIPTION_STATUSES,
-          ],
+  await prisma.$transaction(
+    async (tx) => {
+      const deactivatedBenefits =
+        await tx.membershipBenefit.updateMany({
+          where: {
+            membershipPlanId: plan.id,
+          },
+          data: {
+            active: false,
+          },
+        });
+      const canceledSubscriptions =
+        await tx.subscription.updateMany({
+          where: {
+            membershipPlanId: plan.id,
+            status: {
+              in: [
+                ...MANAGEABLE_SUBSCRIPTION_STATUSES,
+              ],
+            },
+          },
+          data: {
+            status:
+              SubscriptionStatus.CANCELED,
+            canceledAt,
+          },
+        });
+
+      await tx.membershipPlan.update({
+        where: {
+          id: plan.id,
         },
-      },
-      data: {
-        status:
-          SubscriptionStatus.CANCELED,
-        canceledAt,
-      },
-    }),
-  ]);
+        data: {
+          active: false,
+        },
+      });
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action:
+          AuditAction.DEACTIVATE,
+        entity:
+          AuditEntity.MEMBERSHIP_PLAN,
+        entityId: plan.id,
+        entityLabel: plan.name,
+        metadata: {
+          deactivatedBenefits:
+            deactivatedBenefits.count,
+          canceledSubscriptions:
+            canceledSubscriptions.count,
+        },
+      });
+    }
+  );
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/plans");

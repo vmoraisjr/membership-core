@@ -4,8 +4,14 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
+import { AuditAction, AuditEntity } from "@prisma/client";
+
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 export async function cloneMembershipPlan(
   id: string
@@ -16,6 +22,8 @@ export async function cloneMembershipPlan(
   );
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
   const plan =
     await prisma.membershipPlan.findFirst({
@@ -78,6 +86,22 @@ export async function cloneMembershipPlan(
           ),
         });
       }
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action: AuditAction.CREATE,
+        entity:
+          AuditEntity.MEMBERSHIP_PLAN,
+        entityId: clonedPlan.id,
+        entityLabel: clonedPlan.name,
+        metadata: {
+          sourcePlanId: plan.id,
+          clonedBenefits:
+            plan.benefits.length,
+        },
+      });
     }
   );
 

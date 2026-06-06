@@ -1,23 +1,14 @@
-import { cookies } from "next/headers";
-
-import {
-  APP_ROLE_COOKIE,
-  DEFAULT_APP_ROLE,
-  isAppRole,
-} from "../constants/roles";
+import { getCurrentAppUser } from "./get-current-app-user";
 
 export async function getCurrentUserRole() {
-  const cookieStore = await cookies();
-  const storedRole =
-    cookieStore.get(APP_ROLE_COOKIE)
-      ?.value;
+  const currentUser =
+    await getCurrentAppUser();
 
-  if (
-    storedRole &&
-    isAppRole(storedRole)
-  ) {
-    return storedRole;
+  if (!currentUser) {
+    throw new Error(
+      "Authentication required."
+    );
   }
 
-  return DEFAULT_APP_ROLE;
+  return currentUser.role;
 }

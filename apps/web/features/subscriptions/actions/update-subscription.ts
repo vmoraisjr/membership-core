@@ -5,12 +5,18 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 import { revalidatePath } from "next/cache";
 
 import {
+  AuditAction,
+  AuditEntity,
   PatientStatus,
   SubscriptionStatus,
 } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 import {
   subscriptionSchema,
@@ -37,6 +43,8 @@ export async function updateSubscription(
   }
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
   const [subscription, patient, plan] =
     await Promise.all([
@@ -102,28 +110,50 @@ export async function updateSubscription(
             30 * 24 * 60 * 60 * 1000
         );
 
-  await prisma.subscription.update({
-    where: {
-      id: subscription.id,
-    },
-
-    data: {
-      patientId: patient.id,
-
-      membershipPlanId: plan.id,
-
-      startedAt: startDate,
-
-      expiresAt: expiresDate,
-      status:
+  await prisma.$transaction(
+    async (tx) => {
+      const status =
         getEvaluatedSubscriptionStatus({
           startedAt: startDate,
           expiresAt: expiresDate,
           status:
             SubscriptionStatus.ACTIVE,
-        }),
-    },
-  });
+        });
+
+      await tx.subscription.update({
+        where: {
+          id: subscription.id,
+        },
+
+        data: {
+          patientId: patient.id,
+
+          membershipPlanId: plan.id,
+
+          startedAt: startDate,
+
+          expiresAt: expiresDate,
+          status,
+        },
+      });
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action: AuditAction.UPDATE,
+        entity:
+          AuditEntity.SUBSCRIPTION,
+        entityId: subscription.id,
+        entityLabel: subscription.id,
+        metadata: {
+          patientId: patient.id,
+          membershipPlanId: plan.id,
+          status,
+        },
+      });
+    }
+  );
 
   revalidatePath(
     "/dashboard/subscriptions"

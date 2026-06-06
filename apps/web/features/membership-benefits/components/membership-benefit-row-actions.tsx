@@ -50,6 +50,7 @@ type Props = {
 
   planIsActive?: boolean;
   canManageBenefits?: boolean;
+  canDeleteBenefitsPermanently?: boolean;
 };
 
 export function MembershipBenefitRowActions({
@@ -57,6 +58,7 @@ export function MembershipBenefitRowActions({
   plans,
   planIsActive = true,
   canManageBenefits = true,
+  canDeleteBenefitsPermanently = true,
 }: Props) {
   if (!canManageBenefits) {
     return (
@@ -176,22 +178,24 @@ export function MembershipBenefitRowActions({
             }
           />
 
-          <ConfirmDialog
-            title="Delete benefit permanently?"
-            description="This permanently removes the inactive benefit record. This action cannot be undone."
-            onConfirm={() =>
-              handleDelete()
-            }
-            actionLabel="Delete permanently"
-            trigger={
-              <Button
-                size="icon"
-                variant="destructive"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            }
-          />
+          {canDeleteBenefitsPermanently ? (
+            <ConfirmDialog
+              title="Delete benefit permanently?"
+              description="This permanently removes the inactive benefit record. This action cannot be undone."
+              onConfirm={() =>
+                handleDelete()
+              }
+              actionLabel="Delete permanently"
+              trigger={
+                <Button
+                  size="icon"
+                  variant="destructive"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              }
+            />
+          ) : null}
         </>
       )}
     </div>

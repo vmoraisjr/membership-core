@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:seed": "tsx prisma/seed.ts",
+    "test:tenant": "tsx tests/tenant-isolation/cross-tenant-regression.test.ts",
+    "test:rbac": "tsx tests/rbac/rbac-hardening.test.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

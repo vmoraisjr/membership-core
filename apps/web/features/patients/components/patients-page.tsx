@@ -42,6 +42,12 @@ export async function PatientsPage() {
       "patients",
       "manage"
     );
+  const canDeletePatientsPermanently =
+    hasPermission(
+      role,
+      "patients",
+      "deletePermanent"
+    );
   const canManageSubscriptions =
     hasPermission(
       role,
@@ -66,6 +72,9 @@ export async function PatientsPage() {
         plans={plans.map((p) => ({ id: p.id, name: p.name }))}
         canManagePatients={
           canManagePatients
+        }
+        canDeletePatientsPermanently={
+          canDeletePatientsPermanently
         }
         canManageSubscriptions={
           canManageSubscriptions

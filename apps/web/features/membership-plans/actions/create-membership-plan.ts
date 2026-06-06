@@ -4,7 +4,13 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
+import { AuditAction, AuditEntity } from "@prisma/client";
+
 import prisma from "@/lib/prisma";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 import {
   membershipPlanSchema,
@@ -30,20 +36,49 @@ export async function createMembershipPlan(
   }
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
-  await prisma.membershipPlan.create({
-    data: {
-      clinicId: clinic.id,
+  await prisma.$transaction(
+    async (tx) => {
+      const plan =
+        await tx.membershipPlan.create({
+          data: {
+            clinicId: clinic.id,
 
-      name: parsed.data.name,
+            name: parsed.data.name,
 
-      description: parsed.data.description,
+            description:
+              parsed.data.description,
 
-      monthlyPrice: parsed.data.monthlyPrice,
+            monthlyPrice:
+              parsed.data.monthlyPrice,
 
-      active: true,
-    },
-  });
+            active: true,
+          },
+          select: {
+            id: true,
+            name: true,
+            monthlyPrice: true,
+          },
+        });
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action: AuditAction.CREATE,
+        entity:
+          AuditEntity.MEMBERSHIP_PLAN,
+        entityId: plan.id,
+        entityLabel: plan.name,
+        metadata: {
+          monthlyPrice:
+            plan.monthlyPrice,
+        },
+      });
+    }
+  );
 
   revalidatePath("/dashboard/plans");
   revalidatePath("/dashboard");

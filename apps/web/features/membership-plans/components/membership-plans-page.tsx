@@ -39,6 +39,12 @@ export async function MembershipPlansPage() {
       "plans",
       "manage"
     );
+  const canDeletePlansPermanently =
+    hasPermission(
+      role,
+      "plans",
+      "deletePermanent"
+    );
   const canManageBenefits =
     hasPermission(
       role,
@@ -62,6 +68,9 @@ export async function MembershipPlansPage() {
         benefitPlans={benefitPlans}
         canManagePlans={
           canManagePlans
+        }
+        canDeletePlansPermanently={
+          canDeletePlansPermanently
         }
         canManageBenefits={
           canManageBenefits

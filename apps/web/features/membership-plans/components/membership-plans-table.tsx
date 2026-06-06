@@ -56,6 +56,7 @@ type Props = {
     name: string;
   }>;
   canManagePlans?: boolean;
+  canDeletePlansPermanently?: boolean;
   canManageBenefits?: boolean;
 };
 
@@ -63,6 +64,7 @@ export function MembershipPlansTable({
   plans,
   benefitPlans,
   canManagePlans = true,
+  canDeletePlansPermanently = true,
   canManageBenefits = true,
 }: Props) {
   const [statusFilter, setStatusFilter] =
@@ -244,6 +246,9 @@ export function MembershipPlansTable({
                   benefitPlans={benefitPlans}
                   canManagePlans={
                     canManagePlans
+                  }
+                  canDeletePlansPermanently={
+                    canDeletePlansPermanently
                   }
                   canManageBenefits={
                     canManageBenefits

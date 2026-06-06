@@ -1,14 +1,14 @@
 import prisma from "@/lib/prisma";
-import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import { getCurrentClinicContext } from "@/lib/auth/tenant";
+import { filterByClinic } from "@/lib/auth/tenant";
 import { MANAGEABLE_SUBSCRIPTION_STATUSES } from "@/features/subscriptions/constants/manageable-subscription-statuses";
 
 export async function getMembershipPlans() {
-  const clinic = await getCurrentClinic();
+  const { clinicId } =
+    await getCurrentClinicContext();
 
   return prisma.membershipPlan.findMany({
-    where: {
-      clinicId: clinic.id,
-    },
+    where: filterByClinic(clinicId),
     include: {
       benefits: {
         orderBy: {

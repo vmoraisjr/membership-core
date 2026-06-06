@@ -4,7 +4,14 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
+import { AuditAction, AuditEntity } from "@prisma/client";
+
 import prisma from "@/lib/prisma";
+import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 import {
   membershipPlanSchema,
@@ -29,21 +36,66 @@ export async function updateMembershipPlan(
     throw new Error("Invalid data.");
   }
 
-  await prisma.membershipPlan.update({
-    where: {
-      id,
-    },
+  const clinic =
+    await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
-    data: {
-      name: parsed.data.name,
+  await prisma.$transaction(
+    async (tx) => {
+      const existingPlan =
+        await tx.membershipPlan.findFirst({
+          where: {
+            id,
+            clinicId: clinic.id,
+          },
+          select: {
+            id: true,
+          },
+        });
 
-      description:
-        parsed.data.description,
+      if (!existingPlan) {
+        throw new Error(
+          "Membership plan not found."
+        );
+      }
 
-      monthlyPrice:
-        parsed.data.monthlyPrice,
-    },
-  });
+      const plan =
+        await tx.membershipPlan.update({
+          where: {
+            id: existingPlan.id,
+          },
+          data: {
+            name: parsed.data.name,
+            description:
+              parsed.data.description,
+            monthlyPrice:
+              parsed.data.monthlyPrice,
+          },
+          select: {
+            id: true,
+            clinicId: true,
+            name: true,
+            monthlyPrice: true,
+          },
+        });
+
+      await createAuditLog(tx, {
+        clinicId: plan.clinicId,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action: AuditAction.UPDATE,
+        entity:
+          AuditEntity.MEMBERSHIP_PLAN,
+        entityId: plan.id,
+        entityLabel: plan.name,
+        metadata: {
+          monthlyPrice:
+            plan.monthlyPrice,
+        },
+      });
+    }
+  );
 
   revalidatePath("/dashboard/plans");
 }

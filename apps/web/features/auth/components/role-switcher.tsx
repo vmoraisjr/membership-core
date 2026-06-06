@@ -3,18 +3,24 @@
 import { useTransition } from "react";
 
 import {
-  APP_ROLES,
   type AppRole,
   getRoleLabel,
 } from "../constants/roles";
-import { setCurrentUserRole } from "../actions/set-current-user-role";
+import { setCurrentAppUser } from "../actions/set-current-app-user";
 
 type Props = {
-  currentRole: AppRole;
+  currentUserId: string;
+  users: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: AppRole;
+  }>;
 };
 
 export function RoleSwitcher({
-  currentRole,
+  currentUserId,
+  users,
 }: Props) {
   const [isPending, startTransition] =
     useTransition();
@@ -22,30 +28,31 @@ export function RoleSwitcher({
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground">
-        Role
+        User
       </span>
 
       <select
-        value={currentRole}
+        value={currentUserId}
         disabled={isPending}
         onChange={(event) => {
-          const nextRole =
-            event.target.value as AppRole;
+          const nextUserId =
+            event.target.value;
 
           startTransition(async () => {
-            await setCurrentUserRole(
-              nextRole
+            await setCurrentAppUser(
+              nextUserId
             );
           });
         }}
         className="h-9 rounded-md border bg-background px-3 text-sm"
       >
-        {APP_ROLES.map((role) => (
+        {users.map((user) => (
           <option
-            key={role}
-            value={role}
+            key={user.id}
+            value={user.id}
           >
-            {getRoleLabel(role)}
+            {user.name} -{" "}
+            {getRoleLabel(user.role)}
           </option>
         ))}
       </select>

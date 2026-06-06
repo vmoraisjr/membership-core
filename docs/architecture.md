@@ -1,85 +1,130 @@
 Monorepo via Turborepo
-Next.js + TypeScript
+Next.js 16 + TypeScript + App Router
 Prisma + PostgreSQL
-Multi-tenant desde início
+Multi-tenant SaaS
 Feature-based architecture
 
 # Folder Structure
 
-features/
+```
+apps/web
+├── features/              # Domain-driven feature folders
+│   ├── audit-log/
+│   ├── auth/
+│   ├── benefit-usage/
+│   ├── clinic/
+│   ├── crm/              # Leads, activities, notes
+│   ├── dashboard/
+│   ├── membership-benefits/
+│   ├── membership-plans/
+│   ├── patients/
+│   ├── rbac/
+│   ├── shared/
+│   └── subscriptions/
+├── components/           # Global UI components
+│   ├── dashboard/
+│   ├── ui/
+│   └── layout/
+├── lib/
+├── prisma/
+├── providers/
+├── hooks/
+├── services/
+└── types/
+```
 
-membership-plans
-patients
-subscriptions
-membership-benefits
-benefit-usage
-dashboard
+# Feature Architecture Pattern
 
-components/
+Each feature follows:
 
-dashboard
-ui
-layout
+```
+features/<feature-name>/
+├── actions/           # Server actions (async operations)
+├── components/        # React components
+├── schemas/           # Zod validation schemas
+├── services/          # Business logic
+└── hooks/             # React hooks (if needed)
+```
 
-# CRUD Pattern
-Every feature should contain:
+# Core CRUD Pattern
 
-actions/
-components/
-schemas/
-services/
+Every entity operation contains:
 
-# UI Pattern
-Dialog Pattern
+1. **Schema** (Zod) - Input validation
+2. **Service** - Business logic
+3. **Action** - Server action wrapper
+4. **Component** - UI dialog/form
+5. **Service** - Row actions handler
 
-<Entity>Dialog
+# UI Patterns
 
-Supports:
+**Dialog Pattern**: `<Entity>Dialog`
+- mode: "create" | "edit"
+- onClose callback
+- form inside dialog
 
-mode=create
-mode=edit
+**Row Actions Pattern**: `<Entity>RowActions`
+- Edit action
+- Delete action
+- Custom actions
 
-# Row Actions Pattern
-<Entity>RowActions
+**Table Pattern**: `<Entity>DataTable`
+- Uses DataTableContainer
+- Built on shadcn/ui Table
 
 # Shared Components
 
-DashboardPage
-PageHeader
-ConfirmDialog
-DataTableContainer
-MetricCard
-SectionCard
+- **DashboardPage** - Layout wrapper
+- **PageHeader** - Title + actions
+- **ConfirmDialog** - Delete confirmation
+- **DataTableContainer** - Table wrapper with pagination
+- **MetricCard** - Dashboard metric display
+- **SectionCard** - Content section wrapper
 
+# Database Models (Current)
 
-# Date Handling
+```
+Core Domain:
+- Clinic
+- AppUser (for audit tracking)
+- Patient
+- Lead (CRM)
+- LeadNote (CRM)
+- LeadActivity (CRM)
+- MembershipPlan
+- MembershipBenefit
+- Subscription
+- BenefitUsage
+- AuditLog
+```
+
+# Data Handling
+
 Server Layer:
-
-Date
+- Date stored as ISO strings in DB
+- Use native Date type
 
 Client Layer:
+- Accept Date | string
+- Always convert: new Date(value)
+- Format with libraries (date-fns, dayjs)
 
-Date | string
+# Multi-Tenant Implementation
 
-Always format with:
+- Every model has clinicId reference
+- Queries filtered by current clinic
+- RBAC enforced per tenant
+- Audit trails isolated per clinic
 
-new Date(value)
+# Date Handling Pattern
 
-# Current Status
-Completed:
+Server Actions:
+```typescript
+const startDate = new Date(input.startDate);
+const endDate = new Date(input.endDate);
+```
 
-Plans
-Patients
-Benefits
-Subscriptions
-
-In Progress:
-
-Benefit Usage
-
-Planned:
-
-Lifecycle
-Dashboard Metrics
-RBAC
-CRM
+Components:
+```typescript
+const formatted = format(new Date(data.createdAt), 'dd/MM/yyyy');
+```

@@ -4,10 +4,18 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
-import { PatientStatus } from "@prisma/client";
+import {
+  AuditAction,
+  AuditEntity,
+  PatientStatus,
+} from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 export async function reactivatePatient(
   id: string
@@ -18,6 +26,8 @@ export async function reactivatePatient(
   );
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
   const patient =
     await prisma.patient.findFirst({
@@ -27,6 +37,7 @@ export async function reactivatePatient(
       },
       select: {
         id: true,
+        fullName: true,
         status: true,
       },
     });
@@ -46,15 +57,32 @@ export async function reactivatePatient(
     );
   }
 
-  await prisma.patient.update({
-    where: {
-      id: patient.id,
-    },
-    data: {
-      status: PatientStatus.ACTIVE,
-      inactiveReason: null,
-    },
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.patient.update({
+        where: {
+          id: patient.id,
+        },
+        data: {
+          status:
+            PatientStatus.ACTIVE,
+          inactiveReason: null,
+        },
+      });
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action:
+          AuditAction.REACTIVATE,
+        entity: AuditEntity.PATIENT,
+        entityId: patient.id,
+        entityLabel:
+          patient.fullName,
+      });
+    }
+  );
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/patients");

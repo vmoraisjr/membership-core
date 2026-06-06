@@ -38,9 +38,10 @@ export async function ClinicPage() {
     <DashboardPage>
       <PageHeader
         title="Clinics"
-        description="Manage clinic records independently as the platform moves toward multi-tenant operations."
+        description="Manage the current clinic tenant without exposing other clinic records."
         action={
-          canManageClinic ? (
+          canManageClinic &&
+          clinics.length === 0 ? (
             <ClinicDialog />
           ) : undefined
         }

@@ -1,9 +1,8 @@
 import {
   BadgeDollarSign,
-  CalendarClock,
   CreditCard,
-  FileStack,
   HeartPulse,
+  ReceiptText,
   Users,
 } from "lucide-react";
 
@@ -58,15 +57,6 @@ export async function DashboardHomePage() {
         />
 
         <MetricCard
-          label="Active Plans"
-          value={metrics.activeMembershipPlans.toString()}
-          hint="Plans currently available for enrollment"
-          icon={
-            <FileStack className="size-5" />
-          }
-        />
-
-        <MetricCard
           label="Active Subscriptions"
           value={metrics.activeSubscriptionsCount.toString()}
           hint="Subscriptions currently in force"
@@ -76,24 +66,22 @@ export async function DashboardHomePage() {
         />
 
         <MetricCard
-          label="Monthly Revenue"
-          value={formatCurrency(
-            metrics.monthlyRevenue
-          )}
-          hint="Derived from active subscriptions and current monthly plan pricing"
+          label="Overdue Invoices"
+          value={metrics.overduePatientInvoices.toString()}
+          hint="Patient invoices that need manual follow-up"
           icon={
-            <BadgeDollarSign className="size-5" />
+            <ReceiptText className="size-5" />
           }
         />
 
         <MetricCard
-          label="Annual Revenue"
+          label="Monthly Patient Revenue"
           value={formatCurrency(
-            metrics.annualRevenue
+            metrics.monthlyPatientRevenue
           )}
-          hint="Annual plan pricing plus monthly plan fallback projections"
+          hint="Paid patient invoice revenue recognized this month"
           icon={
-            <FileStack className="size-5" />
+            <BadgeDollarSign className="size-5" />
           }
         />
 
@@ -105,28 +93,28 @@ export async function DashboardHomePage() {
             <HeartPulse className="size-5" />
           }
         />
-
-        <MetricCard
-          label="Expiring Subscriptions"
-          value={metrics.expiringSubscriptionsCount.toString()}
-          hint="Active or overdue subscriptions expiring in the next 7 days"
-          icon={
-            <CalendarClock className="size-5" />
-          }
-        />
       </div>
 
       <SectionCard
         title="Operational Snapshot"
-        description="Real tenant-scoped counts from the current clinic help leadership spot enrollment, revenue, and usage pressure at a glance."
+        description="Real tenant-scoped counts from the current clinic help leadership spot enrollment, billing pressure and benefit usage at a glance."
       >
         <div className="grid gap-4 p-4 md:grid-cols-3">
           <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
             <p className="text-sm font-medium">
-              Active plan catalog
+              Patient revenue baseline
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              {metrics.activeMembershipPlans} active membership plans are currently available for new enrollments.
+              Paid patient invoices produced {formatCurrency(metrics.monthlyPatientRevenue)} this month for the current clinic.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+            <p className="text-sm font-medium">
+              Billing attention needed
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {metrics.overduePatientInvoices} patient invoices are overdue and require manual follow-up in the V1 billing flow.
             </p>
           </div>
 
@@ -138,17 +126,69 @@ export async function DashboardHomePage() {
               {metrics.benefitUsageEvents} total benefit usage events have been recorded for this clinic so far.
             </p>
           </div>
-
-          <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
-            <p className="text-sm font-medium">
-              Revenue baseline
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Current active subscriptions represent {formatCurrency(metrics.monthlyRevenue)} in monthly recurring revenue.
-            </p>
-          </div>
         </div>
       </SectionCard>
+
+      {metrics.platformMetrics ? (
+        <SectionCard
+          title="Platform Snapshot"
+          description="Admin-only platform billing metrics derived from real clinic subscription data."
+        >
+          <div className="grid gap-4 p-4 md:grid-cols-4">
+            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+              <p className="text-sm font-medium">
+                Active clinics
+              </p>
+              <p className="mt-2 text-2xl font-semibold">
+                {
+                  metrics
+                    .platformMetrics
+                    .activeClinics
+                }
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+              <p className="text-sm font-medium">
+                Trial clinics
+              </p>
+              <p className="mt-2 text-2xl font-semibold">
+                {
+                  metrics
+                    .platformMetrics
+                    .trialClinics
+                }
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+              <p className="text-sm font-medium">
+                Past due clinics
+              </p>
+              <p className="mt-2 text-2xl font-semibold">
+                {
+                  metrics
+                    .platformMetrics
+                    .pastDueClinics
+                }
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+              <p className="text-sm font-medium">
+                Monthly SaaS revenue
+              </p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatCurrency(
+                  metrics
+                    .platformMetrics
+                    .monthlySaasRevenue
+                )}
+              </p>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
     </DashboardPage>
   );
 }

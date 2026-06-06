@@ -4,20 +4,30 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
-import { PatientStatus } from "@prisma/client";
+import {
+  AuditAction,
+  AuditEntity,
+  PatientStatus,
+} from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 export async function deletePatientPermanently(
   id: string
 ) {
   await assertPermission(
     "patients",
-    "manage"
+    "deletePermanent"
   );
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
   const patient =
     await prisma.patient.findFirst({
@@ -27,6 +37,7 @@ export async function deletePatientPermanently(
       },
       select: {
         id: true,
+        fullName: true,
         status: true,
         _count: {
           select: {
@@ -60,11 +71,26 @@ export async function deletePatientPermanently(
     );
   }
 
-  await prisma.patient.delete({
-    where: {
-      id: patient.id,
-    },
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.patient.delete({
+        where: {
+          id: patient.id,
+        },
+      });
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action: AuditAction.DELETE,
+        entity: AuditEntity.PATIENT,
+        entityId: patient.id,
+        entityLabel:
+          patient.fullName,
+      });
+    }
+  );
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/patients");

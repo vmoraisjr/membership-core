@@ -5,9 +5,13 @@ import Link from "next/link";
 import {
   BadgePercent,
   Building2,
+  ClipboardList,
   CreditCard,
   History,
   LayoutDashboard,
+  Package,
+  ReceiptText,
+  ShieldCheck,
   SquareStack,
   Users,
 } from "lucide-react";
@@ -66,6 +70,41 @@ const items = [
     href: "/dashboard/benefit-usage",
     icon: History,
     resource: "benefitUsage",
+  },
+
+  {
+    label: "Billing",
+    href: "/dashboard/billing",
+    icon: ReceiptText,
+    resource: "billing",
+  },
+
+  {
+    label: "Contracts",
+    href: "/dashboard/contracts",
+    icon: ClipboardList,
+    resource: "contracts",
+  },
+
+  {
+    label: "Modules",
+    href: "/dashboard/modules",
+    icon: Package,
+    resource: "modules",
+  },
+
+  {
+    label: "Audit Log",
+    href: "/dashboard/audit-logs",
+    icon: ClipboardList,
+    resource: "auditLogs",
+  },
+
+  {
+    label: "Users",
+    href: "/dashboard/users",
+    icon: ShieldCheck,
+    resource: "users",
   },
 ].map((item) => item as {
   label: string;

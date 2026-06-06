@@ -4,8 +4,14 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
+import { AuditAction, AuditEntity } from "@prisma/client";
+
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 import {
   membershipBenefitSchema,
@@ -31,6 +37,8 @@ export async function updateMembershipBenefit(
   }
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
   const benefit =
     await prisma.membershipBenefit.findFirst({
@@ -69,36 +77,62 @@ export async function updateMembershipBenefit(
     );
   }
 
-  await prisma.membershipBenefit.update({
-    where: {
-      id: benefit.id,
-    },
+  await prisma.$transaction(
+    async (tx) => {
+      const updatedBenefit =
+        await tx.membershipBenefit.update({
+          where: {
+            id: benefit.id,
+          },
 
-    data: {
-      membershipPlanId: plan.id,
+          data: {
+            membershipPlanId: plan.id,
 
-      type: parsed.data.type,
+            type: parsed.data.type,
 
-      title: parsed.data.title,
+            title:
+              parsed.data.title,
 
-      description:
-        parsed.data.description,
+            description:
+              parsed.data.description,
 
-      discountPercentage:
-        parsed.data
-          .discountPercentage,
+            discountPercentage:
+              parsed.data
+                .discountPercentage,
 
-      discountAmount:
-        parsed.data.discountAmount,
+            discountAmount:
+              parsed.data.discountAmount,
 
-      usageLimit:
-        parsed.data.usageLimit,
+            usageLimit:
+              parsed.data.usageLimit,
 
-      resetPeriod:
-        parsed.data.resetPeriod ||
-        null,
-    },
-  });
+            resetPeriod:
+              parsed.data.resetPeriod ||
+              null,
+          },
+          select: {
+            id: true,
+            title: true,
+            type: true,
+          },
+        });
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action: AuditAction.UPDATE,
+        entity:
+          AuditEntity.MEMBERSHIP_BENEFIT,
+        entityId: updatedBenefit.id,
+        entityLabel:
+          updatedBenefit.title,
+        metadata: {
+          type: updatedBenefit.type,
+        },
+      });
+    }
+  );
 
   revalidatePath(
     "/dashboard/benefits"

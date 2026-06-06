@@ -4,8 +4,14 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
+import { AuditAction, AuditEntity } from "@prisma/client";
+
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 
 export async function reactivateMembershipBenefit(
   id: string
@@ -16,6 +22,8 @@ export async function reactivateMembershipBenefit(
   );
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
   const benefit =
     await prisma.membershipBenefit.findFirst({
@@ -27,6 +35,7 @@ export async function reactivateMembershipBenefit(
       },
       select: {
         id: true,
+        title: true,
         active: true,
         membershipPlan: {
           select: {
@@ -56,14 +65,31 @@ export async function reactivateMembershipBenefit(
     );
   }
 
-  await prisma.membershipBenefit.update({
-    where: {
-      id: benefit.id,
-    },
-    data: {
-      active: true,
-    },
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.membershipBenefit.update({
+        where: {
+          id: benefit.id,
+        },
+        data: {
+          active: true,
+        },
+      });
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action:
+          AuditAction.REACTIVATE,
+        entity:
+          AuditEntity.MEMBERSHIP_BENEFIT,
+        entityId: benefit.id,
+        entityLabel:
+          benefit.title,
+      });
+    }
+  );
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/plans");

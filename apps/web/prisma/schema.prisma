@@ -25,6 +25,80 @@ model Clinic {
 
   patients         Patient[]
   membershipPlans  MembershipPlan[]
+  auditLogs        AuditLog[]
+  leads            Lead[]
+  appUsers         AppUser[]
+  patientInvoices  PatientInvoice[]
+  patientPayments  PatientPayment[]
+  clinicModules    ClinicModule[]
+  contractTemplates ContractTemplate[]
+  patientContracts PatientContract[]
+  clinicContracts  ClinicContract[]
+  clinicSubscriptions ClinicSubscription[]
+  clinicInvoices   ClinicInvoice[]
+  clinicPayments   ClinicPayment[]
+}
+
+model AppUser {
+  id         String      @id @default(cuid())
+  clinicId   String?
+  name       String
+  email      String      @unique
+  passwordHash String?
+  role       AppUserRole
+  createdAt  DateTime    @default(now())
+  lastLoginAt DateTime?
+  updatedAt  DateTime    @updatedAt
+
+  clinic     Clinic?     @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  auditLogs  AuditLog[]
+  authSessions AuthSession[]
+  passwordResetTokens PasswordResetToken[]
+  patientPaymentConfirmations PatientPayment[] @relation("PatientPaymentConfirmedBy")
+  patientContractAcceptances PatientContractAcceptance[]
+  clinicPaymentConfirmations ClinicPayment[] @relation("ClinicPaymentConfirmedBy")
+
+  @@index([clinicId, role])
+}
+
+model AuthSession {
+  id               String   @id @default(cuid())
+  appUserId        String
+  sessionTokenHash String   @unique
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  lastSeenAt       DateTime @default(now())
+
+  appUser          AppUser  @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+
+  @@index([appUserId, expiresAt])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  appUserId  String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  appUser    AppUser  @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+
+  @@index([appUserId, expiresAt])
+}
+
+model UserInvite {
+  id              String      @id @default(cuid())
+  clinicId        String?
+  email           String
+  role            AppUserRole
+  tokenHash       String      @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  invitedByUserId String?
+  createdAt       DateTime    @default(now())
+
+  @@index([email, expiresAt])
 }
 
 model Patient {
@@ -50,6 +124,54 @@ model Patient {
   clinic         Clinic @relation(fields: [clinicId], references: [id])
 
   subscriptions  Subscription[]
+  convertedFromLead Lead? @relation("LeadConvertedPatient")
+  invoices       PatientInvoice[]
+  patientContracts PatientContract[]
+}
+
+model Lead {
+  id                 String             @id @default(cuid())
+  clinicId           String
+  fullName           String
+  email              String
+  phone              String
+  birthDate          DateTime
+  document           String
+  zipCode            String
+  city               String
+  state              String
+  address            String
+  status             LeadPipelineStatus @default(NEW)
+  convertedAt        DateTime?
+  convertedPatientId String?            @unique
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  clinic             Clinic             @relation(fields: [clinicId], references: [id])
+  convertedPatient   Patient?           @relation("LeadConvertedPatient", fields: [convertedPatientId], references: [id])
+  notes              LeadNote[]
+  activities         LeadActivity[]
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  leadId     String
+  content    String
+  createdAt  DateTime @default(now())
+
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model LeadActivity {
+  id          String           @id @default(cuid())
+  leadId       String
+  type         LeadActivityType
+  description  String
+  createdAt    DateTime         @default(now())
+
+  lead         Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
 }
 
 model MembershipPlan {
@@ -113,6 +235,8 @@ model Subscription {
   membershipPlan    MembershipPlan @relation(fields: [membershipPlanId], references: [id])
 
   benefitUsages     BenefitUsage[]
+  patientInvoices   PatientInvoice[]
+  patientContracts  PatientContract[]
 }
 
 model BenefitUsage {
@@ -133,9 +257,258 @@ model BenefitUsage {
   membershipBenefit     MembershipBenefit @relation(fields: [membershipBenefitId], references: [id])
 }
 
+model PatientInvoice {
+  id              String        @id @default(cuid())
+  clinicId        String
+  patientId       String
+  subscriptionId  String?
+  status          PaymentStatus @default(PENDING)
+  billingCycle    BillingCycle
+  amount          Float
+  currency        String        @default("BRL")
+  description     String?
+  dueDate         DateTime
+  issuedAt        DateTime      @default(now())
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+
+  clinic          Clinic        @relation(fields: [clinicId], references: [id])
+  patient         Patient       @relation(fields: [patientId], references: [id])
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  payments        PatientPayment[]
+
+  @@index([clinicId, status, dueDate])
+  @@index([patientId, status])
+  @@index([subscriptionId])
+}
+
+model PatientPayment {
+  id                String        @id @default(cuid())
+  clinicId          String
+  patientInvoiceId  String
+  amount            Float
+  status            PaymentStatus @default(PAID)
+  paidAt            DateTime      @default(now())
+  notes             String?
+  confirmedByUserId String?
+  createdAt         DateTime      @default(now())
+
+  clinic            Clinic        @relation(fields: [clinicId], references: [id])
+  patientInvoice    PatientInvoice @relation(fields: [patientInvoiceId], references: [id], onDelete: Cascade)
+  confirmedByUser   AppUser?      @relation("PatientPaymentConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, paidAt])
+  @@index([patientInvoiceId])
+}
+
+model ClinicBillingPlan {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  monthlyPrice Float?
+  annualPrice  Float?
+  trialDays    Int      @default(14)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  subscriptions ClinicSubscription[]
+}
+
+model ClinicSubscription {
+  id                 String                  @id @default(cuid())
+  clinicId           String
+  clinicBillingPlanId String
+  status             ClinicSubscriptionStatus @default(TRIAL)
+  startedAt          DateTime
+  trialEndsAt        DateTime?
+  expiresAt          DateTime?
+  canceledAt         DateTime?
+  createdAt          DateTime                @default(now())
+
+  clinic             Clinic                  @relation(fields: [clinicId], references: [id])
+  clinicBillingPlan  ClinicBillingPlan       @relation(fields: [clinicBillingPlanId], references: [id])
+  invoices           ClinicInvoice[]
+
+  @@index([clinicId, status])
+}
+
+model ClinicInvoice {
+  id                   String        @id @default(cuid())
+  clinicId             String
+  clinicSubscriptionId String
+  status               PaymentStatus @default(PENDING)
+  amount               Float
+  currency             String        @default("BRL")
+  description          String?
+  dueDate              DateTime
+  issuedAt             DateTime      @default(now())
+  paidAt               DateTime?
+  createdAt            DateTime      @default(now())
+
+  clinic               Clinic        @relation(fields: [clinicId], references: [id])
+  clinicSubscription   ClinicSubscription @relation(fields: [clinicSubscriptionId], references: [id], onDelete: Cascade)
+  payments             ClinicPayment[]
+
+  @@index([clinicId, status, dueDate])
+}
+
+model ClinicPayment {
+  id                String        @id @default(cuid())
+  clinicId          String
+  clinicInvoiceId   String
+  amount            Float
+  status            PaymentStatus @default(PAID)
+  paidAt            DateTime      @default(now())
+  notes             String?
+  confirmedByUserId String?
+  createdAt         DateTime      @default(now())
+
+  clinic            Clinic        @relation(fields: [clinicId], references: [id])
+  clinicInvoice     ClinicInvoice @relation(fields: [clinicInvoiceId], references: [id], onDelete: Cascade)
+  confirmedByUser   AppUser?      @relation("ClinicPaymentConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, paidAt])
+  @@index([clinicInvoiceId])
+}
+
+model Module {
+  id          String     @id @default(cuid())
+  key         ModuleKey  @unique
+  name        String
+  description String?
+  isV1Active  Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+
+  clinicModules ClinicModule[]
+}
+
+model ClinicModule {
+  id         String       @id @default(cuid())
+  clinicId   String
+  moduleId   String
+  status     ModuleStatus @default(ENABLED)
+  enabledAt  DateTime?
+  disabledAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  clinic     Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  module     Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, moduleId])
+  @@index([clinicId, status])
+}
+
+model ContractTemplate {
+  id          String       @id @default(cuid())
+  clinicId    String?
+  type        ContractType
+  title       String
+  content     String
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  clinic      Clinic?      @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  patientContracts PatientContract[]
+  clinicContracts ClinicContract[]
+
+  @@index([clinicId, type, active])
+}
+
+model PatientContract {
+  id             String               @id @default(cuid())
+  clinicId       String
+  patientId      String
+  subscriptionId String
+  templateId     String?
+  title          String
+  contentSnapshot String
+  status         PatientContractStatus @default(PENDING_ACCEPTANCE)
+  acceptedAt     DateTime?
+  createdAt      DateTime              @default(now())
+
+  clinic         Clinic                @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient        Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  subscription   Subscription          @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  template       ContractTemplate?     @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  acceptances    PatientContractAcceptance[]
+
+  @@index([clinicId, status])
+  @@index([subscriptionId])
+}
+
+model PatientContractAcceptance {
+  id                String         @id @default(cuid())
+  patientContractId String
+  acceptedAt        DateTime       @default(now())
+  acceptedByUserId  String?
+  createdAt         DateTime       @default(now())
+
+  patientContract   PatientContract @relation(fields: [patientContractId], references: [id], onDelete: Cascade)
+  acceptedByUser    AppUser?       @relation(fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([patientContractId, acceptedAt])
+}
+
+model ClinicContract {
+  id              String              @id @default(cuid())
+  clinicId        String
+  templateId      String?
+  title           String
+  contentSnapshot String
+  status          ClinicContractStatus @default(PENDING_SIGNATURE)
+  effectiveAt     DateTime?
+  signedAt        DateTime?
+  createdAt       DateTime            @default(now())
+
+  clinic          Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  template        ContractTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  files           ClinicContractFile[]
+
+  @@index([clinicId, status])
+}
+
+model ClinicContractFile {
+  id              String        @id @default(cuid())
+  clinicContractId String
+  fileName        String
+  fileUrl         String
+  uploadedAt      DateTime      @default(now())
+
+  clinicContract  ClinicContract @relation(fields: [clinicContractId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  clinicId    String?
+  actorUserId String?
+  actor       String
+  action      AuditAction
+  entity      AuditEntity
+  entityId    String
+  entityLabel String?
+  metadata    Json?
+  createdAt   DateTime    @default(now())
+
+  clinic      Clinic?     @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  actorUser   AppUser?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, createdAt])
+  @@index([clinicId, actor])
+  @@index([clinicId, entity])
+  @@index([actorUserId])
+}
+
 enum ClinicStatus {
   ACTIVE
   INACTIVE
+}
+
+enum AppUserRole {
+  OWNER
+  ADMIN
+  STAFF
+  FINANCE
+  READ_ONLY
 }
 
 enum PatientStatus {
@@ -152,6 +525,29 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELED
+  FAILED
+  REFUNDED
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+  MANUAL
+}
+
+enum ClinicSubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELED
+}
+
 enum BenefitType {
   FREE
   PERCENTAGE_DISCOUNT
@@ -162,4 +558,96 @@ enum BenefitType {
 enum ResetPeriod {
   MONTHLY
   YEARLY
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  DEACTIVATE
+  REACTIVATE
+  CONSUME_BENEFIT
+  CANCEL_SUBSCRIPTION
+  RENEW_SUBSCRIPTION
+  PAUSE_SUBSCRIPTION
+  RESUME_SUBSCRIPTION
+  EXPIRE_SUBSCRIPTION
+  MARK_INVOICE_PAID
+  MARK_INVOICE_OVERDUE
+  ACCEPT_CONTRACT
+  ENABLE_MODULE
+  DISABLE_MODULE
+}
+
+enum AuditEntity {
+  CLINIC
+  PATIENT
+  LEAD
+  MEMBERSHIP_PLAN
+  MEMBERSHIP_BENEFIT
+  SUBSCRIPTION
+  BENEFIT_USAGE
+  PATIENT_INVOICE
+  PATIENT_PAYMENT
+  CLINIC_BILLING_PLAN
+  CLINIC_SUBSCRIPTION
+  CLINIC_INVOICE
+  CLINIC_PAYMENT
+  MODULE
+  CLINIC_MODULE
+  CONTRACT_TEMPLATE
+  PATIENT_CONTRACT
+  CLINIC_CONTRACT
+}
+
+enum LeadPipelineStatus {
+  NEW
+  CONTACTED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum LeadActivityType {
+  CREATED
+  UPDATED
+  NOTE_ADDED
+  CONVERTED
+  DELETED
+}
+
+enum ModuleKey {
+  MEMBERSHIP
+  CRM
+  SCHEDULING
+  COMMUNICATION
+  PATIENT_PORTAL
+  ANALYTICS
+}
+
+enum ModuleStatus {
+  ENABLED
+  DISABLED
+}
+
+enum ContractType {
+  PATIENT_MEMBERSHIP
+  CLINIC_PLATFORM
+}
+
+enum PatientContractStatus {
+  PENDING_ACCEPTANCE
+  ACCEPTED
+  CANCELED
+  EXPIRED
+}
+
+enum ClinicContractStatus {
+  DRAFT
+  PENDING_SIGNATURE
+  ACTIVE
+  SUSPENDED
+  CANCELED
+  EXPIRED
 }

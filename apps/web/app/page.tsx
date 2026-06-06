@@ -1,5 +1,14 @@
 import { redirect } from "next/navigation";
 
-export default function Page() {
-  redirect("/dashboard");
+import { getCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+
+export default async function Page() {
+  const currentUser =
+    await getCurrentAppUser();
+
+  redirect(
+    currentUser
+      ? "/dashboard"
+      : "/login"
+  );
 }

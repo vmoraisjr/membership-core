@@ -39,6 +39,7 @@ type Props = {
     name: string;
   }>;
   canManagePlans?: boolean;
+  canDeletePlansPermanently?: boolean;
   canManageBenefits?: boolean;
 };
 
@@ -46,6 +47,7 @@ export function MembershipPlanRowActions({
   plan,
   benefitPlans,
   canManagePlans = true,
+  canDeletePlansPermanently = true,
   canManageBenefits = true,
 }: Props) {
   if (!canManagePlans) {
@@ -195,22 +197,24 @@ export function MembershipPlanRowActions({
             }
           />
 
-          <ConfirmDialog
-            title="Delete plan permanently?"
-            description="This permanently removes the inactive plan record. This action cannot be undone."
-            onConfirm={() =>
-              handleDelete()
-            }
-            actionLabel="Delete permanently"
-            trigger={
-              <Button
-                size="icon"
-                variant="destructive"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            }
-          />
+          {canDeletePlansPermanently ? (
+            <ConfirmDialog
+              title="Delete plan permanently?"
+              description="This permanently removes the inactive plan record. This action cannot be undone."
+              onConfirm={() =>
+                handleDelete()
+              }
+              actionLabel="Delete permanently"
+              trigger={
+                <Button
+                  size="icon"
+                  variant="destructive"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              }
+            />
+          ) : null}
         </>
       )}
     </div>

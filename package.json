@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint"
+    "lint": "turbo lint",
+    "test:tenant": "pnpm --dir apps/web test:tenant",
+    "test:rbac": "pnpm --dir apps/web test:rbac"
   },
   "devDependencies": {
     "turbo": "^2.0.0"

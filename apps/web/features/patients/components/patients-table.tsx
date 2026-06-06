@@ -43,6 +43,7 @@ type Props = {
   patients: PatientWithCurrentSubscription[];
   plans: Array<{ id: string; name: string }>;
   canManagePatients?: boolean;
+  canDeletePatientsPermanently?: boolean;
   canManageSubscriptions?: boolean;
 };
 
@@ -68,6 +69,7 @@ export function PatientsTable({
   patients,
   plans,
   canManagePatients = true,
+  canDeletePatientsPermanently = true,
   canManageSubscriptions = true,
 }: Props) {
   const [statusFilter, setStatusFilter] =
@@ -245,6 +247,9 @@ export function PatientsTable({
                     plans={plans}
                     canManagePatients={
                       canManagePatients
+                    }
+                    canDeletePatientsPermanently={
+                      canDeletePatientsPermanently
                     }
                     canManageSubscriptions={
                       canManageSubscriptions

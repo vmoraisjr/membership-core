@@ -1,51 +1,119 @@
-import prisma from "@/lib/prisma";
+import {
+  ClinicStatus,
+  ClinicSubscriptionStatus,
+  PaymentStatus,
+} from "@prisma/client";
+
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import prisma from "@/lib/prisma";
 
 import { getBenefitConsumptionMetrics } from "./get-benefit-consumption-metrics";
 import { getActivePatients } from "./get-active-patients";
 import { getActiveSubscriptions } from "./get-active-subscriptions";
-import { getMonthlyRevenue } from "./get-monthly-revenue";
-import { getExpiringSubscriptions } from "../../subscriptions/services/get-expiring-subscriptions";
 
 export async function getDashboardMetrics() {
   const clinic = await getCurrentClinic();
+  const currentUser =
+    await requireCurrentAppUser();
+  const startOfMonth = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1
+  );
 
   const [
     activePatients,
-    activeMembershipPlans,
     activeSubscriptionsCount,
-    revenueMetrics,
     benefitConsumptionMetrics,
-    expiringSubscriptions,
+    overduePatientInvoices,
+    monthlyPatientRevenue,
+    platformMetrics,
   ] = await Promise.all([
     getActivePatients(),
-    prisma.membershipPlan.count({
+    getActiveSubscriptions(),
+    getBenefitConsumptionMetrics(),
+    prisma.patientInvoice.count({
       where: {
         clinicId: clinic.id,
-        active: true,
+        status: PaymentStatus.OVERDUE,
       },
     }),
-    getActiveSubscriptions(),
-    getMonthlyRevenue(),
-    getBenefitConsumptionMetrics(),
-    getExpiringSubscriptions(),
+    prisma.patientInvoice.aggregate({
+      where: {
+        clinicId: clinic.id,
+        status: PaymentStatus.PAID,
+        paidAt: {
+          gte: startOfMonth,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    }),
+    currentUser.clinicId == null &&
+    (currentUser.role === "OWNER" ||
+      currentUser.role === "ADMIN")
+      ? Promise.all([
+          prisma.clinic.count({
+            where: {
+              status: ClinicStatus.ACTIVE,
+            },
+          }),
+          prisma.clinicSubscription.count({
+            where: {
+              status:
+                ClinicSubscriptionStatus.TRIAL,
+            },
+          }),
+          prisma.clinicSubscription.count({
+            where: {
+              status:
+                ClinicSubscriptionStatus.PAST_DUE,
+            },
+          }),
+          prisma.clinicInvoice.aggregate({
+            where: {
+              status: PaymentStatus.PAID,
+              paidAt: {
+                gte: startOfMonth,
+              },
+            },
+            _sum: {
+              amount: true,
+            },
+          }),
+        ]).then(
+          ([
+            activeClinics,
+            trialClinics,
+            pastDueClinics,
+            monthlySaasRevenue,
+          ]) => ({
+            activeClinics,
+            trialClinics,
+            pastDueClinics,
+            monthlySaasRevenue:
+              monthlySaasRevenue
+                ._sum.amount ?? 0,
+          })
+        )
+      : Promise.resolve(null),
   ]);
 
   return {
     clinicName:
       clinic.brandName ?? clinic.name,
     activePatients,
-    activeMembershipPlans,
     activeSubscriptionsCount,
-    monthlyRevenue:
-      revenueMetrics.monthlyRevenue,
-    annualRevenue:
-      revenueMetrics.annualRevenue,
+    overduePatientInvoices,
+    monthlyPatientRevenue:
+      monthlyPatientRevenue._sum
+        .amount ?? 0,
     benefitsConsumed:
       benefitConsumptionMetrics.consumedThisMonth,
     benefitUsageEvents:
       benefitConsumptionMetrics.totalUsageEvents,
-    expiringSubscriptionsCount:
-      expiringSubscriptions.length,
+    platformMetrics,
   };
 }

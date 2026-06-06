@@ -106,5 +106,5 @@ PostgreSQL
 Read:
 docs/ai-context.md
 docs/codex-workflow.md
-tasks/backlog/004-clinic-management.md
+tasks/backlog/006-audit-log.md
 Execute the task.

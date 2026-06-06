@@ -5,6 +5,7 @@ import {
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import { getEvaluatedSubscriptionStatus } from "@/features/subscriptions/services/evaluate-subscription-status";
 
 type ValidateBenefitUsageInput = {
   subscriptionId: string;
@@ -106,6 +107,7 @@ export async function validateBenefitUsage({
           select: {
             id: true,
             name: true,
+            active: true,
           },
         },
       },
@@ -114,6 +116,32 @@ export async function validateBenefitUsage({
   if (!subscription) {
     throw new Error(
       "Only active subscriptions can consume benefits."
+    );
+  }
+
+  const evaluatedStatus =
+    getEvaluatedSubscriptionStatus({
+      startedAt:
+        subscription.startedAt,
+      expiresAt:
+        subscription.expiresAt,
+      status: subscription.status,
+    });
+
+  if (
+    evaluatedStatus !==
+    SubscriptionStatus.ACTIVE
+  ) {
+    throw new Error(
+      "Only active subscriptions can consume benefits."
+    );
+  }
+
+  if (
+    !subscription.membershipPlan.active
+  ) {
+    throw new Error(
+      "Inactive plans cannot consume benefits."
     );
   }
 
@@ -131,12 +159,19 @@ export async function validateBenefitUsage({
         usageLimit: true,
         resetPeriod: true,
         membershipPlanId: true,
+        active: true,
       },
     });
 
   if (!benefit) {
     throw new Error(
       "This benefit does not belong to the subscription plan."
+    );
+  }
+
+  if (!benefit.active) {
+    throw new Error(
+      "Inactive benefits cannot be consumed."
     );
   }
 

@@ -49,6 +49,12 @@ export async function MembershipBenefitsPage({
       "benefits",
       "manage"
     );
+  const canDeleteBenefitsPermanently =
+    hasPermission(
+      role,
+      "benefits",
+      "deletePermanent"
+    );
 
   return (
     <DashboardPage>
@@ -77,6 +83,9 @@ export async function MembershipBenefitsPage({
         selectedPlanId={contextPlanId}
         canManageBenefits={
           canManageBenefits
+        }
+        canDeleteBenefitsPermanently={
+          canDeleteBenefitsPermanently
         }
       />
     </DashboardPage>

@@ -5,12 +5,20 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 import { revalidatePath } from "next/cache";
 
 import {
+  AuditAction,
+  AuditEntity,
   PatientStatus,
   SubscriptionStatus,
 } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
+import { createPatientInvoiceForSubscription } from "@/features/billing/services/billing-foundation";
+import { generatePatientContractForSubscription } from "@/features/contracts/services/contracts-foundation";
 
 import {
   subscriptionSchema,
@@ -34,6 +42,8 @@ export async function createSubscription(
   }
 
   const clinic = await getCurrentClinic();
+  const actor =
+    await getCurrentAuditActor();
 
   const [patient, plan] =
     await Promise.all([
@@ -45,6 +55,7 @@ export async function createSubscription(
         },
         select: {
           id: true,
+          fullName: true,
         },
       }),
       prisma.membershipPlan.findFirst({
@@ -55,6 +66,9 @@ export async function createSubscription(
         },
         select: {
           id: true,
+          name: true,
+          monthlyPrice: true,
+          annualPrice: true,
         },
       }),
     ]);
@@ -82,27 +96,76 @@ export async function createSubscription(
             30 * 24 * 60 * 60 * 1000
         );
 
-  await prisma.subscription.create({
-    data: {
-      patientId: patient.id,
-
-      membershipPlanId: plan.id,
-
-      startedAt: startDate,
-
-      expiresAt: expiresDate,
-
-      status:
+  await prisma.$transaction(
+    async (tx) => {
+      const status =
         getEvaluatedSubscriptionStatus({
           startedAt: startDate,
           expiresAt: expiresDate,
           status:
             SubscriptionStatus.ACTIVE,
-        }),
-    },
-  });
+        });
+
+      const subscription =
+        await tx.subscription.create({
+          data: {
+            patientId: patient.id,
+
+            membershipPlanId: plan.id,
+
+            startedAt: startDate,
+
+            expiresAt: expiresDate,
+
+            status,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+      await createPatientInvoiceForSubscription(
+        {
+          clinicId: clinic.id,
+          patientId: patient.id,
+          subscriptionId:
+            subscription.id,
+          plan,
+        },
+        tx
+      );
+      await generatePatientContractForSubscription(
+        {
+          clinicId: clinic.id,
+          patientId: patient.id,
+          subscriptionId:
+            subscription.id,
+        },
+        tx
+      );
+
+      await createAuditLog(tx, {
+        clinicId: clinic.id,
+        actor: actor.displayName,
+        actorUserId: actor.id,
+        action: AuditAction.CREATE,
+        entity:
+          AuditEntity.SUBSCRIPTION,
+        entityId: subscription.id,
+        entityLabel: subscription.id,
+        metadata: {
+          patientId: patient.id,
+          membershipPlanId: plan.id,
+          status,
+        },
+      });
+    }
+  );
 
   revalidatePath(
     "/dashboard/subscriptions"
   );
+  revalidatePath("/dashboard/billing");
+  revalidatePath("/dashboard/contracts");
+  revalidatePath("/dashboard");
 }

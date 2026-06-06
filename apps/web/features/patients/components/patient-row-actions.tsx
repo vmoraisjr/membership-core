@@ -47,6 +47,7 @@ type Props = {
   };
   plans?: Array<{ id: string; name: string }>;
   canManagePatients?: boolean;
+  canDeletePatientsPermanently?: boolean;
   canManageSubscriptions?: boolean;
 };
 
@@ -54,6 +55,7 @@ export function PatientRowActions({
   patient,
   plans = [],
   canManagePatients = true,
+  canDeletePatientsPermanently = true,
   canManageSubscriptions = true,
 }: Props) {
   async function handleSuspend({
@@ -202,22 +204,24 @@ export function PatientRowActions({
                 }
               />
 
-              <ConfirmDialog
-                title="Delete patient permanently?"
-                description="This permanently removes the inactive patient record. This action cannot be undone."
-                onConfirm={() =>
-                  handleDelete()
-                }
-                actionLabel="Delete permanently"
-                trigger={
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                }
-              />
+              {canDeletePatientsPermanently ? (
+                <ConfirmDialog
+                  title="Delete patient permanently?"
+                  description="This permanently removes the inactive patient record. This action cannot be undone."
+                  onConfirm={() =>
+                    handleDelete()
+                  }
+                  actionLabel="Delete permanently"
+                  trigger={
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  }
+                />
+              ) : null}
             </>
           ) : null}
         </>
