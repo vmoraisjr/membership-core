@@ -20,81 +20,82 @@ import { usePathname } from "next/navigation";
 
 import type { AppRole } from "@/features/auth/constants/roles";
 import { hasPermission, type AppResource } from "@/features/rbac/permissions";
+import { useTranslations } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 const items = [
   {
-    label: "Overview",
+    label: "navigation.overview",
     href: "/dashboard",
     icon: LayoutDashboard,
     resource: "dashboard",
   },
 
   {
-    label: "Clinics",
+    label: "navigation.clinics",
     href: "/dashboard/clinics",
     icon: Building2,
     resource: "clinic",
   },
 
   {
-    label: "Membership Plans",
+    label: "navigation.membershipPlans",
     href: "/dashboard/plans",
     icon: SquareStack,
     resource: "plans",
   },
 
   {
-    label: "Patients",
+    label: "navigation.patients",
     href: "/dashboard/patients",
     icon: Users,
     resource: "patients",
   },
 
   {
-    label: "Subscriptions",
+    label: "navigation.subscriptions",
     href: "/dashboard/subscriptions",
     icon: CreditCard,
     resource: "subscriptions",
   },
 
   {
-    label: "Benefits",
+    label: "navigation.benefits",
     href: "/dashboard/benefits",
     icon: BadgePercent,
     resource: "benefits",
   },
 
   {
-    label: "Benefit Usage",
+    label: "navigation.benefitUsage",
     href: "/dashboard/benefit-usage",
     icon: History,
     resource: "benefitUsage",
   },
 
   {
-    label: "Payments",
+    label: "navigation.payments",
     href: "/dashboard/payments",
     icon: ReceiptText,
     resource: "billing",
   },
 
   {
-    label: "Modules",
+    label: "navigation.modules",
     href: "/dashboard/modules",
     icon: Package,
     resource: "modules",
   },
 
   {
-    label: "Audit Log",
+    label: "navigation.auditLog",
     href: "/dashboard/audit-logs",
     icon: ClipboardList,
     resource: "auditLogs",
   },
 
   {
-    label: "Users",
+    label: "navigation.users",
     href: "/dashboard/users",
     icon: ShieldCheck,
     resource: "users",
@@ -113,6 +114,7 @@ type Props = {
 export function DashboardSidebar({
   role,
 }: Props) {
+  const t = useTranslations();
   const pathname = usePathname();
   const visibleItems = items.filter(
     (item) =>
@@ -128,11 +130,11 @@ export function DashboardSidebar({
       <div className="flex flex-col gap-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Membership Core
+            {t("app.name")}
           </h1>
 
           <p className="text-sm text-muted-foreground">
-            Clinic operations workspace
+            {t("navigation.workspace")}
           </p>
         </div>
 
@@ -160,7 +162,7 @@ export function DashboardSidebar({
               >
                 <Icon className="size-4" />
 
-                {item.label}
+                {t(item.label)}
               </Link>
             );
           })}

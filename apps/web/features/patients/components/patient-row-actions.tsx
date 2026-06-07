@@ -22,6 +22,7 @@ import { deletePatientPermanently } from "../actions/delete-patient-permanently"
 import { PatientDialog } from "./patient-dialog";
 import { SubscriptionDialog } from "@/features/subscriptions/components/subscription-dialog";
 import { ConsumeBenefitDialog } from "@/features/benefit-usage/components/consume-benefit-dialog";
+import { useTranslations } from "@/i18n/provider";
 
 type PatientBenefitBalance = {
   subscriptionId: string;
@@ -78,6 +79,7 @@ export function PatientRowActions({
   canManageSubscriptions = true,
   canManageBenefitUsage = true,
 }: Props) {
+  const t = useTranslations();
   async function handleSuspend({
     detailsValue,
   }: {
@@ -91,13 +93,17 @@ export function PatientRowActions({
       );
 
       toast.success(
-        "Patient deactivated and subscriptions canceled."
+        t(
+          "patients.rowActions.deactivateSuccess"
+        )
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to deactivate patient."
+          : t(
+              "patients.rowActions.deactivateError"
+            )
       );
     }
   }
@@ -109,13 +115,17 @@ export function PatientRowActions({
       );
 
       toast.success(
-        "Patient reactivated."
+        t(
+          "patients.rowActions.reactivateSuccess"
+        )
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to reactivate patient."
+          : t(
+              "patients.rowActions.reactivateError"
+            )
       );
     }
   }
@@ -127,13 +137,13 @@ export function PatientRowActions({
       );
 
       toast.success(
-        "Patient permanently deleted."
+        t("patients.rowActions.deleteSuccess")
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to permanently delete patient."
+          : t("patients.rowActions.deleteError")
       );
     }
   }
@@ -145,8 +155,8 @@ export function PatientRowActions({
 
   if (!canShowActions) {
     return (
-      <span className="text-xs text-muted-foreground">
-        Read only
+        <span className="text-xs text-muted-foreground">
+        {t("shared.states.readOnly")}
       </span>
     );
   }
@@ -186,11 +196,14 @@ export function PatientRowActions({
           {canManageBenefitUsage ? (
             <ConsumeBenefitDialog
               balances={benefitBalances}
-              title={`Record benefit usage for ${patient.fullName}`}
+              title={t(
+                "patients.rowActions.consumeTitle",
+                { name: patient.fullName }
+              )}
               trigger={
                 <Button variant="outline">
                   <Activity className="size-4" />
-                  Use Benefit
+                  {t("patients.rowActions.useBenefit")}
                 </Button>
               }
             />
@@ -198,12 +211,20 @@ export function PatientRowActions({
 
           {canManagePatients ? (
             <ConfirmDialog
-              title="Deactivate patient?"
-              description="The patient record will become inactive, active subscriptions will be canceled, and you must provide a reason."
+              title={t(
+                "patients.rowActions.deactivateTitle"
+              )}
+              description={t(
+                "patients.rowActions.deactivateDescription"
+              )}
               onConfirm={handleSuspend}
-              actionLabel="Deactivate patient"
-              detailsLabel="Reason"
-              detailsPlaceholder="Describe why this patient is being deactivated"
+              actionLabel={t(
+                "patients.rowActions.deactivateAction"
+              )}
+              detailsLabel={t("shared.labels.reason")}
+              detailsPlaceholder={t(
+                "patients.rowActions.deactivatePlaceholder"
+              )}
               detailsRequired
               detailsInput="textarea"
               trigger={
@@ -222,12 +243,18 @@ export function PatientRowActions({
           {canManagePatients ? (
             <>
               <ConfirmDialog
-                title="Reactivate patient?"
-                description="The patient record will become active again and available for new subscriptions."
+                title={t(
+                  "patients.rowActions.reactivateTitle"
+                )}
+                description={t(
+                  "patients.rowActions.reactivateDescription"
+                )}
                 onConfirm={() =>
                   handleReactivate()
                 }
-                actionLabel="Reactivate patient"
+                actionLabel={t(
+                  "patients.rowActions.reactivateAction"
+                )}
                 trigger={
                   <Button
                     size="icon"
@@ -240,12 +267,18 @@ export function PatientRowActions({
 
               {canDeletePatientsPermanently ? (
                 <ConfirmDialog
-                  title="Delete patient permanently?"
-                  description="This permanently removes the inactive patient record. This action cannot be undone."
+                  title={t(
+                    "patients.rowActions.deleteTitle"
+                  )}
+                  description={t(
+                    "patients.rowActions.deleteDescription"
+                  )}
                   onConfirm={() =>
                     handleDelete()
                   }
-                  actionLabel="Delete permanently"
+                  actionLabel={t(
+                    "shared.actions.deletePermanently"
+                  )}
                   trigger={
                     <Button
                       size="icon"

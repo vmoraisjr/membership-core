@@ -2,51 +2,70 @@
 
 ## Objective
 
-Add a direct patient-row action for benefit usage without weakening tenant or
-RBAC protections.
+Add a direct benefit usage action to the patient row actions.
 
-## Files Created
+## Requirements
 
-- `tasks/review/014-patient-benefit-use-action.md`
+In the patients table action column, add:
 
-## Files Modified
+- Use Benefit
 
-- `apps/web/features/benefit-usage/components/consume-benefit-dialog.tsx`
-- `apps/web/features/patients/components/patient-row-actions.tsx`
-- `apps/web/features/patients/components/patients-page.tsx`
-- `apps/web/features/patients/components/patients-table.tsx`
+Visibility rules:
 
-## What Was Implemented
+- only visible if patient is ACTIVE
+- hidden/disabled if patient is suspended/inactive
+- respects RBAC
+- respects tenant isolation
 
-- Reused the existing benefit consumption dialog as a configurable trigger-based
-  component.
-- Added a direct row action for benefit usage in the patient roster.
-- Scoped available benefit options to the selected patient's active
-  subscription balances.
-- Kept the action hidden for inactive patients by only enabling it on active
-  rows.
-- Kept tenant isolation and RBAC enforcement in the existing benefit
-  consumption action path.
+Behavior:
 
-## Decisions Made
+- opens dialog to select active subscription
+- shows available benefits from the subscribed plan
+- validates usage limit
+- confirms usage
+- persists BenefitUsage
+- updates patient history
 
-- Reused `getPatientBenefitBalance()` instead of introducing a second patient
-  benefit query path.
-- Reused the current `consumeBenefit()` action so monthly limits, inactive
-  benefit checks, inactive subscription checks and audit logging remain
-  centralized.
+## Rules
 
-## Risks
+- cannot consume benefit for inactive patient
+- cannot consume benefit without active subscription
+- cannot consume inactive benefit
+- cannot exceed monthly limit
+- audit log must record usage
 
-- The row action currently relies on server-provided balances, so any future
-  subscription status rule changes should stay aligned with
-  `getPatientBenefitBalance()`.
+## Tests
+
+Update:
+
+- pnpm test:membership
+- pnpm test:rbac
+- pnpm test:audit
+
+Test:
+
+- active patient sees benefit usage action
+- inactive patient cannot consume benefit
+- usage creates history
+- usage creates audit log
+- STAFF follows existing permission matrix
 
 ## Validation
 
-- `pnpm test:tenant` OK
-- `pnpm test:rbac` OK
-- `pnpm test:membership` OK
-- `pnpm test:audit` OK
-- `pnpm lint` OK
-- `pnpm --dir apps/web typecheck` OK
+Run:
+
+pnpm test:tenant
+pnpm test:rbac
+pnpm test:membership
+pnpm test:audit
+pnpm lint
+pnpm --dir apps/web typecheck
+
+## Report
+
+Create:
+
+tasks/review/014-patient-benefit-use-action.md
+
+Move task to review.
+Do not start next task.

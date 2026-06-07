@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { getTranslations } from "@/i18n/messages";
 
 import { activateClinicSubscriptionAction } from "../actions/activate-clinic-subscription";
 import { cancelClinicSubscriptionAction } from "../actions/cancel-clinic-subscription";
@@ -21,6 +22,7 @@ export function ClinicSubscriptionActions({
   subscriptionId,
   status,
 }: Props) {
+  const t = getTranslations();
   const router = useRouter();
   const [isPending, startTransition] =
     useTransition();
@@ -60,16 +62,16 @@ export function ClinicSubscriptionActions({
       {status !==
       ClinicSubscriptionStatus.ACTIVE ? (
         <ConfirmDialog
-          title="Mark platform subscription as active?"
-          description="This reactivates the clinic's manual SaaS subscription state."
-          actionLabel="Mark active"
+          title={t("billing.markSubscriptionActiveTitle")}
+          description={t("billing.markSubscriptionActiveDescription")}
+          actionLabel={t("billing.actions.markActive")}
           trigger={
             <Button
               type="button"
               variant="outline"
               disabled={isPending}
             >
-              Mark active
+              {t("billing.actions.markActive")}
             </Button>
           }
           onConfirm={() =>
@@ -78,8 +80,8 @@ export function ClinicSubscriptionActions({
                 activateClinicSubscriptionAction(
                   buildFormData()
                 ),
-              "Platform subscription marked as active.",
-              "Failed to activate platform subscription."
+              t("billing.markSubscriptionActiveSuccess"),
+              t("billing.markSubscriptionActiveError")
             )
           }
         />
@@ -90,16 +92,16 @@ export function ClinicSubscriptionActions({
       status !==
         ClinicSubscriptionStatus.CANCELED ? (
         <ConfirmDialog
-          title="Suspend platform subscription?"
-          description="This suspends the clinic's manual SaaS subscription state."
-          actionLabel="Suspend"
+          title={t("billing.suspendSubscriptionTitle")}
+          description={t("billing.suspendSubscriptionDescription")}
+          actionLabel={t("billing.actions.suspend")}
           trigger={
             <Button
               type="button"
               variant="outline"
               disabled={isPending}
             >
-              Suspend
+              {t("billing.actions.suspend")}
             </Button>
           }
           onConfirm={() =>
@@ -108,8 +110,8 @@ export function ClinicSubscriptionActions({
                 suspendClinicSubscriptionAction(
                   buildFormData()
                 ),
-              "Platform subscription suspended.",
-              "Failed to suspend platform subscription."
+              t("billing.suspendSubscriptionSuccess"),
+              t("billing.suspendSubscriptionError")
             )
           }
         />
@@ -118,16 +120,16 @@ export function ClinicSubscriptionActions({
       {status !==
       ClinicSubscriptionStatus.CANCELED ? (
         <ConfirmDialog
-          title="Cancel platform subscription?"
-          description="This cancels the clinic's manual SaaS subscription state."
-          actionLabel="Cancel"
+          title={t("billing.cancelSubscriptionTitle")}
+          description={t("billing.cancelSubscriptionDescription")}
+          actionLabel={t("billing.actions.cancelSubscription")}
           trigger={
             <Button
               type="button"
               variant="outline"
               disabled={isPending}
             >
-              Cancel
+              {t("billing.actions.cancelSubscription")}
             </Button>
           }
           onConfirm={() =>
@@ -136,14 +138,14 @@ export function ClinicSubscriptionActions({
                 cancelClinicSubscriptionAction(
                   buildFormData()
                 ),
-              "Platform subscription canceled.",
-              "Failed to cancel platform subscription."
+              t("billing.cancelSubscriptionSuccess"),
+              t("billing.cancelSubscriptionError")
             )
           }
         />
       ) : (
         <span className="text-xs text-muted-foreground">
-          Canceled subscriptions stay visible for history and are not auto-recreated.
+          {t("billing.canceledHistoryNote")}
         </span>
       )}
     </div>

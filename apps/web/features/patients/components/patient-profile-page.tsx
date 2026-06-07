@@ -6,6 +6,7 @@ import { DashboardPage } from "@/components/layout/dashboard-page";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 import { formatCurrency } from "@/lib/formatters";
 
 import { getPatientProfile } from "../services/get-patient-profile";
@@ -17,8 +18,9 @@ type Props = {
 function formatDateTime(
   value: Date | null | undefined
 ) {
+  const t = getTranslations();
   if (!value) {
-    return "Not recorded";
+    return t("shared.states.notRecorded");
   }
 
   return new Date(value).toLocaleString();
@@ -27,8 +29,9 @@ function formatDateTime(
 function formatDateOnly(
   value: Date | null | undefined
 ) {
+  const t = getTranslations();
   if (!value) {
-    return "Not recorded";
+    return t("shared.states.notRecorded");
   }
 
   return new Date(value).toLocaleDateString();
@@ -37,6 +40,7 @@ function formatDateOnly(
 export async function PatientProfilePage({
   patientId,
 }: Props) {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -50,8 +54,12 @@ export async function PatientProfilePage({
     return (
       <DashboardPage>
         <AccessDenied
-          title="Patient access denied"
-          description="The current role cannot view patient operational history."
+          title={t(
+            "patients.profile.accessDeniedTitle"
+          )}
+          description={t(
+            "patients.profile.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -64,35 +72,41 @@ export async function PatientProfilePage({
     <DashboardPage>
       <PageHeader
         title={profile.patient.fullName}
-        description="Full operational profile, billing records, benefit usage history, and patient-related audit trail."
+        description={t(
+          "patients.profile.description"
+        )}
       />
 
       <SectionCard
-        title="Patient overview"
-        description="Current registration and status snapshot."
+        title={t("patients.profile.overviewTitle")}
+        description={t(
+          "patients.profile.overviewDescription"
+        )}
       >
         <div className="grid gap-4 p-4 md:grid-cols-3">
           <div>
             <p className="text-sm text-muted-foreground">
-              Email
+              {t("shared.labels.email")}
             </p>
             <p>{profile.patient.email}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">
-              Phone
+              {t("shared.labels.phone")}
             </p>
             <p>{profile.patient.phone}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">
-              Status
+              {t("shared.labels.status")}
             </p>
             <p>{profile.patient.status}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">
-              Registration date
+              {t(
+                "shared.labels.registrationDate"
+              )}
             </p>
             <p>
               {formatDateOnly(
@@ -102,7 +116,7 @@ export async function PatientProfilePage({
           </div>
           <div>
             <p className="text-sm text-muted-foreground">
-              Birth date
+              {t("shared.labels.birthDate")}
             </p>
             <p>
               {formatDateOnly(
@@ -112,7 +126,7 @@ export async function PatientProfilePage({
           </div>
           <div>
             <p className="text-sm text-muted-foreground">
-              Document
+              {t("shared.labels.document")}
             </p>
             <p>
               {profile.patient.document}
@@ -122,27 +136,31 @@ export async function PatientProfilePage({
       </SectionCard>
 
       <SectionCard
-        title="Subscriptions"
-        description="Current and historical subscriptions for this patient."
+        title={t(
+          "patients.profile.subscriptionsTitle"
+        )}
+        description={t(
+          "patients.profile.subscriptionsDescription"
+        )}
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
                 <th className="py-2">
-                  Plan
+                  {t("shared.labels.plan")}
                 </th>
                 <th className="py-2">
-                  Status
+                  {t("shared.labels.status")}
                 </th>
                 <th className="py-2">
-                  Started
+                  {t("patients.profile.started")}
                 </th>
                 <th className="py-2">
-                  Expires
+                  {t("shared.labels.expires")}
                 </th>
                 <th className="py-2">
-                  Link
+                  {t("patients.profile.link")}
                 </th>
               </tr>
             </thead>
@@ -178,7 +196,7 @@ export async function PatientProfilePage({
                         href={`/dashboard/subscriptions?patientId=${profile.patient.id}`}
                         className="text-primary underline-offset-4 hover:underline"
                       >
-                        Open
+                        {t("shared.actions.open")}
                       </Link>
                     </td>
                   </tr>
@@ -190,27 +208,31 @@ export async function PatientProfilePage({
       </SectionCard>
 
       <SectionCard
-        title="Benefit usage history"
-        description="Includes active and canceled benefit usage records."
+        title={t(
+          "patients.profile.benefitHistoryTitle"
+        )}
+        description={t(
+          "patients.profile.benefitHistoryDescription"
+        )}
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
                 <th className="py-2">
-                  Benefit
+                  {t("shared.labels.benefit")}
                 </th>
                 <th className="py-2">
-                  Status
+                  {t("shared.labels.status")}
                 </th>
                 <th className="py-2">
-                  Quantity
+                  {t("shared.labels.quantity")}
                 </th>
                 <th className="py-2">
-                  Used by
+                  {t("patients.profile.usedBy")}
                 </th>
                 <th className="py-2">
-                  Used at
+                  {t("patients.profile.usedAt")}
                 </th>
               </tr>
             </thead>
@@ -245,8 +267,13 @@ export async function PatientProfilePage({
                           usage.canceledAt
                             ? `${formatDateTime(
                                 usage.usedAt
-                              )} (canceled ${formatDateTime(
-                                usage.canceledAt
+                              )} (${t(
+                                "patients.profile.canceledAt",
+                                {
+                                  date: formatDateTime(
+                                    usage.canceledAt
+                                  ),
+                                }
                               )})`
                             : formatDateTime(
                                 usage.usedAt
@@ -262,30 +289,34 @@ export async function PatientProfilePage({
       </SectionCard>
 
       <SectionCard
-        title="Payment history"
-        description="Invoices, payment records, and overdue history for this patient."
+        title={t(
+          "patients.profile.paymentHistoryTitle"
+        )}
+        description={t(
+          "patients.profile.paymentHistoryDescription"
+        )}
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
                 <th className="py-2">
-                  Invoice
+                  {t("patients.profile.invoice")}
                 </th>
                 <th className="py-2">
-                  Plan
+                  {t("shared.labels.plan")}
                 </th>
                 <th className="py-2">
-                  Amount
+                  {t("shared.labels.amount")}
                 </th>
                 <th className="py-2">
-                  Due date
+                  {t("shared.labels.dueDate")}
                 </th>
                 <th className="py-2">
-                  Status
+                  {t("shared.labels.status")}
                 </th>
                 <th className="py-2">
-                  Payment history
+                  {t("shared.labels.paymentHistory")}
                 </th>
               </tr>
             </thead>
@@ -304,7 +335,7 @@ export async function PatientProfilePage({
                       {invoice.subscription
                         ?.membershipPlan
                         ?.name ??
-                        "Detached"}
+                        t("patients.profile.detached")}
                     </td>
                     <td className="py-3">
                       {formatCurrency(
@@ -323,7 +354,9 @@ export async function PatientProfilePage({
                       {invoice.payments.length ===
                       0 ? (
                         <span className="text-muted-foreground">
-                          No payments recorded
+                          {t(
+                            "patients.profile.noPaymentsRecorded"
+                          )}
                         </span>
                       ) : (
                         <div className="space-y-1">
@@ -335,7 +368,9 @@ export async function PatientProfilePage({
                                 {payment.status}
                                 {" · "}
                                 {payment.paymentMethod ??
-                                  "Unspecified"}
+                                  t(
+                                    "patients.profile.unspecified"
+                                  )}
                                 {" · "}
                                 {formatDateTime(
                                   payment.paidAt
@@ -357,24 +392,28 @@ export async function PatientProfilePage({
       {profile.patient.patientContracts
         .length > 0 ? (
         <SectionCard
-          title="Patient contract history"
-          description="Historical contract records linked to this patient."
+          title={t(
+            "patients.profile.contractHistoryTitle"
+          )}
+          description={t(
+            "patients.profile.contractHistoryDescription"
+          )}
         >
           <div className="overflow-x-auto p-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left">
                   <th className="py-2">
-                    Title
+                    {t("shared.labels.title")}
                   </th>
                   <th className="py-2">
-                    Status
+                    {t("shared.labels.status")}
                   </th>
                   <th className="py-2">
-                    Created
+                    {t("shared.labels.created")}
                   </th>
                   <th className="py-2">
-                    Accepted
+                    {t("patients.profile.accepted")}
                   </th>
                 </tr>
               </thead>
@@ -411,13 +450,15 @@ export async function PatientProfilePage({
       ) : null}
 
       <SectionCard
-        title="Transaction timeline"
-        description="Chronological operational history tied to this patient."
+        title={t("patients.profile.timelineTitle")}
+        description={t(
+          "patients.profile.timelineDescription"
+        )}
       >
         <div className="divide-y">
           {profile.timeline.length === 0 ? (
             <div className="p-4 text-sm text-muted-foreground">
-              No patient-related timeline entries found.
+              {t("patients.profile.timelineEmpty")}
             </div>
           ) : (
             profile.timeline.map((entry) => (
@@ -436,11 +477,12 @@ export async function PatientProfilePage({
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Actor: {entry.actor}
+                  {t("patients.profile.actor")}:{" "}
+                  {entry.actor}
                 </p>
                 {entry.entityLabel ? (
                   <p className="text-sm text-muted-foreground">
-                    Label:{" "}
+                    {t("patients.profile.label")}:{" "}
                     {entry.entityLabel}
                   </p>
                 ) : null}

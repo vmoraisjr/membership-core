@@ -2,76 +2,108 @@
 
 ## Objective
 
-Complete the V1 patient payment control flow with manual payment methods,
-patient invoice cancellation and stronger operational history.
+Create the V1 payment control section for membership subscriptions.
 
-## Files Created
+This is about payments from patient to clinic.
 
-- `apps/web/app/(dashboard)/dashboard/payments/page.tsx`
-- `apps/web/features/billing/actions/cancel-patient-invoice.ts`
-- `apps/web/features/billing/actions/update-patient-invoice-payment-method.ts`
-- `apps/web/prisma/migrations/20260607024500_patient_payment_methods/migration.sql`
-- `apps/web/prisma/migrations/20260607025500_payment_method_enum_alignment/migration.sql`
-- `tasks/review/016-patient-payment-control.md`
+Not Nortex SaaS billing.
 
-## Files Modified
+No gateway integration in V1.
 
-- `apps/web/prisma/schema.prisma`
-- `apps/web/features/billing/actions/mark-patient-invoice-paid.ts`
-- `apps/web/features/billing/components/billing-page.tsx`
-- `apps/web/features/billing/services/billing-foundation.ts`
-- `apps/web/features/billing/services/billing-status.ts`
-- `apps/web/features/patients/components/patient-profile-page.tsx`
-- `apps/web/tests/audit/audit-log-hardening.test.ts`
-- `apps/web/tests/billing/billing-hardening.test.ts`
-- `apps/web/tests/rbac/rbac-hardening.test.ts`
+## Requirements
 
-## What Was Implemented
+Create or complete payment section showing:
 
-- Added persisted patient payment methods with V1-supported values:
-  - `CARD`
-  - `PIX`
-  - `CASH`
-  - `BANK_TRANSFER`
-  - `OTHER`
-- Added manual invoice payment-method updates for patient invoices.
-- Required a valid payment method when marking a patient invoice as paid.
-- Added manual patient invoice cancellation for pending and overdue invoices.
-- Expanded the billing UI to show:
-  - patient
-  - plan
-  - subscription
-  - amount
-  - due date
-  - status
-  - payment date
-  - payment method
-  - payment history
-- Added `/dashboard/payments` as an alias to the billing surface.
-- Extended patient profile payment history to include payment method context.
+- patient
+- subscription
+- plan
+- invoice amount
+- due date
+- status
+- payment date
+- payment method
 
-## Decisions Made
+Payment methods:
 
-- Stored payment method on both `PatientInvoice` and `PatientPayment` so the
-  current invoice state and historical paid record stay aligned.
-- Reused the existing billing page instead of building a second payments
-  surface for V1.
+- CARD
+- PIX
+- CASH
 
-## Risks
+Optional if already modeled:
 
-- Payment method changes after a payment exists currently synchronize paid
-  patient-payment rows for that invoice; future multi-payment support would need
-  a more granular history model.
+- BANK_TRANSFER
+- OTHER
+
+Payment statuses:
+
+- PENDING
+- PAID
+- OVERDUE
+- CANCELED
+- FAILED
+
+Actions:
+
+- mark as paid
+- mark as overdue
+- cancel invoice if supported
+- update payment method
+- view payment history
+
+Rules:
+
+- STAFF cannot confirm payment unless RBAC allows
+- ADMIN/OWNER can confirm payment
+- payments are tenant-scoped
+- payment confirmation creates audit log
+- overdue status creates audit log
+
+## UI
+
+Create or complete:
+
+/dashboard/payments
+
+or use existing billing page if already present.
+
+The section should focus on clinic operational payments, not Nortex billing.
+
+## Tests
+
+Create or update:
+
+pnpm test:billing
+pnpm test:audit
+pnpm test:rbac
+pnpm test:tenant
+
+Test:
+
+- invoice appears for subscription
+- payment can be marked paid
+- payment method is stored
+- staff cannot confirm payment
+- owner/admin can confirm payment
+- Alpha cannot access Beta payment
+- audit log is created
 
 ## Validation
 
-- `pnpm --dir apps/web exec prisma migrate deploy` OK
-- `pnpm --dir apps/web exec prisma generate` OK
-- `pnpm test:tenant` OK
-- `pnpm test:rbac` OK
-- `pnpm test:membership` OK
-- `pnpm test:billing` OK
-- `pnpm test:audit` OK
-- `pnpm test:contracts` OK
-- `pnpm lint` OK
-- `pnpm --dir apps/web typecheck` OK
+Run:
+
+pnpm test:tenant
+pnpm test:rbac
+pnpm test:membership
+pnpm test:billing
+pnpm test:audit
+pnpm lint
+pnpm --dir apps/web typecheck
+
+## Report
+
+Create:
+
+tasks/review/016-patient-payment-control.md
+
+Move task to review.
+Do not start next task.

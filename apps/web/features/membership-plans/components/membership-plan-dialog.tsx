@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
+import { useTranslations } from "@/i18n/provider";
 
 import { Textarea } from "@/components/ui/textarea";
 
@@ -60,6 +61,7 @@ export function MembershipPlanDialog({
 
   trigger,
 }: Props) {
+  const t = useTranslations();
   const [open, setOpen] =
     useState(false);
 
@@ -122,7 +124,7 @@ export function MembershipPlanDialog({
         );
 
         toast.success(
-          "Membership plan updated."
+          t("plans.dialog.saveSuccess")
         );
       } else {
         await createMembershipPlan(
@@ -130,7 +132,7 @@ export function MembershipPlanDialog({
         );
 
         toast.success(
-          "Membership plan created."
+          t("plans.dialog.createSuccess")
         );
       }
 
@@ -139,7 +141,7 @@ export function MembershipPlanDialog({
       setOpen(false);
     } catch {
       toast.error(
-        "Failed to save membership plan."
+        t("plans.dialog.saveError")
       );
     }
   }
@@ -152,7 +154,7 @@ export function MembershipPlanDialog({
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
-            New Plan
+            {t("plans.new")}
           </Button>
         )}
       </DialogTrigger>
@@ -161,28 +163,30 @@ export function MembershipPlanDialog({
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"
-              ? "Edit Membership Plan"
-              : "Create Membership Plan"}
+              ? t("plans.dialog.editTitle")
+              : t("plans.dialog.createTitle")}
           </DialogTitle>
         </DialogHeader>
 
         <form className="flex flex-col gap-4">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Plan name
+              {t("plans.dialog.name")}
             </label>
             <Input
-              placeholder="Plan name"
+              placeholder={t("plans.dialog.name")}
               {...form.register("name")}
             />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Description
+              {t("shared.labels.description")}
             </label>
             <Textarea
-              placeholder="Description"
+              placeholder={t(
+                "shared.labels.description"
+              )}
               {...form.register(
                 "description"
               )}
@@ -191,12 +195,14 @@ export function MembershipPlanDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Monthly price
+              {t("plans.dialog.monthlyPrice")}
             </label>
             <Input
               type="number"
               step="0.01"
-              placeholder="Monthly price"
+              placeholder={t(
+                "plans.dialog.monthlyPrice"
+              )}
               {...form.register(
                 "monthlyPrice",
                 {
@@ -209,24 +215,30 @@ export function MembershipPlanDialog({
           <ConfirmDialog
             title={
               mode === "edit"
-                ? "Save membership plan changes?"
-                : "Create membership plan?"
+                ? t("plans.dialog.confirmEditTitle")
+                : t(
+                    "plans.dialog.confirmCreateTitle"
+                  )
             }
             description={
               mode === "edit"
-                ? "This updates the selected membership plan."
-                : "This creates a new membership plan."
+                ? t(
+                    "plans.dialog.confirmEditDescription"
+                  )
+                : t(
+                    "plans.dialog.confirmCreateDescription"
+                  )
             }
             actionLabel={
               mode === "edit"
-                ? "Save changes"
-                : "Create plan"
+                ? t("shared.actions.saveChanges")
+                : t("plans.dialog.createAction")
             }
             trigger={
               <Button type="button">
                 {mode === "edit"
-                  ? "Save Changes"
-                  : "Create Plan"}
+                  ? t("shared.actions.saveChanges")
+                  : t("plans.dialog.createAction")}
               </Button>
             }
             onConfirm={() =>

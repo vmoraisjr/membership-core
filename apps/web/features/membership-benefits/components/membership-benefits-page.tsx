@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 
 import { getMembershipBenefits } from "../services/get-membership-benefits";
 import { getMembershipBenefitFormOptions } from "../services/get-membership-benefit-form-options";
@@ -17,6 +18,7 @@ type Props = {
 export async function MembershipBenefitsPage({
   contextPlanId,
 }: Props) {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -30,8 +32,12 @@ export async function MembershipBenefitsPage({
     return (
       <DashboardPage>
         <AccessDenied
-          title="Benefits access denied"
-          description="The current role cannot view membership benefits."
+          title={t(
+            "benefits.accessDeniedTitle"
+          )}
+          description={t(
+            "benefits.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -59,11 +65,13 @@ export async function MembershipBenefitsPage({
   return (
     <DashboardPage>
       <PageHeader
-        title="Benefits"
+        title={t("benefits.title")}
         description={
           contextPlanId
-            ? "Support screen filtered by the selected plan context."
-            : "Support screen for plan-linked benefits."
+            ? t(
+                "benefits.filteredDescription"
+              )
+            : t("benefits.description")
         }
         action={
           canManageBenefits ? (

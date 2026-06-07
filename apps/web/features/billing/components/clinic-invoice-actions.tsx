@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { getTranslations } from "@/i18n/messages";
 
 import { markClinicInvoiceOverdueAction } from "../actions/mark-clinic-invoice-overdue";
 import { markClinicInvoicePaidAction } from "../actions/mark-clinic-invoice-paid";
@@ -20,6 +21,7 @@ export function ClinicInvoiceActions({
   invoiceId,
   status,
 }: Props) {
+  const t = getTranslations();
   const router = useRouter();
   const [isPending, startTransition] =
     useTransition();
@@ -57,16 +59,16 @@ export function ClinicInvoiceActions({
       status ===
         PaymentStatus.OVERDUE ? (
         <ConfirmDialog
-          title="Mark clinic invoice as paid?"
-          description="This confirms manual payment for the clinic SaaS invoice."
-          actionLabel="Mark paid"
+          title={t("billing.markClinicPaidTitle")}
+          description={t("billing.markClinicPaidDescription")}
+          actionLabel={t("billing.actions.markPaid")}
           trigger={
             <Button
               type="button"
               variant="outline"
               disabled={isPending}
             >
-              Mark paid
+              {t("billing.actions.markPaid")}
             </Button>
           }
           onConfirm={() =>
@@ -75,8 +77,8 @@ export function ClinicInvoiceActions({
                 markClinicInvoicePaidAction(
                   buildFormData()
                 ),
-              "Clinic invoice marked as paid.",
-              "Failed to mark clinic invoice as paid."
+              t("billing.markClinicPaidSuccess"),
+              t("billing.markClinicPaidError")
             )
           }
         />
@@ -85,16 +87,16 @@ export function ClinicInvoiceActions({
       {status ===
       PaymentStatus.PENDING ? (
         <ConfirmDialog
-          title="Mark clinic invoice as overdue?"
-          description="This moves the clinic SaaS invoice to overdue status."
-          actionLabel="Mark overdue"
+          title={t("billing.markClinicOverdueTitle")}
+          description={t("billing.markClinicOverdueDescription")}
+          actionLabel={t("billing.actions.markOverdue")}
           trigger={
             <Button
               type="button"
               variant="outline"
               disabled={isPending}
             >
-              Mark overdue
+              {t("billing.actions.markOverdue")}
             </Button>
           }
           onConfirm={() =>
@@ -103,8 +105,8 @@ export function ClinicInvoiceActions({
                 markClinicInvoiceOverdueAction(
                   buildFormData()
                 ),
-              "Clinic invoice marked as overdue.",
-              "Failed to mark clinic invoice as overdue."
+              t("billing.markClinicOverdueSuccess"),
+              t("billing.markClinicOverdueError")
             )
           }
         />
@@ -114,7 +116,7 @@ export function ClinicInvoiceActions({
       status !==
         PaymentStatus.OVERDUE ? (
         <span className="text-xs text-muted-foreground">
-          Locked status
+          {t("billing.lockedStatus")}
         </span>
       ) : null}
     </div>

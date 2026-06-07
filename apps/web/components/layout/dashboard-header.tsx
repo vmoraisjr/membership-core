@@ -1,6 +1,7 @@
 import type { AppRole } from "@/features/auth/constants/roles";
 import { getRoleLabel } from "@/features/auth/constants/roles";
 import { logoutAction } from "@/features/auth/actions/logout";
+import { getTranslations } from "@/i18n/messages";
 
 type Props = {
   role: AppRole;
@@ -16,15 +17,18 @@ export function DashboardHeader({
   role,
   currentUser,
 }: Props) {
+  const t = getTranslations();
+
   return (
     <header className="flex min-h-16 items-center justify-between border-b border-border/60 bg-background/95 px-4 md:px-6">
       <div>
         <h2 className="font-semibold tracking-tight">
-          Operations
+          {t("dashboardLayout.operations")}
         </h2>
 
         <p className="text-sm text-muted-foreground">
-          {getRoleLabel(role)} workspace
+          {getRoleLabel(role)}{" "}
+          {t("dashboardLayout.workspaceSuffix")}
         </p>
       </div>
 
@@ -42,10 +46,12 @@ export function DashboardHeader({
             type="submit"
             className="rounded-md border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
-            Sign out
+            {t("shared.actions.signOut")}
           </button>
         </form>
-        <span>Membership Core SaaS</span>
+        <span>
+          {t("dashboardLayout.saasLabel")}
+        </span>
       </div>
     </header>
   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requestPasswordResetAction } from "@/features/auth/actions/request-password-reset";
+import { getTranslations } from "@/i18n/messages";
 
 type Props = {
   searchParams?: Promise<{
@@ -11,6 +12,7 @@ type Props = {
 export default async function ForgotPasswordPage({
   searchParams,
 }: Props) {
+  const t = getTranslations();
   const params =
     (await searchParams) ?? {};
 
@@ -18,16 +20,15 @@ export default async function ForgotPasswordPage({
     <main className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
       <div className="w-full max-w-md rounded-2xl border bg-background p-6 shadow-sm">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Password recovery
+          {t("auth.forgotPassword.title")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Submit your email to create a password reset token foundation for this
-          account.
+          {t("auth.forgotPassword.description")}
         </p>
 
         {params.status === "sent" ? (
           <p className="mt-4 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm">
-            If the account exists, a reset token has been created.
+            {t("auth.forgotPassword.success")}
           </p>
         ) : null}
 
@@ -55,7 +56,7 @@ export default async function ForgotPasswordPage({
             type="submit"
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
           >
-            Create reset token
+            {t("auth.forgotPassword.submit")}
           </button>
         </form>
 
@@ -63,7 +64,7 @@ export default async function ForgotPasswordPage({
           href="/login"
           className="mt-4 inline-block text-sm text-muted-foreground underline-offset-4 hover:underline"
         >
-          Back to login
+          {t("shared.actions.backToLogin")}
         </Link>
       </div>
     </main>

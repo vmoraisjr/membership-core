@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslations } from "@/i18n/provider";
 
 type Props = {
   trigger: React.ReactNode;
@@ -59,6 +60,7 @@ export function ConfirmDialog({
   detailsRequired = false,
   detailsInput = "input",
 }: Props) {
+  const t = useTranslations();
   const [open, setOpen] =
     useState(false);
   const [typedValue, setTypedValue] =
@@ -118,7 +120,9 @@ export function ConfirmDialog({
             <div className="mt-4 w-full space-y-2">
               <label className="block text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {confirmLabel ??
-                  "Type to confirm"}
+                  t(
+                    "confirmDialog.typeToConfirm"
+                  )}
               </label>
 
               <Input
@@ -140,7 +144,7 @@ export function ConfirmDialog({
             <div className="mt-4 w-full space-y-2">
               <label className="block text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {detailsLabel ??
-                  "Details"}
+                  t("shared.labels.details")}
               </label>
 
               <DetailsField
@@ -160,7 +164,7 @@ export function ConfirmDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel>
-            Cancel
+            {t("shared.actions.cancel")}
           </AlertDialogCancel>
 
           <AlertDialogAction

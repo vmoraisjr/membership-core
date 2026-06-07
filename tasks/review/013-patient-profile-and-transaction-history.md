@@ -2,50 +2,84 @@
 
 ## Objective
 
-Create a tenant-safe patient detail page with operational history and a
-patient-scoped timeline.
+Create a patient detail page with full operational history.
 
-## Files Created
+## Requirements
 
-- `apps/web/app/(dashboard)/dashboard/patients/[patientId]/page.tsx`
-- `tasks/review/013-patient-profile-and-transaction-history.md`
+### Patient name link
 
-## Files Modified
+In the patients table, make the patient name clickable.
 
-- `apps/web/features/patients/components/patients-table.tsx`
-- `apps/web/features/patients/services/get-patient-profile.ts`
-- `apps/web/tests/membership/membership-regression.test.ts`
-- `apps/web/tests/tenant-isolation/cross-tenant-regression.test.ts`
+Route example:
 
-## What Was Implemented
+/dashboard/patients/[patientId]
 
-- Connected the patient name in the roster to `/dashboard/patients/[patientId]`.
-- Activated the existing patient profile surface through a real dashboard route.
-- Kept patient detail access tenant-scoped by loading only records that belong to
-  the current clinic.
-- Expanded patient timeline filtering to include invoice-related metadata and
-  patient payment entities when present.
-- Preserved historical visibility for canceled benefit usages and prior
-  subscription events inside the patient profile.
+### Patient detail page
 
-## Regression Coverage
+Create a page showing:
 
-- Added tenant regression coverage proving Alpha cannot access Beta patient
-  detail.
-- Added patient-profile regression coverage proving the timeline remains tied to
-  the selected patient and includes historical canceled usage.
+- patient data
+- registration date
+- current status
+- subscriptions
+- benefit usage history
+- canceled benefit usages
+- payment history
+- patient contract history if contracts remain available internally
+- audit log entries related to this patient
 
-## Risks
+### Transaction timeline
 
-- The patient timeline still depends on audit-log metadata consistency, so new
-  billing or contract events should continue recording patient/subscription or
-  invoice identifiers.
+Create a chronological history containing:
+
+- patient created
+- patient updated
+- plan subscribed
+- subscription canceled/reactivated/expired
+- benefit consumed
+- benefit usage canceled
+- invoice created
+- payment confirmed
+- payment overdue
+- relevant audit log entries
+
+## Rules
+
+- tenant-safe
+- RBAC-safe
+- patient must belong to current clinic
+- STAFF can view if current RBAC allows patient view
+- no cross-tenant data leakage
+
+## Tests
+
+Update or add:
+
+- pnpm test:tenant
+- pnpm test:membership
+- pnpm test:users if needed
+
+Test:
+
+- Alpha cannot access Beta patient detail
+- patient timeline only shows patient-related data
+- inactive/canceled records appear historically
 
 ## Validation
 
-- `pnpm test:tenant` OK
-- `pnpm test:rbac` OK
-- `pnpm test:membership` OK
-- `pnpm test:audit` OK
-- `pnpm lint` OK
-- `pnpm --dir apps/web typecheck` OK
+Run:
+
+pnpm test:tenant
+pnpm test:rbac
+pnpm test:membership
+pnpm lint
+pnpm --dir apps/web typecheck
+
+## Report
+
+Create:
+
+tasks/review/013-patient-profile-and-transaction-history.md
+
+Move task to review.
+Do not start next task.

@@ -21,6 +21,7 @@ import { revokeUserInviteAction } from "../actions/revoke-user-invite";
 import { submitClinicUserRoleAction } from "../actions/update-clinic-user-role";
 import { updateClinicUserStatusAction } from "../actions/update-clinic-user-status";
 import { getClinicUsersOverview } from "../services/get-clinic-users-overview";
+import { getTranslations } from "@/i18n/messages";
 
 type UsersPageFeedback = {
   inviteError?: string;
@@ -95,6 +96,7 @@ function getRoleLabelFromValue(
 export async function UsersPage({
   feedback,
 }: Props) {
+  const t = getTranslations();
   const [role, currentUser] =
     await Promise.all([
       getCurrentUserRole(),
@@ -111,8 +113,10 @@ export async function UsersPage({
     return (
       <DashboardPage>
         <AccessDenied
-          title="Users access denied"
-          description="The current role cannot view clinic users or invites."
+          title={t("users.accessDeniedTitle")}
+          description={t(
+            "users.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -132,8 +136,8 @@ export async function UsersPage({
   return (
     <DashboardPage>
       <PageHeader
-        title="Users"
-        description="Review clinic members, track pending invites, and keep role assignments under owner control."
+        title={t("users.title")}
+        description={t("users.description")}
       />
 
       {feedback?.inviteError ? (
@@ -159,33 +163,28 @@ export async function UsersPage({
       {feedback?.inviteCreated &&
       feedback.inviteToken ? (
         <SectionCard
-          title="Invite created"
-          description="Share this one-time onboarding link with the invited clinic user."
+          title={t("users.inviteCreatedCardTitle")}
+          description={t("users.inviteCreatedCardDescription")}
         >
           <div className="space-y-3 p-4 text-sm">
             <p>
-              Invite ready for{" "}
-              <span className="font-medium">
-                {feedback.inviteEmail}
-              </span>{" "}
-              as{" "}
-              <span className="font-medium">
-                {getRoleLabelFromValue(
+              {t("users.inviteReady", {
+                email: feedback.inviteEmail,
+                role: getRoleLabelFromValue(
                   feedback.inviteRole
-                )}
-              </span>
-              .
+                ),
+              })}
             </p>
             <div className="rounded-lg border bg-background px-3 py-2 font-mono text-xs break-all">
               /invite?token=
               {feedback.inviteToken}
             </div>
             <p className="text-muted-foreground">
-              Expires on{" "}
-              {formatDate(
-                feedback.inviteExpiresAt
-              )}
-              .
+              {t("users.expiresOn", {
+                date: formatDate(
+                  feedback.inviteExpiresAt
+                ),
+              })}
             </p>
           </div>
         </SectionCard>
@@ -199,18 +198,19 @@ export async function UsersPage({
             "success"
           )}`}
         >
-          {feedback.updatedUserName} is now{" "}
-          {getRoleLabelFromValue(
-            feedback.updatedRole
-          )}
-          .
+          {t("users.roleUpdated", {
+            name: feedback.updatedUserName,
+            role: getRoleLabelFromValue(
+              feedback.updatedRole
+            ),
+          })}
         </div>
       ) : null}
 
       {canManageUsers ? (
         <SectionCard
-          title="Invite clinic user"
-          description="Invite a new operator and assign the role before they set their password."
+          title={t("users.inviteUserCardTitle")}
+          description={t("users.inviteUserCardDescription")}
         >
           <form
             action={submitUserInviteAction}
@@ -219,13 +219,13 @@ export async function UsersPage({
           >
             <label className="grid gap-2 text-sm">
               <span className="font-medium">
-                Email
+                {t("shared.labels.email")}
               </span>
               <Input
                 name="email"
                 type="email"
                 required
-                placeholder="new.user@clinic.com"
+                placeholder={t("users.newUserPlaceholder")}
                 defaultValue={
                   feedback?.inviteError
                     ? feedback.inviteEmail
@@ -236,7 +236,7 @@ export async function UsersPage({
 
             <label className="grid gap-2 text-sm">
               <span className="font-medium">
-                Role
+                {t("shared.labels.role")}
               </span>
               <select
                 name="role"
@@ -269,10 +269,10 @@ export async function UsersPage({
             <div className="flex items-end">
               <ConfirmSubmitButton
                 formId="create-user-invite-form"
-                title="Create user invite?"
-                description="This will create a new invite for the selected email and role."
-                actionLabel="Create invite"
-                label="Create invite"
+                title={t("users.createInviteTitle")}
+                description={t("users.createInviteDescription")}
+                actionLabel={t("users.createInviteAction")}
+                label={t("users.createInvite")}
               />
             </div>
           </form>
@@ -280,30 +280,30 @@ export async function UsersPage({
       ) : null}
 
       <SectionCard
-        title="Clinic roster"
-        description="Only users assigned to the current clinic appear here."
+        title={t("users.rosterCardTitle")}
+        description={t("users.rosterCardDescription")}
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
                 <th className="py-2">
-                  User
+                  {t("shared.labels.user")}
                 </th>
                 <th className="py-2">
-                  Role
+                  {t("shared.labels.role")}
                 </th>
                 <th className="py-2">
-                  Status
+                  {t("shared.labels.status")}
                 </th>
                 <th className="py-2">
-                  Created
+                  {t("shared.labels.created")}
                 </th>
                 <th className="py-2">
-                  Last login
+                  {t("shared.labels.lastLogin")}
                 </th>
                 <th className="py-2 text-right">
-                  Actions
+                  {t("shared.labels.actions")}
                 </th>
               </tr>
             </thead>
@@ -314,7 +314,7 @@ export async function UsersPage({
                     colSpan={6}
                     className="py-6 text-center text-muted-foreground"
                   >
-                    No clinic users found.
+                    {t("users.emptyClinicUsers")}
                   </td>
                 </tr>
               ) : (
@@ -338,7 +338,7 @@ export async function UsersPage({
                         <div className="text-xs text-muted-foreground">
                           {user.email}
                           {isCurrentUser
-                            ? " · Current session"
+                            ? ` · ${t("users.currentSession")}`
                             : ""}
                         </div>
                       </td>
@@ -384,10 +384,10 @@ export async function UsersPage({
                             </select>
                             <ConfirmSubmitButton
                               formId={`update-user-role-${user.id}`}
-                              title="Update user role?"
-                              description={`This will change ${user.name}'s role.`}
-                              actionLabel="Save role"
-                              label="Save"
+                              title={t("users.updateRoleTitle")}
+                              description={t("users.updateRoleDescription", { name: user.name })}
+                              actionLabel={t("shared.actions.saveRole")}
+                              label={t("users.save")}
                             />
                           </form>
                         ) : (
@@ -404,7 +404,7 @@ export async function UsersPage({
                             user.status
                           )}`}
                         >
-                          {user.status}
+                          {t(`users.status.${user.status}`)}
                         </span>
                       </td>
                       <td className="py-3">
@@ -420,7 +420,7 @@ export async function UsersPage({
                       <td className="py-3 text-right">
                         {isCurrentUser ? (
                           <span className="text-xs text-muted-foreground">
-                            Manage your own account outside this screen
+                            {t("users.manageOwnAccount")}
                           </span>
                         ) : canManageUsers ? (
                           <div className="flex flex-wrap justify-end gap-2">
@@ -451,21 +451,21 @@ export async function UsersPage({
                                 title={
                                   user.status ===
                                   AppUserStatus.ACTIVE
-                                    ? "Deactivate user?"
-                                    : "Reactivate user?"
+                                    ? t("users.deactivateTitle")
+                                    : t("users.reactivateTitle")
                                 }
-                                description={`This will update ${user.name}'s account status.`}
+                                description={t("users.updateUserStatusDescription", { name: user.name })}
                                 actionLabel={
                                   user.status ===
                                   AppUserStatus.ACTIVE
-                                    ? "Deactivate"
-                                    : "Reactivate"
+                                    ? t("shared.actions.deactivate")
+                                    : t("shared.actions.reactivate")
                                 }
                                 label={
                                   user.status ===
                                   AppUserStatus.ACTIVE
-                                    ? "Deactivate"
-                                    : "Reactivate"
+                                    ? t("shared.actions.deactivate")
+                                    : t("shared.actions.reactivate")
                                 }
                               />
                             </form>
@@ -483,16 +483,16 @@ export async function UsersPage({
                               />
                               <ConfirmSubmitButton
                                 formId={`remove-user-${user.id}`}
-                                title="Remove user from clinic?"
-                                description={`This will remove ${user.name} from the clinic roster.`}
-                                actionLabel="Remove user"
-                                label="Remove"
+                                title={t("users.removeTitle")}
+                                description={t("users.removeDescription", { name: user.name })}
+                                actionLabel={t("users.removeUserAction")}
+                                label={t("users.remove")}
                               />
                             </form>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            Read only
+                            {t("shared.states.readOnly")}
                           </span>
                         )}
                       </td>
@@ -506,33 +506,33 @@ export async function UsersPage({
       </SectionCard>
 
       <SectionCard
-        title="Invite history"
-        description="Pending, accepted, and expired clinic invites remain scoped to the current clinic."
+        title={t("users.inviteHistoryCardTitle")}
+        description={t("users.inviteHistoryCardDescription")}
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
                 <th className="py-2">
-                  Email
+                  {t("shared.labels.email")}
                 </th>
                 <th className="py-2">
-                  Role
+                  {t("shared.labels.role")}
                 </th>
                 <th className="py-2">
-                  Status
+                  {t("shared.labels.status")}
                 </th>
                 <th className="py-2">
-                  Invited by
+                  {t("users.invitedBy")}
                 </th>
                 <th className="py-2">
-                  Created
+                  {t("shared.labels.created")}
                 </th>
                 <th className="py-2">
-                  Expires
+                  {t("shared.labels.expires")}
                 </th>
                 <th className="py-2 text-right">
-                  Actions
+                  {t("shared.labels.actions")}
                 </th>
               </tr>
             </thead>
@@ -543,7 +543,7 @@ export async function UsersPage({
                     colSpan={7}
                     className="py-6 text-center text-muted-foreground"
                   >
-                    No clinic invites found.
+                    {t("users.emptyClinicInvites")}
                   </td>
                 </tr>
               ) : (
@@ -567,7 +567,7 @@ export async function UsersPage({
                             invite.status
                           )}`}
                         >
-                          {invite.status}
+                          {t(`users.status.${invite.status}`)}
                         </span>
                       </td>
                       <td className="py-3">
@@ -602,10 +602,10 @@ export async function UsersPage({
                             />
                             <ConfirmSubmitButton
                               formId={`revoke-invite-${invite.id}`}
-                              title="Revoke invite?"
-                              description={`This will revoke the pending invite for ${invite.email}.`}
-                              actionLabel="Revoke invite"
-                              label="Revoke"
+                              title={t("users.revokeTitle")}
+                              description={t("users.revokeDescription", { email: invite.email })}
+                              actionLabel={t("users.revokeAction")}
+                              label={t("users.revoke")}
                             />
                           </form>
                         ) : (
@@ -613,7 +613,7 @@ export async function UsersPage({
                             {invite.status ===
                             "REVOKED"
                               ? "Revoked"
-                              : "Read only"}
+                              : t("shared.states.readOnly")}
                           </span>
                         )}
                       </td>

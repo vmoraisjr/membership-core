@@ -3,6 +3,7 @@ import { DashboardPage } from "@/components/layout/dashboard-page";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 
 import {
   type AuditLogFilters,
@@ -18,6 +19,7 @@ type Props = {
 export async function AuditLogPage({
   filters,
 }: Props) {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -31,8 +33,10 @@ export async function AuditLogPage({
     return (
       <DashboardPage>
         <AccessDenied
-          title="Audit log access denied"
-          description="The current role cannot view operational history."
+          title={t("audit.accessDeniedTitle")}
+          description={t(
+            "audit.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -47,8 +51,8 @@ export async function AuditLogPage({
   return (
     <DashboardPage>
       <PageHeader
-        title="Audit Log"
-        description="Review the operational history for critical membership actions."
+        title={t("audit.title")}
+        description={t("audit.description")}
       />
 
       <AuditLogTable

@@ -11,6 +11,7 @@ import { DashboardPage } from "@/components/layout/dashboard-page";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 import { formatCurrency } from "@/lib/formatters";
 
 import { ClinicInvoiceActions } from "./clinic-invoice-actions";
@@ -55,11 +56,28 @@ function getSubscriptionStatusClass(
   }
 }
 
+function getPaymentStatusLabel(
+  status: PaymentStatus
+) {
+  const t = getTranslations();
+  return t(`billing.status.${status}`);
+}
+
+function getClinicSubscriptionStatusLabel(
+  status:
+    | SubscriptionStatus
+    | ClinicSubscriptionStatus
+) {
+  const t = getTranslations();
+  return t(`billing.status.${status}`);
+}
+
 function formatOptionalDate(
   value: Date | string | null | undefined
 ) {
+  const t = getTranslations();
   if (!value) {
-    return "Not set";
+    return t("shared.states.notSet");
   }
 
   return new Date(value).toLocaleDateString();
@@ -68,23 +86,25 @@ function formatOptionalDate(
 function getPaymentMethodLabel(
   value: PaymentMethod | null | undefined
 ) {
+  const t = getTranslations();
   switch (value) {
     case PaymentMethod.CARD:
-      return "Card";
+      return t("billing.paymentMethod.CARD");
     case PaymentMethod.PIX:
-      return "Pix";
+      return t("billing.paymentMethod.PIX");
     case PaymentMethod.CASH:
-      return "Cash";
+      return t("billing.paymentMethod.CASH");
     case PaymentMethod.BANK_TRANSFER:
-      return "Bank transfer";
+      return t("billing.paymentMethod.BANK_TRANSFER");
     case PaymentMethod.OTHER:
-      return "Other";
+      return t("billing.paymentMethod.OTHER");
     default:
-      return "Not set";
+      return t("shared.states.notSet");
   }
 }
 
 export async function BillingPage() {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -98,8 +118,8 @@ export async function BillingPage() {
     return (
       <DashboardPage>
         <AccessDenied
-          title="Billing access denied"
-          description="The current role cannot view billing operations."
+          title={t("billing.accessDeniedTitle")}
+          description={t("billing.accessDeniedDescription")}
         />
       </DashboardPage>
     );
@@ -117,14 +137,14 @@ export async function BillingPage() {
   return (
     <DashboardPage>
       <PageHeader
-        title="Payments"
-        description="Track patient payments, manual invoice handling, and the clinic's Nortex SaaS billing status."
+        title={t("billing.title")}
+        description={t("billing.description")}
       />
 
       <div className="grid gap-4 md:grid-cols-3">
         <SectionCard
-          title="Overdue patient invoices"
-          description="Open invoices that need manual follow-up."
+          title={t("billing.sections.overduePatientInvoices.title")}
+          description={t("billing.sections.overduePatientInvoices.description")}
         >
           <div className="p-4 text-3xl font-semibold">
             {
@@ -134,8 +154,8 @@ export async function BillingPage() {
         </SectionCard>
 
         <SectionCard
-          title="Monthly patient revenue"
-          description="Paid invoice revenue recognized this month."
+          title={t("billing.sections.monthlyPatientRevenue.title")}
+          description={t("billing.sections.monthlyPatientRevenue.description")}
         >
           <div className="p-4 text-3xl font-semibold">
             {formatCurrency(
@@ -145,8 +165,8 @@ export async function BillingPage() {
         </SectionCard>
 
         <SectionCard
-          title="Platform subscription"
-          description="Current Nortex commercial status for this clinic."
+          title={t("billing.sections.platformSubscription.title")}
+          description={t("billing.sections.platformSubscription.description")}
         >
           <div className="p-4">
             <div className="space-y-3">
@@ -159,16 +179,22 @@ export async function BillingPage() {
                       ClinicSubscriptionStatus.TRIAL
                   )}`}
                 >
-                  {
-                    overview
-                      .clinicSubscription
-                      ?.status
-                  }
+                  {overview
+                    .clinicSubscription
+                    ?.status
+                    ? getClinicSubscriptionStatusLabel(
+                        overview
+                          .clinicSubscription
+                          .status
+                      )
+                    : getClinicSubscriptionStatusLabel(
+                        ClinicSubscriptionStatus.TRIAL
+                      )}
                 </span>
               </div>
               <div className="space-y-1 text-sm text-muted-foreground">
                 <p>
-                  Plan:{" "}
+                  {t("billing.sections.platformSubscription.plan")}:{" "}
                   {
                     overview
                       .clinicSubscription
@@ -177,7 +203,7 @@ export async function BillingPage() {
                   }
                 </p>
                 <p>
-                  Trial ends:{" "}
+                  {t("billing.sections.platformSubscription.trialEnds")}:{" "}
                   {formatOptionalDate(
                     overview
                       .clinicSubscription
@@ -185,7 +211,7 @@ export async function BillingPage() {
                   )}
                 </p>
                 <p>
-                  Expires:{" "}
+                  {t("billing.sections.platformSubscription.expires")}:{" "}
                   {formatOptionalDate(
                     overview
                       .clinicSubscription
@@ -193,7 +219,7 @@ export async function BillingPage() {
                   )}
                 </p>
                 <p>
-                  Canceled at:{" "}
+                  {t("billing.sections.platformSubscription.canceledAt")}:{" "}
                   {formatOptionalDate(
                     overview
                       .clinicSubscription
@@ -223,42 +249,42 @@ export async function BillingPage() {
       </div>
 
       <SectionCard
-        title="Patient invoices"
-        description="Manual V1 patient billing records created from subscriptions. Canceling a subscription keeps historical invoices visible for follow-up."
+        title={t("billing.sections.patientInvoices.title")}
+        description={t("billing.sections.patientInvoices.description")}
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
                 <th className="py-2">
-                  Patient
+                  {t("patients.title")}
                 </th>
                 <th className="py-2">
-                  Plan
+                  {t("shared.labels.plan")}
                 </th>
                 <th className="py-2">
-                  Amount
+                  {t("shared.labels.amount")}
                 </th>
                 <th className="py-2">
-                  Subscription
+                  {t("shared.labels.subscription")}
                 </th>
                 <th className="py-2">
-                  Due
+                  {t("shared.labels.due")}
                 </th>
                 <th className="py-2">
-                  Status
+                  {t("shared.labels.status")}
                 </th>
                 <th className="py-2">
-                  Payment date
+                  {t("shared.labels.paymentDate")}
                 </th>
                 <th className="py-2">
-                  Method
+                  {t("shared.labels.method")}
                 </th>
                 <th className="py-2">
-                  Payment history
+                  {t("shared.labels.paymentHistory")}
                 </th>
                 <th className="py-2 text-right">
-                  Actions
+                  {t("shared.labels.actions")}
                 </th>
               </tr>
             </thead>
@@ -270,7 +296,7 @@ export async function BillingPage() {
                     colSpan={10}
                     className="py-6 text-center text-muted-foreground"
                   >
-                    No patient invoices found.
+                    {t("billing.sections.patientInvoices.empty")}
                   </td>
                 </tr>
               ) : (
@@ -290,7 +316,7 @@ export async function BillingPage() {
                         {invoice.subscription
                           ?.membershipPlan
                           ?.name ??
-                          "Detached"}
+                          t("shared.states.detached")}
                       </td>
                       <td className="py-3">
                         {formatCurrency(
@@ -313,16 +339,16 @@ export async function BillingPage() {
                                   .status
                               )}`}
                             >
-                              {
+                              {getClinicSubscriptionStatusLabel(
                                 invoice
                                   .subscription
                                   .status
-                              }
+                              )}
                             </span>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            Manual / detached
+                            {t("billing.manualDetached")}
                           </span>
                         )}
                       </td>
@@ -337,9 +363,9 @@ export async function BillingPage() {
                             invoice.status
                           )}`}
                         >
-                          {
+                          {getPaymentStatusLabel(
                             invoice.status
-                          }
+                          )}
                         </span>
                       </td>
                       <td className="py-3">
@@ -356,7 +382,7 @@ export async function BillingPage() {
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            Not paid
+                            {t("billing.notPaid")}
                           </span>
                         )}
                       </td>
@@ -397,7 +423,7 @@ export async function BillingPage() {
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            No payment history
+                            {t("billing.noPaymentHistory")}
                           </span>
                         )}
                       </td>
@@ -419,7 +445,7 @@ export async function BillingPage() {
                           />
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            Read only
+                            {t("billing.readOnly")}
                           </span>
                         )}
                       </td>
@@ -433,33 +459,33 @@ export async function BillingPage() {
       </SectionCard>
 
       <SectionCard
-        title="Clinic SaaS invoices"
-        description="Commercial invoices between Nortex and the clinic."
+        title={t("billing.sections.clinicInvoices.title")}
+        description={t("billing.sections.clinicInvoices.description")}
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
                 <th className="py-2">
-                  Description
+                  {t("shared.labels.description")}
                 </th>
                 <th className="py-2">
-                  Amount
+                  {t("shared.labels.amount")}
                 </th>
                 <th className="py-2">
-                  Subscription
+                  {t("shared.labels.subscription")}
                 </th>
                 <th className="py-2">
-                  Due
+                  {t("shared.labels.due")}
                 </th>
                 <th className="py-2">
-                  Status
+                  {t("shared.labels.status")}
                 </th>
                 <th className="py-2">
-                  Payment
+                  {t("shared.labels.payment")}
                 </th>
                 <th className="py-2 text-right">
-                  Actions
+                  {t("shared.labels.actions")}
                 </th>
               </tr>
             </thead>
@@ -471,7 +497,7 @@ export async function BillingPage() {
                     colSpan={7}
                     className="py-6 text-center text-muted-foreground"
                   >
-                    No clinic invoices found.
+                    {t("billing.sections.clinicInvoices.empty")}
                   </td>
                 </tr>
               ) : (
@@ -483,7 +509,7 @@ export async function BillingPage() {
                     >
                       <td className="py-3">
                         {invoice.description ??
-                          "Clinic SaaS invoice"}
+                          t("billing.sections.clinicInvoices.defaultDescription")}
                       </td>
                       <td className="py-3">
                         {formatCurrency(
@@ -506,11 +532,11 @@ export async function BillingPage() {
                                 .status
                             )}`}
                           >
-                            {
+                            {getClinicSubscriptionStatusLabel(
                               invoice
                                 .clinicSubscription
                                 .status
-                            }
+                            )}
                           </span>
                         </div>
                       </td>
@@ -525,9 +551,9 @@ export async function BillingPage() {
                             invoice.status
                           )}`}
                         >
-                          {
+                          {getPaymentStatusLabel(
                             invoice.status
-                          }
+                          )}
                         </span>
                       </td>
                       <td className="py-3">
@@ -535,7 +561,7 @@ export async function BillingPage() {
                           .length > 0 ? (
                           <div className="text-xs">
                             <div className="font-medium">
-                              Last paid:
+                              {t("billing.sections.clinicInvoices.lastPaid")}:
                             </div>
                             <div>
                               {new Date(
@@ -547,7 +573,7 @@ export async function BillingPage() {
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            No payment record
+                            {t("billing.sections.clinicInvoices.noPaymentRecord")}
                           </span>
                         )}
                       </td>
@@ -563,7 +589,7 @@ export async function BillingPage() {
                           />
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            Read only
+                            {t("billing.readOnly")}
                           </span>
                         )}
                       </td>
@@ -578,13 +604,13 @@ export async function BillingPage() {
 
       {overview.platformMetrics ? (
         <SectionCard
-          title="Platform admin metrics"
-          description="Only visible when the current user is operating without clinic tenancy."
+          title={t("billing.sections.platformMetrics.title")}
+          description={t("billing.sections.platformMetrics.description")}
         >
           <div className="grid gap-4 p-4 md:grid-cols-4">
             <div>
               <p className="text-sm text-muted-foreground">
-                Active clinics
+                {t("dashboard.platform.activeClinics")}
               </p>
               <p className="text-2xl font-semibold">
                 {
@@ -596,7 +622,7 @@ export async function BillingPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">
-                Trial clinics
+                {t("dashboard.platform.trialClinics")}
               </p>
               <p className="text-2xl font-semibold">
                 {
@@ -608,7 +634,7 @@ export async function BillingPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">
-                Past due clinics
+                {t("dashboard.platform.pastDueClinics")}
               </p>
               <p className="text-2xl font-semibold">
                 {
@@ -620,7 +646,7 @@ export async function BillingPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">
-                Monthly SaaS revenue
+                {t("dashboard.platform.monthlySaasRevenue")}
               </p>
               <p className="text-2xl font-semibold">
                 {formatCurrency(

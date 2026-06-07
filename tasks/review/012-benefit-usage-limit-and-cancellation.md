@@ -2,79 +2,84 @@
 
 ## Objective
 
-Harden V1 benefit usage rules with explicit monthly-limit behavior and
-cancelable historical usage records.
+Improve benefit usage rules for V1.
 
-## Files Created
+## Requirements
 
-- `apps/web/features/benefit-usage/actions/cancel-benefit-usage.ts`
-- `apps/web/prisma/migrations/20260607093000_benefit_usage_cancellation/migration.sql`
-- `tasks/review/012-benefit-usage-limit-and-cancellation.md`
+### Benefit usage limit
 
-## Files Modified
+When creating or editing a membership benefit, allow defining:
 
-- `apps/web/prisma/schema.prisma`
-- `apps/web/features/benefit-usage/services/validate-benefit-usage.ts`
-- `apps/web/features/benefit-usage/services/get-patient-benefit-balance.ts`
-- `apps/web/features/benefit-usage/services/get-benefit-usage-history.ts`
-- `apps/web/features/benefit-usage/components/benefit-usage-table.tsx`
-- `apps/web/features/benefit-usage/components/benefit-usage-history-page.tsx`
-- `apps/web/features/membership-benefits/schemas/membership-benefit.schema.ts`
-- `apps/web/features/membership-benefits/actions/create-membership-benefit.ts`
-- `apps/web/features/membership-benefits/actions/update-membership-benefit.ts`
-- `apps/web/features/membership-benefits/components/membership-benefit-dialog.tsx`
-- `apps/web/features/membership-benefits/components/membership-benefits-table.tsx`
-- `apps/web/tests/membership/membership-regression.test.ts`
-- `apps/web/tests/audit/audit-log-hardening.test.ts`
-- `apps/web/tests/rbac/rbac-hardening.test.ts`
-- `apps/web/tests/tenant-isolation/cross-tenant-regression.test.ts`
+- unlimited monthly usage
+- limited monthly usage
 
-## What Was Implemented
+If limited, store:
 
-- Added operational benefit usage cancellation with persistent history.
-- Added `BenefitUsage.status` with:
-  - `ACTIVE`
-  - `CANCELED`
-- Added `BenefitUsage.canceledAt` to preserve cancellation history.
-- Excluded canceled usages from monthly limit validation and patient benefit
-  balances.
-- Added owner/admin-only cancellation enforcement while keeping staff blocked.
-- Added audit log coverage for benefit usage cancellation.
-- Updated the benefit-management UI to express V1 behavior as:
-  - unlimited monthly usage
-  - limited monthly usage
-- Standardized limited benefits to monthly reset behavior in V1.
-- Exposed cancellation state in benefit usage history.
+- monthlyUsageLimit
 
-## Decisions Made
+Rules:
 
-- Reused the existing `usageLimit` field as the persisted monthly limit instead
-  of introducing a second database column during this pass.
-- Kept `BenefitType.LIMITED` as the operational type for tracked monthly usage,
-  with `usageLimit = null` representing unlimited monthly usage.
-- Used the existing audit system with `DEACTIVATE` on `BENEFIT_USAGE` instead of
-  inventing a second cancellation event model.
+- unlimited benefits can be consumed without monthly count restriction
+- limited benefits must validate monthly usage count before consumption
+- limit resets monthly
 
-## What Was Intentionally Left Out
+### Benefit usage cancellation
 
-- No yearly or custom reset-period expansion for V1.
-- No soft-delete or restore flow for canceled usage.
-- No separate approval workflow beyond current owner/admin authorization.
+Add ability to cancel a benefit usage record.
 
-## Risks
+Business rule:
 
-- Benefit usage history is now richer, so future reporting surfaces should
-  distinguish active versus canceled usage explicitly.
-- The UI labels now describe monthly-limit behavior more clearly, but the
-  underlying persisted field name remains `usageLimit`.
+- usage cancellation requires ADMIN or OWNER approval
+- STAFF cannot cancel usage
+- canceled usage should not count against the monthly limit
+- canceled usage must remain in history
+- audit log must record cancellation
+
+## Expected changes
+
+Audit current models before editing.
+
+Possible changes:
+
+- BenefitUsage status
+- MembershipBenefit monthly limit fields
+- cancel-benefit-usage action
+- benefit usage tests
+- audit log coverage
+
+## Tests
+
+Create or update:
+
+- pnpm test:membership
+- pnpm test:audit
+- pnpm test:rbac
+
+Test cases:
+
+- limited benefit blocks after monthly limit
+- unlimited benefit does not block
+- canceled usage no longer counts against limit
+- STAFF cannot cancel usage
+- ADMIN or OWNER can cancel usage
+- cancellation creates audit log
 
 ## Validation
 
-- `pnpm --dir apps/web exec prisma migrate deploy` ✅
-- `pnpm --dir apps/web exec prisma generate` ✅
-- `pnpm test:tenant` ✅
-- `pnpm test:rbac` ✅
-- `pnpm test:membership` ✅
-- `pnpm test:audit` ✅
-- `pnpm lint` ✅
-- `pnpm --dir apps/web typecheck` ✅
+Run:
+
+pnpm test:tenant
+pnpm test:rbac
+pnpm test:membership
+pnpm test:audit
+pnpm lint
+pnpm --dir apps/web typecheck
+
+## Report
+
+Create:
+
+tasks/review/012-benefit-usage-limit-and-cancellation.md
+
+Move task to review.
+Do not start next task.

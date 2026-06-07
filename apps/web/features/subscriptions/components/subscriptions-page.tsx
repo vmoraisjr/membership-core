@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 
 import { SubscriptionsTable } from "./subscriptions-table";
 import { SubscriptionDialog } from "./subscription-dialog";
@@ -19,6 +20,7 @@ export async function SubscriptionsPage({
   contextPlanId,
   contextPatientId,
 }: Props) {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -32,8 +34,12 @@ export async function SubscriptionsPage({
     return (
       <DashboardPage>
         <AccessDenied
-          title="Subscriptions access denied"
-          description="The current role cannot view subscriptions."
+          title={t(
+            "subscriptions.accessDeniedTitle"
+          )}
+          description={t(
+            "subscriptions.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -62,12 +68,14 @@ export async function SubscriptionsPage({
   return (
     <DashboardPage>
       <PageHeader
-        title="Subscriptions"
+        title={t("subscriptions.title")}
         description={
           contextPlanId ||
           contextPatientId
-            ? "Support screen filtered by the selected plan or patient context."
-            : "Support screen for patient memberships and lifecycle states."
+            ? t(
+                "subscriptions.filteredDescription"
+              )
+            : t("subscriptions.description")
         }
         action={
           canManageSubscriptions ? (

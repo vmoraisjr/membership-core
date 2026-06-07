@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
+import { useTranslations } from "@/i18n/provider";
 
 type Props = {
   mode?: "create" | "edit";
@@ -72,6 +73,7 @@ export function SubscriptionDialog({
   defaultMembershipPlanId,
   trigger,
 }: Props) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
 
   const today = useMemo(() => new Date(), []);
@@ -178,7 +180,7 @@ export function SubscriptionDialog({
         );
 
         toast.success(
-          "Subscription updated."
+          t("subscriptions.dialog.saveSuccess")
         );
       } else {
         await createSubscription(
@@ -186,7 +188,7 @@ export function SubscriptionDialog({
         );
 
         toast.success(
-          "Subscription created."
+          t("subscriptions.dialog.createSuccess")
         );
       }
 
@@ -201,7 +203,7 @@ export function SubscriptionDialog({
       setOpen(false);
     } catch {
       toast.error(
-        "Failed to save subscription."
+        t("subscriptions.dialog.saveError")
       );
     }
   }
@@ -214,7 +216,7 @@ export function SubscriptionDialog({
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
-            New Subscription
+            {t("subscriptions.new")}
           </Button>
         )}
       </DialogTrigger>
@@ -223,15 +225,15 @@ export function SubscriptionDialog({
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"
-              ? "Edit Subscription"
-              : "Create Subscription"}
+              ? t("subscriptions.dialog.editTitle")
+              : t("subscriptions.dialog.createTitle")}
           </DialogTitle>
         </DialogHeader>
 
         <form className="flex flex-col gap-4">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Patient
+              {t("subscriptions.dialog.patient")}
             </label>
             {defaultPatientId ? (
               <div className="rounded-md border px-3 py-2 bg-muted text-sm">
@@ -245,7 +247,7 @@ export function SubscriptionDialog({
                 className="h-10 rounded-md border px-3"
               >
                 <option value="">
-                  Select patient
+                  {t("subscriptions.dialog.selectPatient")}
                 </option>
 
                 {filteredPatients.map(
@@ -264,7 +266,7 @@ export function SubscriptionDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Membership plan
+              {t("subscriptions.dialog.membershipPlan")}
             </label>
             <select
               {...form.register(
@@ -273,7 +275,7 @@ export function SubscriptionDialog({
               className="h-10 rounded-md border px-3"
             >
               <option value="">
-                Select plan
+                {t("subscriptions.dialog.selectPlan")}
               </option>
 
               {plans.map((plan) => (
@@ -289,7 +291,7 @@ export function SubscriptionDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Start date
+              {t("shared.labels.startDate")}
             </label>
             <Input
               type="date"
@@ -301,7 +303,7 @@ export function SubscriptionDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Expiration date
+              {t("subscriptions.dialog.expirationDate")}
             </label>
             <Input
               type="date"
@@ -316,24 +318,32 @@ export function SubscriptionDialog({
           <ConfirmDialog
             title={
               mode === "edit"
-                ? "Save subscription changes?"
-                : "Create subscription?"
+                ? t(
+                    "subscriptions.dialog.confirmEditTitle"
+                  )
+                : t(
+                    "subscriptions.dialog.confirmCreateTitle"
+                  )
             }
             description={
               mode === "edit"
-                ? "This updates the selected subscription."
-                : "This creates a new patient subscription and its downstream records."
+                ? t(
+                    "subscriptions.dialog.confirmEditDescription"
+                  )
+                : t(
+                    "subscriptions.dialog.confirmCreateDescription"
+                  )
             }
             actionLabel={
               mode === "edit"
-                ? "Save changes"
-                : "Create subscription"
+                ? t("shared.actions.saveChanges")
+                : t("subscriptions.dialog.createAction")
             }
             trigger={
               <Button type="button">
                 {mode === "edit"
-                  ? "Save Changes"
-                  : "Create Subscription"}
+                  ? t("shared.actions.saveChanges")
+                  : t("subscriptions.dialog.createAction")}
               </Button>
             }
             onConfirm={() =>

@@ -6,11 +6,13 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 
 import { MembershipPlansTable } from "./membership-plans-table";
 import { MembershipPlanDialog } from "./membership-plan-dialog";
 
 export async function MembershipPlansPage() {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -20,8 +22,10 @@ export async function MembershipPlansPage() {
     return (
       <DashboardPage>
         <AccessDenied
-          title="Plans access denied"
-          description="The current role cannot view membership plans."
+          title={t("plans.accessDeniedTitle")}
+          description={t(
+            "plans.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -55,8 +59,8 @@ export async function MembershipPlansPage() {
   return (
     <DashboardPage>
       <PageHeader
-        title="Membership Plans"
-        description="Manage active and inactive plans, their benefits, and new subscriptions from a single screen."
+        title={t("plans.title")}
+        description={t("plans.description")}
         action={
           canManagePlans ? (
             <MembershipPlanDialog />

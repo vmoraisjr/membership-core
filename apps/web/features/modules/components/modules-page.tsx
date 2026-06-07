@@ -10,6 +10,7 @@ import { SectionCard } from "@/components/dashboard/section-card";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 
 import { disableClinicModuleAction } from "../actions/disable-clinic-module";
 import { enableClinicModuleAction } from "../actions/enable-clinic-module";
@@ -17,6 +18,7 @@ import { getClinicModules } from "../services/module-access";
 import { isModuleV1Active } from "../services/module-policy";
 
 export async function ModulesPage() {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -30,8 +32,12 @@ export async function ModulesPage() {
     return (
       <DashboardPage>
         <AccessDenied
-          title="Module management access denied"
-          description="The current role cannot view commercial module settings."
+          title={t(
+            "modules.accessDeniedTitle"
+          )}
+          description={t(
+            "modules.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -49,29 +55,29 @@ export async function ModulesPage() {
   return (
     <DashboardPage>
       <PageHeader
-        title="Modules"
-        description="Manage the clinic's commercial module entitlements while keeping future modules dormant in V1."
+        title={t("modules.title")}
+        description={t("modules.description")}
       />
 
       <SectionCard
-        title="Clinic modules"
-        description="Membership stays enabled in V1; future modules can remain represented but disabled."
+        title={t("modules.clinicModulesTitle")}
+        description={t("modules.clinicModulesDescription")}
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
                 <th className="py-2">
-                  Module
+                  {t("modules.module")}
                 </th>
                 <th className="py-2">
-                  Status
+                  {t("shared.labels.status")}
                 </th>
                 <th className="py-2">
                   V1
                 </th>
                 <th className="py-2 text-right">
-                  Actions
+                  {t("shared.labels.actions")}
                 </th>
               </tr>
             </thead>
@@ -98,16 +104,17 @@ export async function ModulesPage() {
                       </div>
                     </td>
                     <td className="py-3">
-                      {
-                        clinicModule.status
-                      }
+                      {clinicModule.status ===
+                      ModuleStatus.ENABLED
+                        ? t("shared.states.active")
+                        : t("shared.states.inactive")}
                     </td>
                     <td className="py-3">
                       {isModuleV1Active(
                         clinicModule.module.key
                       )
-                        ? "Active"
-                        : "Future"}
+                        ? t("shared.states.active")
+                        : t("modules.future")}
                     </td>
                     <td className="py-3 text-right">
                       {!canManageModules ||
@@ -117,14 +124,14 @@ export async function ModulesPage() {
                           {clinicModule.module
                             .key ===
                           ModuleKey.MEMBERSHIP
-                            ? "Core module"
-                            : "Read only"}
+                            ? t("modules.coreModule")
+                            : t("shared.states.readOnly")}
                         </span>
                       ) : !isModuleV1Active(
                           clinicModule.module.key
                         ) ? (
                         <span className="text-xs text-muted-foreground">
-                          V2 only
+                          {t("modules.v2Only")}
                         </span>
                       ) : clinicModule.status ===
                         ModuleStatus.ENABLED ? (
@@ -145,10 +152,10 @@ export async function ModulesPage() {
                           />
                           <ConfirmSubmitButton
                             formId={`disable-module-${clinicModule.id}`}
-                            title="Disable module?"
-                            description={`This will disable ${clinicModule.module.name} for the current clinic.`}
-                            actionLabel="Disable module"
-                            label="Disable"
+                            title={t("modules.disableTitle")}
+                            description={t("modules.disableDescription", { name: clinicModule.module.name })}
+                            actionLabel={t("modules.disableAction")}
+                            label={t("shared.actions.disable")}
                           />
                         </form>
                       ) : (
@@ -169,10 +176,10 @@ export async function ModulesPage() {
                           />
                           <ConfirmSubmitButton
                             formId={`enable-module-${clinicModule.id}`}
-                            title="Enable module?"
-                            description={`This will enable ${clinicModule.module.name} for the current clinic.`}
-                            actionLabel="Enable module"
-                            label="Enable"
+                            title={t("modules.enableTitle")}
+                            description={t("modules.enableDescription", { name: clinicModule.module.name })}
+                            actionLabel={t("modules.enableAction")}
+                            label={t("shared.actions.enable")}
                           />
                         </form>
                       )}

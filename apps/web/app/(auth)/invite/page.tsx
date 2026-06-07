@@ -1,4 +1,5 @@
 import { acceptUserInviteAction } from "@/features/auth/actions/accept-user-invite";
+import { getTranslations } from "@/i18n/messages";
 
 type Props = {
   searchParams?: Promise<{
@@ -7,16 +8,23 @@ type Props = {
   }>;
 };
 
-function getErrorMessage(error?: string) {
+function getErrorMessage(
+  t: ReturnType<typeof getTranslations>,
+  error?: string
+) {
   switch (error) {
     case "missing_name":
-      return "Name is required.";
+      return t("auth.invite.missingName");
     case "password_too_short":
-      return "Password must be at least 8 characters.";
+      return t(
+        "auth.invite.passwordTooShort"
+      );
     case "password_mismatch":
-      return "Passwords do not match.";
+      return t(
+        "auth.invite.passwordMismatch"
+      );
     case "invalid_token":
-      return "The invite token is invalid or expired.";
+      return t("auth.invite.invalidToken");
     default:
       return null;
   }
@@ -25,10 +33,12 @@ function getErrorMessage(error?: string) {
 export default async function InvitePage({
   searchParams,
 }: Props) {
+  const t = getTranslations();
   const params =
     (await searchParams) ?? {};
   const errorMessage =
     getErrorMessage(
+      t,
       params.error
     );
 
@@ -36,10 +46,10 @@ export default async function InvitePage({
     <main className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
       <div className="w-full max-w-md rounded-2xl border bg-background p-6 shadow-sm">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Accept invite
+          {t("auth.invite.title")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Complete your account setup with the invite token you received.
+          {t("auth.invite.description")}
         </p>
 
         {errorMessage ? (
@@ -57,7 +67,7 @@ export default async function InvitePage({
               htmlFor="token"
               className="text-sm font-medium"
             >
-              Invite token
+              {t("auth.invite.tokenLabel")}
             </label>
             <input
               id="token"
@@ -76,7 +86,7 @@ export default async function InvitePage({
               htmlFor="name"
               className="text-sm font-medium"
             >
-              Full name
+              {t("shared.labels.fullName")}
             </label>
             <input
               id="name"
@@ -92,7 +102,7 @@ export default async function InvitePage({
               htmlFor="password"
               className="text-sm font-medium"
             >
-              Password
+              {t("auth.resetPassword.newPassword")}
             </label>
             <input
               id="password"
@@ -109,7 +119,9 @@ export default async function InvitePage({
               htmlFor="confirmPassword"
               className="text-sm font-medium"
             >
-              Confirm password
+              {t(
+                "auth.resetPassword.confirmPassword"
+              )}
             </label>
             <input
               id="confirmPassword"
@@ -125,7 +137,7 @@ export default async function InvitePage({
             type="submit"
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
           >
-            Activate account
+            {t("auth.invite.activateAccount")}
           </button>
         </form>
       </div>

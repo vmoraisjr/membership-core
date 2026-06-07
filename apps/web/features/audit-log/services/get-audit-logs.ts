@@ -46,69 +46,69 @@ export const AUDIT_ACTION_LABELS: Record<
   string
 > = {
   LOGIN: "Login",
-  CREATE: "Create",
-  UPDATE: "Update",
-  DELETE: "Delete",
-  DEACTIVATE: "Deactivate",
-  REACTIVATE: "Reactivate",
-  CONSUME_BENEFIT: "Consume Benefit",
+  CREATE: "Criar",
+  UPDATE: "Atualizar",
+  DELETE: "Excluir",
+  DEACTIVATE: "Desativar",
+  REACTIVATE: "Reativar",
+  CONSUME_BENEFIT: "Consumir benefício",
   CANCEL_SUBSCRIPTION:
-    "Cancel Subscription",
+    "Cancelar assinatura",
   RENEW_SUBSCRIPTION:
-    "Renew Subscription",
+    "Renovar assinatura",
   PAUSE_SUBSCRIPTION:
-    "Pause Subscription",
+    "Pausar assinatura",
   RESUME_SUBSCRIPTION:
-    "Resume Subscription",
+    "Retomar assinatura",
   EXPIRE_SUBSCRIPTION:
-    "Expire Subscription",
+    "Expirar assinatura",
   MARK_INVOICE_PAID:
-    "Mark Invoice Paid",
+    "Marcar cobrança como paga",
   MARK_INVOICE_OVERDUE:
-    "Mark Invoice Overdue",
+    "Marcar cobrança em atraso",
   ACCEPT_CONTRACT:
-    "Accept Contract",
-  ENABLE_MODULE: "Enable Module",
+    "Aceitar contrato",
+  ENABLE_MODULE: "Habilitar módulo",
   DISABLE_MODULE:
-    "Disable Module",
+    "Desabilitar módulo",
 };
 
 export const AUDIT_ENTITY_LABELS: Record<
   string,
   string
 > = {
-  CLINIC: "Clinic",
-  APP_USER: "App User",
-  USER_INVITE: "User Invite",
-  PATIENT: "Patient",
+  CLINIC: "Clínica",
+  APP_USER: "Usuário do app",
+  USER_INVITE: "Convite de usuário",
+  PATIENT: "Paciente",
   LEAD: "Lead",
   MEMBERSHIP_PLAN:
-    "Membership Plan",
+    "Plano",
   MEMBERSHIP_BENEFIT:
-    "Membership Benefit",
-  SUBSCRIPTION: "Subscription",
-  BENEFIT_USAGE: "Benefit Usage",
+    "Benefício",
+  SUBSCRIPTION: "Assinatura",
+  BENEFIT_USAGE: "Uso de benefício",
   PATIENT_INVOICE:
-    "Patient Invoice",
+    "Cobrança do paciente",
   PATIENT_PAYMENT:
-    "Patient Payment",
+    "Pagamento do paciente",
   CLINIC_BILLING_PLAN:
-    "Clinic Billing Plan",
+    "Plano de cobrança da clínica",
   CLINIC_SUBSCRIPTION:
-    "Clinic Subscription",
+    "Assinatura da clínica",
   CLINIC_INVOICE:
-    "Clinic Invoice",
+    "Cobrança da clínica",
   CLINIC_PAYMENT:
-    "Clinic Payment",
-  MODULE: "Module",
+    "Pagamento da clínica",
+  MODULE: "Módulo",
   CLINIC_MODULE:
-    "Clinic Module",
+    "Módulo da clínica",
   CONTRACT_TEMPLATE:
-    "Contract Template",
+    "Modelo de contrato",
   PATIENT_CONTRACT:
-    "Patient Contract",
+    "Contrato do paciente",
   CLINIC_CONTRACT:
-    "Clinic Contract",
+    "Contrato da clínica",
 };
 
 export async function getAuditLogs(

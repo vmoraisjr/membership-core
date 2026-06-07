@@ -2,19 +2,8 @@
 
 import { SubscriptionStatus } from "@prisma/client";
 
+import { getTranslations } from "@/i18n/messages";
 import { cn } from "@/lib/utils";
-
-const STATUS_LABELS: Record<
-  SubscriptionStatus,
-  string
-> = {
-  ACTIVE: "Active",
-  PAUSED: "Paused",
-  PENDING: "Pending",
-  OVERDUE: "Overdue",
-  CANCELED: "Canceled",
-  EXPIRED: "Expired",
-};
 
 const STATUS_STYLES: Record<
   SubscriptionStatus,
@@ -41,6 +30,7 @@ type Props = {
 export function SubscriptionStatusBadge({
   status,
 }: Props) {
+  const t = getTranslations();
   return (
     <span
       className={cn(
@@ -48,7 +38,7 @@ export function SubscriptionStatusBadge({
         STATUS_STYLES[status]
       )}
     >
-      {STATUS_LABELS[status]}
+      {t(`subscriptions.statuses.${status}`)}
     </span>
   );
 }

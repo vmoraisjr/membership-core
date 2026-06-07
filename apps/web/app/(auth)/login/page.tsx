@@ -9,6 +9,7 @@ import {
   isDefaultAuthBootstrapEnabled,
 } from "@/features/auth/services/get-current-app-user";
 import { getRoleLabel } from "@/features/auth/constants/roles";
+import { getTranslations } from "@/i18n/messages";
 
 type Props = {
   searchParams?: Promise<{
@@ -19,15 +20,16 @@ type Props = {
 };
 
 function getMessage(
+  t: ReturnType<typeof getTranslations>,
   error?: string,
   status?: string
 ) {
   if (error === "invalid_credentials") {
-    return "Invalid email or password.";
+    return t("auth.login.invalidCredentials");
   }
 
   if (status === "password_reset") {
-    return "Password updated. You can sign in now.";
+    return t("auth.login.passwordUpdated");
   }
 
   return null;
@@ -36,6 +38,7 @@ function getMessage(
 export default async function LoginPage({
   searchParams,
 }: Props) {
+  const t = getTranslations();
   const currentUser =
     await getCurrentAppUser();
 
@@ -52,6 +55,7 @@ export default async function LoginPage({
   const bootstrapEnabled =
     isDefaultAuthBootstrapEnabled();
   const message = getMessage(
+    t,
     params.error,
     params.status
   );
@@ -67,10 +71,10 @@ export default async function LoginPage({
       <div className="w-full max-w-md rounded-2xl border bg-background p-6 shadow-sm">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Sign in
+            {t("auth.login.title")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Access the Membership Core dashboard with a real server session.
+            {t("auth.login.description")}
           </p>
         </div>
 
@@ -111,7 +115,7 @@ export default async function LoginPage({
               htmlFor="password"
               className="text-sm font-medium"
             >
-              Password
+              {t("auth.resetPassword.newPassword")}
             </label>
             <input
               id="password"
@@ -127,7 +131,7 @@ export default async function LoginPage({
             type="submit"
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
           >
-            Sign in
+            {t("shared.actions.signIn")}
           </button>
         </form>
 
@@ -136,7 +140,7 @@ export default async function LoginPage({
             href="/forgot-password"
             className="text-muted-foreground underline-offset-4 hover:underline"
           >
-            Forgot your password?
+            {t("auth.login.forgotPassword")}
           </Link>
         </div>
 
@@ -144,10 +148,12 @@ export default async function LoginPage({
         users.length > 0 ? (
           <div className="mt-6 rounded-xl border border-dashed border-border/60 bg-muted/30 p-4 text-sm">
             <p className="font-medium">
-              Seeded access for local development
+              {t("auth.login.seededAccessTitle")}
             </p>
             <p className="mt-1 text-muted-foreground">
-              Default password for seeded users:{" "}
+              {t(
+                "auth.login.seededAccessDescription"
+              )}{" "}
               <code>{defaultPassword}</code>
             </p>
             <ul className="mt-3 space-y-1 text-muted-foreground">

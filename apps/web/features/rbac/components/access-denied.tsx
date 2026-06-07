@@ -1,6 +1,7 @@
 import { ShieldAlert } from "lucide-react";
 
 import { SectionCard } from "@/components/dashboard/section-card";
+import { getTranslations } from "@/i18n/messages";
 
 type Props = {
   title: string;
@@ -11,6 +12,8 @@ export function AccessDenied({
   title,
   description,
 }: Props) {
+  const t = getTranslations();
+
   return (
     <SectionCard
       title={title}
@@ -18,7 +21,7 @@ export function AccessDenied({
     >
       <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <ShieldAlert className="size-5" />
-        Access is restricted for the current role.
+        {t("accessDenied.message")}
       </div>
     </SectionCard>
   );

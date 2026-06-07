@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
+import { useTranslations } from "@/i18n/provider";
 
 type Props = {
   mode?: "create" | "edit";
@@ -64,6 +65,7 @@ export function PatientDialog({
   initialData,
   trigger,
 }: Props) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
 
   const form = useForm<PatientSchema>({
@@ -124,13 +126,13 @@ export function PatientDialog({
         );
 
         toast.success(
-          "Patient updated."
+          t("patients.dialog.saveSuccess")
         );
       } else {
         await createPatient(values);
 
         toast.success(
-          "Patient created."
+          t("patients.dialog.createSuccess")
         );
       }
 
@@ -139,7 +141,7 @@ export function PatientDialog({
       setOpen(false);
     } catch {
       toast.error(
-        "Failed to save patient."
+        t("patients.dialog.saveError")
       );
     }
   }
@@ -151,7 +153,7 @@ export function PatientDialog({
     >
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button>New Patient</Button>
+          <Button>{t("patients.new")}</Button>
         )}
       </DialogTrigger>
 
@@ -159,18 +161,20 @@ export function PatientDialog({
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"
-              ? "Edit Patient"
-              : "Create Patient"}
+              ? t("patients.dialog.editTitle")
+              : t("patients.dialog.createTitle")}
           </DialogTitle>
         </DialogHeader>
 
         <form className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Full name
+              {t("shared.labels.fullName")}
             </label>
             <Input
-              placeholder="Full name"
+              placeholder={t(
+                "shared.labels.fullName"
+              )}
               {...form.register(
                 "fullName"
               )}
@@ -179,27 +183,27 @@ export function PatientDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Email
+              {t("shared.labels.email")}
             </label>
             <Input
-              placeholder="Email"
+              placeholder={t("shared.labels.email")}
               {...form.register("email")}
             />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Phone
+              {t("shared.labels.phone")}
             </label>
             <Input
-              placeholder="Phone"
+              placeholder={t("shared.labels.phone")}
               {...form.register("phone")}
             />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Birth date
+              {t("shared.labels.birthDate")}
             </label>
             <Input
               type="date"
@@ -211,10 +215,12 @@ export function PatientDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Document
+              {t("shared.labels.document")}
             </label>
             <Input
-              placeholder="Document"
+              placeholder={t(
+                "shared.labels.document"
+              )}
               {...form.register(
                 "document"
               )}
@@ -223,10 +229,12 @@ export function PatientDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              ZIP code
+              {t("shared.labels.zipCode")}
             </label>
             <Input
-              placeholder="ZIP code"
+              placeholder={t(
+                "shared.labels.zipCode"
+              )}
               {...form.register(
                 "zipCode"
               )}
@@ -235,30 +243,30 @@ export function PatientDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              City
+              {t("shared.labels.city")}
             </label>
             <Input
-              placeholder="City"
+              placeholder={t("shared.labels.city")}
               {...form.register("city")}
             />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              State
+              {t("shared.labels.state")}
             </label>
             <Input
-              placeholder="State"
+              placeholder={t("shared.labels.state")}
               {...form.register("state")}
             />
           </div>
 
           <div className="col-span-2 space-y-2">
             <label className="text-sm text-muted-foreground">
-              Address
+              {t("shared.labels.address")}
             </label>
             <Input
-              placeholder="Address"
+              placeholder={t("shared.labels.address")}
               {...form.register(
                 "address"
               )}
@@ -269,18 +277,26 @@ export function PatientDialog({
             <ConfirmDialog
               title={
                 mode === "edit"
-                  ? "Save patient changes?"
-                  : "Create patient?"
+                  ? t(
+                      "patients.dialog.confirmEditTitle"
+                    )
+                  : t(
+                      "patients.dialog.confirmCreateTitle"
+                    )
               }
               description={
                 mode === "edit"
-                  ? "This updates the selected patient record."
-                  : "This creates a new patient record."
+                  ? t(
+                      "patients.dialog.confirmEditDescription"
+                    )
+                  : t(
+                      "patients.dialog.confirmCreateDescription"
+                    )
               }
               actionLabel={
                 mode === "edit"
-                  ? "Save changes"
-                  : "Create patient"
+                  ? t("shared.actions.saveChanges")
+                  : t("patients.dialog.createAction")
               }
               trigger={
                 <Button
@@ -288,8 +304,8 @@ export function PatientDialog({
                   className="w-full"
                 >
                   {mode === "edit"
-                    ? "Save Changes"
-                    : "Create Patient"}
+                    ? t("shared.actions.saveChanges")
+                    : t("patients.dialog.createAction")}
                 </Button>
               }
               onConfirm={() =>

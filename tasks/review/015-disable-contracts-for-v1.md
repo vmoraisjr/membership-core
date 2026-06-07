@@ -2,47 +2,51 @@
 
 ## Objective
 
-Remove Contracts from the active V1 operator experience without deleting the
-existing contract foundation.
+Disable the Contracts section from active V1 navigation and operational flow.
 
-## Files Created
+Contracts were implemented, but for V1 production they should not be exposed as an active module.
 
-- `tasks/review/015-disable-contracts-for-v1.md`
+Do not delete contract code.
 
-## Files Modified
+## Requirements
 
-- `apps/web/components/layout/dashboard-sidebar.tsx`
-- `docs/v1-scope.md`
-- `docs/known-limitations.md`
-- `docs/roadmap.md`
-- `docs/deployment-checklist.md`
-- `docs/manual-qa-checklist.md`
+- remove Contracts from dashboard navigation/sidebar
+- remove direct V1 UI entry points
+- ensure contracts do not block subscription/payment flows
+- keep contract code, tests and database structures intact
+- document contracts as future/internal module
 
-## What Was Implemented
+## Rules
 
-- Removed the Contracts entry from the active dashboard sidebar.
-- Kept contract code, routes, tests and database structures intact.
-- Repositioned contracts in the documentation as an internal foundation instead
-  of an active V1 navigation module.
-- Updated deployment and manual QA guidance so operators validate that
-  Contracts is not exposed in the pilot navigation.
+- do not delete migrations
+- do not delete tests
+- do not remove contract side effects if they are required by existing tests unless intentionally adjusted
+- contracts may remain internally available but not exposed in user-facing V1 UI
 
-## Decisions Made
+## Docs
 
-- Preserved contract-side effects used by subscriptions and regression suites.
-- Kept the internal route available for support and regression workflows rather
-  than deleting the feature surface.
+Update:
 
-## Risks
+- docs/v1-scope.md if exists
+- docs/known-limitations.md
+- docs/roadmap.md if needed
 
-- Because the internal route still exists, future UI work should avoid
-  reintroducing public navigation or links to Contracts by accident.
+## Tests
 
-## Validation
+Run:
 
-- `pnpm test:tenant` OK
-- `pnpm test:rbac` OK
-- `pnpm test:membership` OK
-- `pnpm test:contracts` OK
-- `pnpm lint` OK
-- `pnpm --dir apps/web typecheck` OK
+pnpm test:tenant
+pnpm test:rbac
+pnpm test:membership
+pnpm test:contracts
+pnpm lint
+pnpm --dir apps/web typecheck
+
+## Report
+
+Create:
+
+tasks/review/015-disable-contracts-for-v1.md
+
+Move task to review.
+Do not start next task.

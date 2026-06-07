@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { getTranslations } from "@/i18n/messages";
 
 import { cancelPatientInvoiceAction } from "../actions/cancel-patient-invoice";
 import { markPatientInvoiceOverdueAction } from "../actions/mark-patient-invoice-overdue";
@@ -19,17 +20,18 @@ import { updatePatientInvoicePaymentMethodAction } from "../actions/update-patie
 function getPaymentMethodLabel(
   value: PaymentMethod
 ) {
+  const t = getTranslations();
   switch (value) {
     case PaymentMethod.CARD:
-      return "Card";
+      return t("billing.paymentMethod.CARD");
     case PaymentMethod.PIX:
-      return "Pix";
+      return t("billing.paymentMethod.PIX");
     case PaymentMethod.CASH:
-      return "Cash";
+      return t("billing.paymentMethod.CASH");
     case PaymentMethod.BANK_TRANSFER:
-      return "Bank transfer";
+      return t("billing.paymentMethod.BANK_TRANSFER");
     case PaymentMethod.OTHER:
-      return "Other";
+      return t("billing.paymentMethod.OTHER");
   }
 }
 
@@ -47,6 +49,7 @@ export function PatientInvoiceActions({
   status,
   defaultPaymentMethod,
 }: Props) {
+  const t = getTranslations();
   const router = useRouter();
   const [isPending, startTransition] =
     useTransition();
@@ -117,16 +120,16 @@ export function PatientInvoiceActions({
 
       <div className="flex flex-wrap justify-end gap-2">
         <ConfirmDialog
-          title="Save payment method?"
-          description="This updates the manual payment method for this patient invoice."
-          actionLabel="Save method"
+          title={t("billing.saveMethodTitle")}
+          description={t("billing.saveMethodDescription")}
+          actionLabel={t("billing.actions.saveMethod")}
           trigger={
             <Button
               type="button"
               variant="outline"
               disabled={isPending}
             >
-              Save method
+              {t("billing.actions.saveMethod")}
             </Button>
           }
           onConfirm={() =>
@@ -135,8 +138,8 @@ export function PatientInvoiceActions({
                 updatePatientInvoicePaymentMethodAction(
                   buildFormData()
                 ),
-              "Payment method updated.",
-              "Failed to update payment method."
+              t("billing.saveMethodSuccess"),
+              t("billing.saveMethodError")
             )
           }
         />
@@ -145,16 +148,16 @@ export function PatientInvoiceActions({
         status ===
           PaymentStatus.OVERDUE ? (
           <ConfirmDialog
-            title="Mark invoice as paid?"
-            description="This confirms manual payment for the patient invoice."
-            actionLabel="Mark paid"
+            title={t("billing.markPatientPaidTitle")}
+            description={t("billing.markPatientPaidDescription")}
+            actionLabel={t("billing.actions.markPaid")}
             trigger={
               <Button
                 type="button"
                 variant="outline"
                 disabled={isPending}
               >
-                Mark paid
+                {t("billing.actions.markPaid")}
               </Button>
             }
             onConfirm={() =>
@@ -163,8 +166,8 @@ export function PatientInvoiceActions({
                   markPatientInvoicePaidAction(
                     buildFormData()
                   ),
-                "Invoice marked as paid.",
-                "Failed to mark invoice as paid."
+                t("billing.markPatientPaidSuccess"),
+                t("billing.markPatientPaidError")
               )
             }
           />
@@ -173,16 +176,16 @@ export function PatientInvoiceActions({
         {status ===
         PaymentStatus.PENDING ? (
           <ConfirmDialog
-            title="Mark invoice as overdue?"
-            description="This moves the patient invoice to overdue status."
-            actionLabel="Mark overdue"
+            title={t("billing.markPatientOverdueTitle")}
+            description={t("billing.markPatientOverdueDescription")}
+            actionLabel={t("billing.actions.markOverdue")}
             trigger={
               <Button
                 type="button"
                 variant="outline"
                 disabled={isPending}
               >
-                Mark overdue
+                {t("billing.actions.markOverdue")}
               </Button>
             }
             onConfirm={() =>
@@ -191,8 +194,8 @@ export function PatientInvoiceActions({
                   markPatientInvoiceOverdueAction(
                     buildFormData()
                   ),
-                "Invoice marked as overdue.",
-                "Failed to mark invoice as overdue."
+                t("billing.markPatientOverdueSuccess"),
+                t("billing.markPatientOverdueError")
               )
             }
           />
@@ -202,16 +205,16 @@ export function PatientInvoiceActions({
         status ===
           PaymentStatus.OVERDUE ? (
           <ConfirmDialog
-            title="Cancel invoice?"
-            description="This cancels the patient invoice and keeps the historical record."
-            actionLabel="Cancel invoice"
+            title={t("billing.cancelInvoiceTitle")}
+            description={t("billing.cancelInvoiceDescription")}
+            actionLabel={t("billing.actions.cancelInvoice")}
             trigger={
               <Button
                 type="button"
                 variant="outline"
                 disabled={isPending}
               >
-                Cancel invoice
+                {t("billing.actions.cancelInvoice")}
               </Button>
             }
             onConfirm={() =>
@@ -220,8 +223,8 @@ export function PatientInvoiceActions({
                   cancelPatientInvoiceAction(
                     buildFormData()
                   ),
-                "Invoice canceled.",
-                "Failed to cancel invoice."
+                t("billing.cancelInvoiceSuccess"),
+                t("billing.cancelInvoiceError")
               )
             }
           />
@@ -231,7 +234,7 @@ export function PatientInvoiceActions({
         status !==
           PaymentStatus.OVERDUE ? (
           <span className="text-xs text-muted-foreground">
-            Locked status
+            {t("billing.lockedStatus")}
           </span>
         ) : null}
       </div>

@@ -23,6 +23,7 @@ import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_LABELS,
 } from "../services/get-audit-logs";
+import { getTranslations } from "@/i18n/messages";
 
 type AuditLogItem = {
   id: string;
@@ -83,10 +84,11 @@ export function AuditLogTable({
   actorOptions,
   entityOptions,
 }: Props) {
+  const t = getTranslations();
   return (
     <DataTableContainer
-      title="Operational History"
-      description="Critical create, update, lifecycle, and benefit consumption events are recorded here."
+      title={t("audit.tableTitle")}
+      description={t("audit.tableDescription")}
     >
       <form
         method="get"
@@ -97,7 +99,7 @@ export function AuditLogTable({
             htmlFor="actor"
             className="text-sm text-muted-foreground"
           >
-            User
+            {t("shared.labels.user")}
           </label>
           <select
             id="actor"
@@ -108,7 +110,7 @@ export function AuditLogTable({
             className="h-10 rounded-md border bg-background px-3"
           >
             <option value="">
-              All users
+              {t("shared.filters.allUsers")}
             </option>
             {actorOptions.map((actor) => (
               <option
@@ -126,7 +128,7 @@ export function AuditLogTable({
             htmlFor="entity"
             className="text-sm text-muted-foreground"
           >
-            Entity
+            {t("shared.labels.entity")}
           </label>
           <select
             id="entity"
@@ -137,7 +139,7 @@ export function AuditLogTable({
             className="h-10 rounded-md border bg-background px-3"
           >
             <option value="">
-              All entities
+              {t("shared.filters.allEntities")}
             </option>
             {entityOptions.map((entity) => (
               <option
@@ -159,7 +161,7 @@ export function AuditLogTable({
             htmlFor="date"
             className="text-sm text-muted-foreground"
           >
-            Date
+            {t("shared.labels.date")}
           </label>
           <Input
             id="date"
@@ -173,14 +175,14 @@ export function AuditLogTable({
 
         <div className="flex items-end gap-2">
           <Button type="submit">
-            Apply Filters
+            {t("shared.actions.applyFilters")}
           </Button>
           <Button
             variant="outline"
             asChild
           >
             <Link href="/dashboard/audit-logs">
-              Clear
+              {t("shared.actions.clear")}
             </Link>
           </Button>
         </div>
@@ -189,11 +191,11 @@ export function AuditLogTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>When</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead>Action</TableHead>
-            <TableHead>Entity</TableHead>
-            <TableHead>Details</TableHead>
+            <TableHead>{t("shared.labels.when")}</TableHead>
+            <TableHead>{t("shared.labels.user")}</TableHead>
+            <TableHead>{t("shared.labels.actions")}</TableHead>
+            <TableHead>{t("shared.labels.entity")}</TableHead>
+            <TableHead>{t("shared.labels.details")}</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -237,7 +239,8 @@ export function AuditLogTable({
                   </div>
                 </TableCell>
                 <TableCell className="align-top text-sm text-muted-foreground">
-                  {details ?? "No extra details"}
+                  {details ??
+                    t("shared.states.noExtraDetails")}
                 </TableCell>
               </TableRow>
             );
@@ -250,8 +253,10 @@ export function AuditLogTable({
                 className="p-0"
               >
                 <EmptyState
-                  title="No audit records found"
-                  description="Adjust the filters or perform a critical action to generate audit history."
+                  title={t("audit.emptyTitle")}
+                  description={t(
+                    "audit.emptyDescription"
+                  )}
                 />
               </TableCell>
             </TableRow>

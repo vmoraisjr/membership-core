@@ -1,3 +1,5 @@
+import { getMessage } from "@/i18n/messages";
+
 export const APP_ROLES = [
   "OWNER",
   "ADMIN",
@@ -28,16 +30,5 @@ export function isAppRole(
 export function getRoleLabel(
   role: AppRole
 ) {
-  switch (role) {
-    case "OWNER":
-      return "Owner";
-    case "ADMIN":
-      return "Admin";
-    case "STAFF":
-      return "Staff";
-    case "FINANCE":
-      return "Finance";
-    case "READ_ONLY":
-      return "Read only";
-  }
+  return getMessage(`roles.${role}`);
 }

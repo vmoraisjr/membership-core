@@ -13,11 +13,13 @@ import { DashboardPage } from "@/components/layout/dashboard-page";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 import { formatCurrency } from "@/lib/formatters";
 
 import { getDashboardMetrics } from "../services/get-dashboard-metrics";
 
 export async function DashboardHomePage() {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -31,8 +33,12 @@ export async function DashboardHomePage() {
     return (
       <DashboardPage>
         <AccessDenied
-          title="Dashboard access denied"
-          description="The current role cannot view dashboard metrics."
+          title={t(
+            "dashboard.accessDeniedTitle"
+          )}
+          description={t(
+            "dashboard.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -44,11 +50,19 @@ export async function DashboardHomePage() {
   return (
     <DashboardPage>
       <PageHeader
-        title="Dashboard"
+        title={t("dashboard.title")}
         description={
           metrics.scope === "clinic"
-            ? `A high-level view of ${metrics.clinicName}'s membership operation across patients, plans, and subscriptions.`
-            : "A high-level platform snapshot covering clinic health, SaaS billing, and active commercial modules in V1."
+            ? t(
+                "dashboard.clinicDescription",
+                {
+                  clinicName:
+                    metrics.clinicName,
+                }
+              )
+            : t(
+                "dashboard.platformDescription"
+              )
         }
       />
 
@@ -56,87 +70,138 @@ export async function DashboardHomePage() {
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <MetricCard
-              label="Active Patients"
+              label={t(
+                "dashboard.metrics.activePatients.label"
+              )}
               value={metrics.activePatients.toString()}
-              hint="Patients currently available for membership operations"
+              hint={t(
+                "dashboard.metrics.activePatients.hint"
+              )}
               icon={<Users className="size-5" />}
             />
 
             <MetricCard
-              label="Active Subscriptions"
+              label={t(
+                "dashboard.metrics.activeSubscriptions.label"
+              )}
               value={metrics.activeSubscriptionsCount.toString()}
-              hint="Subscriptions currently in force"
+              hint={t(
+                "dashboard.metrics.activeSubscriptions.hint"
+              )}
               icon={
                 <CreditCard className="size-5" />
               }
             />
 
             <MetricCard
-              label="Overdue Invoices"
+              label={t(
+                "dashboard.metrics.overdueInvoices.label"
+              )}
               value={metrics.overduePatientInvoices.toString()}
-              hint="Patient invoices that need manual follow-up"
+              hint={t(
+                "dashboard.metrics.overdueInvoices.hint"
+              )}
               icon={
                 <ReceiptText className="size-5" />
               }
             />
 
             <MetricCard
-              label="Monthly Patient Revenue"
+              label={t(
+                "dashboard.metrics.monthlyPatientRevenue.label"
+              )}
               value={formatCurrency(
                 metrics.monthlyPatientRevenue
               )}
-              hint="Paid patient invoice revenue recognized this month"
+              hint={t(
+                "dashboard.metrics.monthlyPatientRevenue.hint"
+              )}
               icon={
                 <BadgeDollarSign className="size-5" />
               }
             />
 
             <MetricCard
-              label="Benefits Consumed"
+              label={t(
+                "dashboard.metrics.benefitsConsumed.label"
+              )}
               value={metrics.benefitsConsumed.toString()}
-              hint="Benefit quantities consumed during the current month"
+              hint={t(
+                "dashboard.metrics.benefitsConsumed.hint"
+              )}
               icon={
                 <HeartPulse className="size-5" />
               }
             />
 
             <MetricCard
-              label="Active Plans"
+              label={t(
+                "dashboard.metrics.activePlans.label"
+              )}
               value={metrics.activePlansCount.toString()}
-              hint="Membership plans currently available for new subscriptions"
+              hint={t(
+                "dashboard.metrics.activePlans.hint"
+              )}
               icon={<CreditCard className="size-5" />}
             />
           </div>
 
           <SectionCard
-            title="Operational Snapshot"
-            description="Real tenant-scoped counts from the current clinic help leadership spot enrollment, billing pressure and benefit usage at a glance."
+            title={t("dashboard.snapshot.title")}
+            description={t(
+              "dashboard.snapshot.description"
+            )}
           >
             <div className="grid gap-4 p-4 md:grid-cols-3">
               <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
                 <p className="text-sm font-medium">
-                  Patient revenue baseline
+                  {t(
+                    "dashboard.snapshot.revenueBaselineTitle"
+                  )}
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Paid patient invoices produced {formatCurrency(metrics.monthlyPatientRevenue)} this month for the current clinic.
+                  {t(
+                    "dashboard.snapshot.revenueBaselineDescription",
+                    {
+                      amount: formatCurrency(
+                        metrics.monthlyPatientRevenue
+                      ),
+                    }
+                  )}
                 </p>
               </div>
 
               <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
                 <p className="text-sm font-medium">
-                  Billing attention needed
+                  {t(
+                    "dashboard.snapshot.billingAttentionTitle"
+                  )}
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {metrics.overduePatientInvoices} patient invoices are overdue and require manual follow-up in the V1 billing flow.
+                  {t(
+                    "dashboard.snapshot.billingAttentionDescription",
+                    {
+                      count:
+                        metrics.overduePatientInvoices,
+                    }
+                  )}
                 </p>
               </div>
 
               <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
                 <p className="text-sm font-medium">
-                  Benefit usage activity
+                  {t(
+                    "dashboard.snapshot.benefitActivityTitle"
+                  )}
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {metrics.benefitUsageEvents} total benefit usage events have been recorded for this clinic so far.
+                  {t(
+                    "dashboard.snapshot.benefitActivityDescription",
+                    {
+                      count:
+                        metrics.benefitUsageEvents,
+                    }
+                  )}
                 </p>
               </div>
             </div>
@@ -146,13 +211,17 @@ export async function DashboardHomePage() {
 
       {metrics.platformMetrics ? (
         <SectionCard
-          title="Platform Snapshot"
-          description="Admin-only platform billing metrics derived from real clinic subscription data."
+          title={t("dashboard.platform.title")}
+          description={t(
+            "dashboard.platform.description"
+          )}
         >
           <div className="grid gap-4 p-4 md:grid-cols-4">
             <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
               <p className="text-sm font-medium">
-                Active clinics
+                {t(
+                  "dashboard.platform.activeClinics"
+                )}
               </p>
               <p className="mt-2 text-2xl font-semibold">
                 {
@@ -165,7 +234,9 @@ export async function DashboardHomePage() {
 
             <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
               <p className="text-sm font-medium">
-                Trial clinics
+                {t(
+                  "dashboard.platform.trialClinics"
+                )}
               </p>
               <p className="mt-2 text-2xl font-semibold">
                 {
@@ -178,7 +249,9 @@ export async function DashboardHomePage() {
 
             <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
               <p className="text-sm font-medium">
-                Past due clinics
+                {t(
+                  "dashboard.platform.pastDueClinics"
+                )}
               </p>
               <p className="mt-2 text-2xl font-semibold">
                 {
@@ -191,7 +264,9 @@ export async function DashboardHomePage() {
 
             <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
               <p className="text-sm font-medium">
-                Monthly SaaS revenue
+                {t(
+                  "dashboard.platform.monthlySaasRevenue"
+                )}
               </p>
               <p className="mt-2 text-2xl font-semibold">
                 {formatCurrency(
@@ -205,7 +280,9 @@ export async function DashboardHomePage() {
 
           <div className="border-t p-4">
             <p className="text-sm font-medium">
-              Active module counts
+              {t(
+                "dashboard.platform.activeModuleCounts"
+              )}
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {metrics.platformMetrics.activeModuleCounts.map(
@@ -224,8 +301,12 @@ export async function DashboardHomePage() {
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
                       {moduleMetric.isV1Active
-                        ? "Active V1 module assignments across clinics."
-                        : "Future module kept dormant in V1."}
+                        ? t(
+                            "dashboard.platform.activeModuleAssignments"
+                          )
+                        : t(
+                            "dashboard.platform.futureModuleDormant"
+                          )}
                     </p>
                   </div>
                 )

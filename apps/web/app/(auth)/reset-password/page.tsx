@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { resetPasswordAction } from "@/features/auth/actions/reset-password";
+import { getTranslations } from "@/i18n/messages";
 
 type Props = {
   searchParams?: Promise<{
@@ -9,14 +10,23 @@ type Props = {
   }>;
 };
 
-function getErrorMessage(error?: string) {
+function getErrorMessage(
+  t: ReturnType<typeof getTranslations>,
+  error?: string
+) {
   switch (error) {
     case "password_too_short":
-      return "Password must be at least 8 characters.";
+      return t(
+        "auth.resetPassword.passwordTooShort"
+      );
     case "password_mismatch":
-      return "Passwords do not match.";
+      return t(
+        "auth.resetPassword.passwordMismatch"
+      );
     case "invalid_token":
-      return "The reset token is invalid or expired.";
+      return t(
+        "auth.resetPassword.invalidToken"
+      );
     default:
       return null;
   }
@@ -25,10 +35,12 @@ function getErrorMessage(error?: string) {
 export default async function ResetPasswordPage({
   searchParams,
 }: Props) {
+  const t = getTranslations();
   const params =
     (await searchParams) ?? {};
   const errorMessage =
     getErrorMessage(
+      t,
       params.error
     );
 
@@ -36,10 +48,10 @@ export default async function ResetPasswordPage({
     <main className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
       <div className="w-full max-w-md rounded-2xl border bg-background p-6 shadow-sm">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Reset password
+          {t("auth.resetPassword.title")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Enter the reset token and choose a new password.
+          {t("auth.resetPassword.description")}
         </p>
 
         {errorMessage ? (
@@ -57,7 +69,7 @@ export default async function ResetPasswordPage({
               htmlFor="token"
               className="text-sm font-medium"
             >
-              Reset token
+              {t("auth.resetPassword.tokenLabel")}
             </label>
             <input
               id="token"
@@ -76,7 +88,7 @@ export default async function ResetPasswordPage({
               htmlFor="password"
               className="text-sm font-medium"
             >
-              New password
+              {t("auth.resetPassword.newPassword")}
             </label>
             <input
               id="password"
@@ -93,7 +105,9 @@ export default async function ResetPasswordPage({
               htmlFor="confirmPassword"
               className="text-sm font-medium"
             >
-              Confirm password
+              {t(
+                "auth.resetPassword.confirmPassword"
+              )}
             </label>
             <input
               id="confirmPassword"
@@ -109,7 +123,7 @@ export default async function ResetPasswordPage({
             type="submit"
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
           >
-            Update password
+            {t("shared.actions.updatePassword")}
           </button>
         </form>
 
@@ -117,7 +131,7 @@ export default async function ResetPasswordPage({
           href="/login"
           className="mt-4 inline-block text-sm text-muted-foreground underline-offset-4 hover:underline"
         >
-          Back to login
+          {t("shared.actions.backToLogin")}
         </Link>
       </div>
     </main>

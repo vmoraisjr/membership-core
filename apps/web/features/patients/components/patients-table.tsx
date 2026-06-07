@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "@/i18n/provider";
 
 import { PatientRowActions } from "./patient-row-actions";
 
@@ -90,6 +91,7 @@ export function PatientsTable({
   canManageSubscriptions = true,
   canManageBenefitUsage = true,
 }: Props) {
+  const t = useTranslations();
   const [statusFilter, setStatusFilter] =
     useState("active");
   const [search, setSearch] =
@@ -132,13 +134,16 @@ export function PatientsTable({
 
   return (
     <DataTableContainer
-      title="Patient Directory"
-      description={`${activePatientsCount} active patients available for subscriptions.`}
+      title={t("patients.table.title")}
+      description={t(
+        "patients.table.description",
+        { count: activePatientsCount }
+      )}
     >
       <div className="flex flex-col gap-4 border-b p-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="grid gap-2">
           <label className="text-sm text-muted-foreground">
-            Status filter
+            {t("shared.filters.statusFilter")}
           </label>
           <select
             value={statusFilter}
@@ -150,20 +155,20 @@ export function PatientsTable({
             className="h-10 rounded-md border px-3"
           >
             <option value="active">
-              Active
+              {t("shared.states.active")}
             </option>
             <option value="inactive">
-              Inactive
+              {t("shared.states.inactive")}
             </option>
             <option value="all">
-              All
+              {t("shared.filters.all")}
             </option>
           </select>
         </div>
 
         <div className="grid gap-2 sm:min-w-80">
           <label className="text-sm text-muted-foreground">
-            Search by patient or document
+            {t("patients.table.searchLabel")}
           </label>
           <input
             value={search}
@@ -172,7 +177,9 @@ export function PatientsTable({
                 event.target.value
               )
             }
-            placeholder="Search name or document"
+            placeholder={t(
+              "shared.filters.searchNameOrDocument"
+            )}
             className="h-10 rounded-md border px-3"
           />
         </div>
@@ -181,14 +188,24 @@ export function PatientsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Patient</TableHead>
-            <TableHead>Birth date</TableHead>
-            <TableHead>Document</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead>
-              Current Plan
+              {t("patients.table.patient")}
             </TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>
+              {t("shared.labels.birthDate")}
+            </TableHead>
+            <TableHead>
+              {t("shared.labels.document")}
+            </TableHead>
+            <TableHead>
+              {t("shared.labels.status")}
+            </TableHead>
+            <TableHead>
+              {t("patients.table.currentPlan")}
+            </TableHead>
+            <TableHead>
+              {t("shared.labels.actions")}
+            </TableHead>
           </TableRow>
         </TableHeader>
 
@@ -223,8 +240,14 @@ export function PatientsTable({
                 </TableCell>
 
                 <TableCell className="align-top">
-                  <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
-                    {patient.status}
+                    <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
+                    {patient.status === "ACTIVE"
+                      ? t(
+                          "shared.states.active"
+                        )
+                      : t(
+                          "shared.states.inactive"
+                        )}
                   </span>
                 </TableCell>
 
@@ -238,7 +261,9 @@ export function PatientsTable({
                     </Link>
                   ) : (
                     <span className="text-sm text-muted-foreground">
-                      No subscription
+                      {t(
+                        "patients.table.noSubscription"
+                      )}
                     </span>
                   )}
                 </TableCell>
@@ -300,8 +325,12 @@ export function PatientsTable({
                 className="p-0"
               >
                 <EmptyState
-                  title="No patients found"
-                  description="Adjust the filters or create a new patient record to continue."
+                  title={t(
+                    "patients.table.emptyTitle"
+                  )}
+                  description={t(
+                    "patients.table.emptyDescription"
+                  )}
                 />
               </TableCell>
             </TableRow>

@@ -23,6 +23,7 @@ import { pauseSubscription } from "../actions/pause-subscription";
 import { renewSubscription } from "../actions/renew-subscription";
 import { resumeSubscription } from "../actions/resume-subscription";
 import { MANAGEABLE_SUBSCRIPTION_STATUSES } from "../constants/manageable-subscription-statuses";
+import { useTranslations } from "@/i18n/provider";
 
 import { SubscriptionDialog } from "./subscription-dialog";
 
@@ -59,10 +60,11 @@ export function SubscriptionRowActions({
   plans,
   canManageSubscriptions = true,
 }: Props) {
+  const t = useTranslations();
   if (!canManageSubscriptions) {
     return (
       <span className="text-xs text-muted-foreground">
-        Read only
+        {t("shared.states.readOnly")}
       </span>
     );
   }
@@ -74,13 +76,15 @@ export function SubscriptionRowActions({
       );
 
       toast.success(
-        "Subscription canceled."
+        t("subscriptions.rowActions.cancelSuccess")
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to cancel subscription."
+          : t(
+              "subscriptions.rowActions.cancelError"
+            )
       );
     }
   }
@@ -92,13 +96,15 @@ export function SubscriptionRowActions({
       );
 
       toast.success(
-        "Subscription paused."
+        t("subscriptions.rowActions.pauseSuccess")
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to pause subscription."
+          : t(
+              "subscriptions.rowActions.pauseError"
+            )
       );
     }
   }
@@ -110,13 +116,15 @@ export function SubscriptionRowActions({
       );
 
       toast.success(
-        "Subscription resumed."
+        t("subscriptions.rowActions.resumeSuccess")
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to resume subscription."
+          : t(
+              "subscriptions.rowActions.resumeError"
+            )
       );
     }
   }
@@ -128,13 +136,15 @@ export function SubscriptionRowActions({
       );
 
       toast.success(
-        "Subscription expired."
+        t("subscriptions.rowActions.expireSuccess")
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to expire subscription."
+          : t(
+              "subscriptions.rowActions.expireError"
+            )
       );
     }
   }
@@ -146,13 +156,15 @@ export function SubscriptionRowActions({
       );
 
       toast.success(
-        "Subscription renewed for 30 days."
+        t("subscriptions.rowActions.renewSuccess")
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to renew subscription."
+          : t(
+              "subscriptions.rowActions.renewError"
+            )
       );
     }
   }
@@ -192,12 +204,18 @@ export function SubscriptionRowActions({
       SubscriptionStatus.ACTIVE ? (
         <>
           <ConfirmDialog
-            title="Pause subscription?"
-            description="Benefits stay linked to the subscription, but they become unavailable until the subscription is resumed."
+            title={t(
+              "subscriptions.rowActions.pauseTitle"
+            )}
+            description={t(
+              "subscriptions.rowActions.pauseDescription"
+            )}
             onConfirm={() =>
               handlePause()
             }
-            actionLabel="Pause subscription"
+            actionLabel={t(
+              "subscriptions.rowActions.pauseAction"
+            )}
             trigger={
               <Button
                 size="icon"
@@ -208,12 +226,18 @@ export function SubscriptionRowActions({
             }
           />
           <ConfirmDialog
-            title="Expire subscription?"
-            description="This immediately marks the subscription as expired and keeps its history intact."
+            title={t(
+              "subscriptions.rowActions.expireTitle"
+            )}
+            description={t(
+              "subscriptions.rowActions.expireDescription"
+            )}
             onConfirm={() =>
               handleExpire()
             }
-            actionLabel="Expire subscription"
+            actionLabel={t(
+              "subscriptions.rowActions.expireAction"
+            )}
             trigger={
               <Button
                 size="icon"
@@ -229,12 +253,18 @@ export function SubscriptionRowActions({
       {subscription.status ===
       SubscriptionStatus.PAUSED ? (
         <ConfirmDialog
-          title="Resume subscription?"
-          description="This restores the subscription to its evaluated active lifecycle state."
+          title={t(
+            "subscriptions.rowActions.resumeTitle"
+          )}
+          description={t(
+            "subscriptions.rowActions.resumeDescription"
+          )}
           onConfirm={() =>
             handleResume()
           }
-          actionLabel="Resume subscription"
+          actionLabel={t(
+            "subscriptions.rowActions.resumeAction"
+          )}
           trigger={
             <Button
               size="icon"
@@ -251,12 +281,18 @@ export function SubscriptionRowActions({
         subscription.status ===
           SubscriptionStatus.EXPIRED) && (
         <ConfirmDialog
-          title="Renew subscription?"
-          description="This extends the expiration date by 30 days and restores the subscription to active."
+          title={t(
+            "subscriptions.rowActions.renewTitle"
+          )}
+          description={t(
+            "subscriptions.rowActions.renewDescription"
+          )}
           onConfirm={() =>
             handleRenew()
           }
-          actionLabel="Renew subscription"
+          actionLabel={t(
+            "subscriptions.rowActions.renewAction"
+          )}
           trigger={
             <Button
               size="icon"
@@ -271,12 +307,18 @@ export function SubscriptionRowActions({
       {subscription.status !==
       SubscriptionStatus.CANCELED ? (
         <ConfirmDialog
-          title="Cancel subscription?"
-          description="The subscription record is kept for history and will become inactive."
+          title={t(
+            "subscriptions.rowActions.cancelTitle"
+          )}
+          description={t(
+            "subscriptions.rowActions.cancelDescription"
+          )}
           onConfirm={() =>
             handleCancel()
           }
-          actionLabel="Cancel subscription"
+          actionLabel={t(
+            "subscriptions.rowActions.cancelAction"
+          )}
           trigger={
             <Button
               size="icon"

@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "@/i18n/provider";
 import { formatCurrency } from "@/lib/formatters";
 
 import { MembershipPlanRowActions } from "./membership-plan-row-actions";
@@ -67,6 +68,7 @@ export function MembershipPlansTable({
   canDeletePlansPermanently = true,
   canManageBenefits = true,
 }: Props) {
+  const t = useTranslations();
   const [statusFilter, setStatusFilter] =
     useState("active");
   const [search, setSearch] =
@@ -115,13 +117,16 @@ export function MembershipPlansTable({
 
   return (
     <DataTableContainer
-      title="Plans Catalog"
-      description={`${activePlansCount} active plans available for subscriptions.`}
+      title={t("plans.table.title")}
+      description={t(
+        "plans.table.description",
+        { count: activePlansCount }
+      )}
     >
       <div className="flex flex-col gap-4 border-b p-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="grid gap-2">
           <label className="text-sm text-muted-foreground">
-            Status filter
+            {t("shared.filters.statusFilter")}
           </label>
           <select
             value={statusFilter}
@@ -133,20 +138,20 @@ export function MembershipPlansTable({
             className="h-10 rounded-md border px-3"
           >
             <option value="active">
-              Active
+              {t("shared.states.active")}
             </option>
             <option value="inactive">
-              Inactive
+              {t("shared.states.inactive")}
             </option>
             <option value="all">
-              All
+              {t("shared.filters.all")}
             </option>
           </select>
         </div>
 
         <div className="grid gap-2 sm:min-w-80">
           <label className="text-sm text-muted-foreground">
-            Search by plan or benefit
+            {t("shared.filters.searchPlanOrBenefit")}
           </label>
           <input
             value={search}
@@ -155,7 +160,9 @@ export function MembershipPlansTable({
                 event.target.value
               )
             }
-            placeholder="Search plan or benefit"
+            placeholder={t(
+              "shared.filters.searchPlanOrBenefit"
+            )}
             className="h-10 rounded-md border px-3"
           />
         </div>
@@ -164,15 +171,15 @@ export function MembershipPlansTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Plan</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Monthly Price</TableHead>
-            <TableHead>Benefits</TableHead>
+            <TableHead>{t("shared.labels.plan")}</TableHead>
+            <TableHead>{t("shared.labels.status")}</TableHead>
+            <TableHead>{t("plans.dialog.monthlyPrice")}</TableHead>
+            <TableHead>{t("plans.table.benefits")}</TableHead>
             <TableHead>
-              Active Subscriptions
+              {t("plans.table.activeSubscriptions")}
             </TableHead>
             <TableHead>
-              Actions
+              {t("shared.labels.actions")}
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -187,22 +194,22 @@ export function MembershipPlansTable({
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {plan.description ||
-                      "No description."}
+                      t("shared.states.noDescription")}
                   </div>
                   <Link
                     href={`/dashboard/benefits?planId=${plan.id}`}
                     className="text-xs text-primary underline-offset-4 hover:underline"
                   >
-                    Open benefits support
+                    {t("plans.table.openBenefitsSupport")}
                   </Link>
                 </div>
               </TableCell>
 
               <TableCell className="align-top">
                 <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
-                  {plan.active
-                    ? "Active"
-                    : "Inactive"}
+                    {plan.active
+                    ? t("shared.states.active")
+                    : t("shared.states.inactive")}
                 </span>
               </TableCell>
 
@@ -218,11 +225,22 @@ export function MembershipPlansTable({
                     {getActiveBenefitsCount(
                       plan
                     )}{" "}
-                    active
+                    {t(
+                      "plans.table.activeBenefitsCount",
+                      {
+                        count:
+                          getActiveBenefitsCount(plan),
+                      }
+                    )}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {plan.benefits.length}{" "}
-                    total registered
+                    {t(
+                      "plans.table.totalRegistered",
+                      {
+                        count:
+                          plan.benefits.length,
+                      }
+                    )}
                   </div>
                 </div>
               </TableCell>
@@ -265,8 +283,10 @@ export function MembershipPlansTable({
                 className="p-0"
               >
                 <EmptyState
-                  title="No plans found"
-                  description="Adjust the filters or create a new membership plan to continue."
+                  title={t("plans.table.emptyTitle")}
+                  description={t(
+                    "plans.table.emptyDescription"
+                  )}
                 />
               </TableCell>
             </TableRow>

@@ -7,11 +7,13 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 
 import { PatientsTable } from "./patients-table";
 import { PatientDialog } from "./patient-dialog";
 
 export async function PatientsPage() {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -25,8 +27,12 @@ export async function PatientsPage() {
     return (
       <DashboardPage>
         <AccessDenied
-          title="Patients access denied"
-          description="The current role cannot view patient records."
+          title={t(
+            "patients.accessDeniedTitle"
+          )}
+          description={t(
+            "patients.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -67,8 +73,8 @@ export async function PatientsPage() {
   return (
     <DashboardPage>
       <PageHeader
-        title="Patients"
-        description="Manage active and inactive patients, review their current plan, create subscriptions, and record benefit usage directly from the patient roster."
+        title={t("patients.title")}
+        description={t("patients.description")}
         action={
           canManagePatients ? (
             <PatientDialog />

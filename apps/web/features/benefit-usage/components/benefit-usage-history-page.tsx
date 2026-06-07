@@ -3,6 +3,7 @@ import { DashboardPage } from "@/components/layout/dashboard-page";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import { getTranslations } from "@/i18n/messages";
 
 import { getBenefitUsageHistory } from "../services/get-benefit-usage-history";
 import { getPatientBenefitBalance } from "../services/get-patient-benefit-balance";
@@ -11,6 +12,7 @@ import { BenefitUsageTable } from "./benefit-usage-table";
 import { ConsumeBenefitDialog } from "./consume-benefit-dialog";
 
 export async function BenefitUsageHistoryPage() {
+  const t = getTranslations();
   const role =
     await getCurrentUserRole();
 
@@ -24,8 +26,12 @@ export async function BenefitUsageHistoryPage() {
     return (
       <DashboardPage>
         <AccessDenied
-          title="Benefit usage access denied"
-          description="The current role cannot view benefit usage history."
+          title={t(
+            "benefitUsage.accessDeniedTitle"
+          )}
+          description={t(
+            "benefitUsage.accessDeniedDescription"
+          )}
         />
       </DashboardPage>
     );
@@ -50,8 +56,10 @@ export async function BenefitUsageHistoryPage() {
   return (
     <DashboardPage>
       <PageHeader
-        title="Benefit Usage"
-        description="Consume patient benefits, enforce limits, and review history."
+        title={t("benefitUsage.title")}
+        description={t(
+          "benefitUsage.description"
+        )}
         action={
           canManageBenefitUsage ? (
             <ConsumeBenefitDialog
