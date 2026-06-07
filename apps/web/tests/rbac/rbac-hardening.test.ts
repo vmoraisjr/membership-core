@@ -288,7 +288,7 @@ async function seedFixtures(): Promise<FixtureState> {
         contentSnapshot:
           "RBAC patient contract snapshot",
         status:
-          PatientContractStatus.PENDING_ACCEPTANCE,
+          PatientContractStatus.ACTIVE,
       },
     });
 
@@ -468,8 +468,12 @@ async function main() {
           ModuleKey.CRM
         );
 
-        await enableClinicModuleAction(
-          moduleFormData
+        await assert.rejects(
+          () =>
+            enableClinicModuleAction(
+              moduleFormData
+            ),
+          /cannot be enabled in V1/i
         );
 
         const roleFormData =
@@ -500,7 +504,7 @@ async function main() {
 
         assert.equal(
           clinicModule?.status,
-          ModuleStatus.ENABLED
+          ModuleStatus.DISABLED
         );
 
         const updatedAdmin =

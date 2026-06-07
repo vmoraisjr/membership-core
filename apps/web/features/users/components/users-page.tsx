@@ -1,3 +1,5 @@
+import { AppUserStatus } from "@prisma/client";
+
 import {
   getRoleLabel,
   isAppRole,
@@ -14,7 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { submitUserInviteAction } from "../actions/submit-user-invite";
+import { removeClinicUserAction } from "../actions/remove-clinic-user";
+import { revokeUserInviteAction } from "../actions/revoke-user-invite";
 import { submitClinicUserRoleAction } from "../actions/update-clinic-user-role";
+import { updateClinicUserStatusAction } from "../actions/update-clinic-user-status";
 import { getClinicUsersOverview } from "../services/get-clinic-users-overview";
 
 type UsersPageFeedback = {
@@ -32,13 +37,32 @@ type UsersPageFeedback = {
 };
 
 function getInviteStatusClass(
-  status: "PENDING" | "ACCEPTED" | "EXPIRED"
+  status:
+    | "PENDING"
+    | "ACCEPTED"
+    | "REVOKED"
+    | "EXPIRED"
 ) {
   switch (status) {
     case "ACCEPTED":
       return "bg-emerald-100 text-emerald-700";
+    case "REVOKED":
+      return "bg-slate-200 text-slate-700";
     case "EXPIRED":
       return "bg-rose-100 text-rose-700";
+    default:
+      return "bg-sky-100 text-sky-700";
+  }
+}
+
+function getUserStatusClass(
+  status: AppUserStatus
+) {
+  switch (status) {
+    case AppUserStatus.ACTIVE:
+      return "bg-emerald-100 text-emerald-700";
+    case AppUserStatus.INACTIVE:
+      return "bg-slate-200 text-slate-700";
     default:
       return "bg-sky-100 text-sky-700";
   }
@@ -265,6 +289,9 @@ export async function UsersPage({
                   Role
                 </th>
                 <th className="py-2">
+                  Status
+                </th>
+                <th className="py-2">
                   Created
                 </th>
                 <th className="py-2">
@@ -279,7 +306,7 @@ export async function UsersPage({
               {overview.users.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="py-6 text-center text-muted-foreground"
                   >
                     No clinic users found.
@@ -365,6 +392,15 @@ export async function UsersPage({
                         )}
                       </td>
                       <td className="py-3">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${getUserStatusClass(
+                            user.status
+                          )}`}
+                        >
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="py-3">
                         {formatDate(
                           user.createdAt
                         )}
@@ -377,12 +413,60 @@ export async function UsersPage({
                       <td className="py-3 text-right">
                         {isCurrentUser ? (
                           <span className="text-xs text-muted-foreground">
-                            Manage your own role outside this screen
+                            Manage your own account outside this screen
                           </span>
                         ) : canManageUsers ? (
-                          <span className="text-xs text-muted-foreground">
-                            Owner-managed
-                          </span>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <form
+                              action={
+                                updateClinicUserStatusAction
+                              }
+                              className="flex items-center gap-2"
+                            >
+                              <input
+                                type="hidden"
+                                name="userId"
+                                value={user.id}
+                              />
+                              <input
+                                type="hidden"
+                                name="status"
+                                value={
+                                  user.status ===
+                                  AppUserStatus.ACTIVE
+                                    ? AppUserStatus.INACTIVE
+                                    : AppUserStatus.ACTIVE
+                                }
+                              />
+                              <Button
+                                type="submit"
+                                variant="outline"
+                              >
+                                {user.status ===
+                                AppUserStatus.ACTIVE
+                                  ? "Deactivate"
+                                  : "Reactivate"}
+                              </Button>
+                            </form>
+
+                            <form
+                              action={
+                                removeClinicUserAction
+                              }
+                            >
+                              <input
+                                type="hidden"
+                                name="userId"
+                                value={user.id}
+                              />
+                              <Button
+                                type="submit"
+                                variant="outline"
+                              >
+                                Remove
+                              </Button>
+                            </form>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             Read only
@@ -424,13 +508,16 @@ export async function UsersPage({
                 <th className="py-2">
                   Expires
                 </th>
+                <th className="py-2 text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {overview.invites.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="py-6 text-center text-muted-foreground"
                   >
                     No clinic invites found.
@@ -472,6 +559,37 @@ export async function UsersPage({
                       <td className="py-3">
                         {formatDate(
                           invite.expiresAt
+                        )}
+                      </td>
+                      <td className="py-3 text-right">
+                        {canManageUsers &&
+                        invite.status ===
+                          "PENDING" ? (
+                          <form
+                            action={
+                              revokeUserInviteAction
+                            }
+                            className="inline-flex"
+                          >
+                            <input
+                              type="hidden"
+                              name="inviteId"
+                              value={invite.id}
+                            />
+                            <Button
+                              type="submit"
+                              variant="outline"
+                            >
+                              Revoke
+                            </Button>
+                          </form>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {invite.status ===
+                            "REVOKED"
+                              ? "Revoked"
+                              : "Read only"}
+                          </span>
                         )}
                       </td>
                     </tr>

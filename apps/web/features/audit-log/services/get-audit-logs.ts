@@ -1,5 +1,4 @@
 import {
-  AuditAction,
   AuditEntity,
   Prisma,
 } from "@prisma/client";
@@ -18,10 +17,15 @@ export type AuditLogFilters = {
 
 function isAuditEntity(
   value: string
-): value is AuditEntity {
-  return Object.values(AuditEntity).includes(
-    value as AuditEntity
-  );
+): value is
+  | AuditEntity
+  | "APP_USER"
+  | "USER_INVITE" {
+  return [
+    ...Object.values(AuditEntity),
+    "APP_USER",
+    "USER_INVITE",
+  ].includes(value as AuditEntity);
 }
 
 function getDateRange(date: string) {
@@ -38,9 +42,10 @@ function getDateRange(date: string) {
 }
 
 export const AUDIT_ACTION_LABELS: Record<
-  AuditAction,
+  string,
   string
 > = {
+  LOGIN: "Login",
   CREATE: "Create",
   UPDATE: "Update",
   DELETE: "Delete",
@@ -69,10 +74,12 @@ export const AUDIT_ACTION_LABELS: Record<
 };
 
 export const AUDIT_ENTITY_LABELS: Record<
-  AuditEntity,
+  string,
   string
 > = {
   CLINIC: "Clinic",
+  APP_USER: "App User",
+  USER_INVITE: "User Invite",
   PATIENT: "Patient",
   LEAD: "Lead",
   MEMBERSHIP_PLAN:

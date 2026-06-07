@@ -56,6 +56,15 @@ export async function acceptPatientContractAction(
     return;
   }
 
+  if (
+    contract.status !==
+    PatientContractStatus.ACTIVE
+  ) {
+    throw new Error(
+      "Only active patient contracts can be accepted."
+    );
+  }
+
   await prisma.$transaction(
     async (tx) => {
       await tx.patientContract.update({

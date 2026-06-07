@@ -2,11 +2,10 @@
 
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
-import { revalidatePath } from "next/cache";
-
 import { AuditAction, AuditEntity } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { safeRevalidatePath } from "@/lib/revalidation";
 import {
   createAuditLog,
   getCurrentAuditActor,
@@ -80,6 +79,8 @@ export async function createMembershipPlan(
     }
   );
 
-  revalidatePath("/dashboard/plans");
-  revalidatePath("/dashboard");
+  safeRevalidatePath(
+    "/dashboard/plans"
+  );
+  safeRevalidatePath("/dashboard");
 }

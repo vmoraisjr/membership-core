@@ -5,10 +5,16 @@ import { redirect } from "next/navigation";
 import { AppUserRole } from "@prisma/client";
 
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import {
+  createAuditLog,
+  getCurrentAuditActor,
+} from "@/features/audit-log/services/create-audit-log";
 import { canAssignRole } from "@/features/rbac/permissions";
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 import { safeRevalidatePath } from "@/lib/revalidation";
 import prisma from "@/lib/prisma";
+
+import { assertNotLastActiveOwner } from "../services/manage-clinic-user";
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
@@ -28,6 +34,8 @@ export async function updateClinicUserRoleAction(
 
   const currentUser =
     await requireCurrentAppUser();
+  const actor =
+    await getCurrentAuditActor();
   const userId = String(
     formData.get("userId") ?? ""
   );
@@ -77,7 +85,9 @@ export async function updateClinicUserRoleAction(
       select: {
         id: true,
         name: true,
+        email: true,
         role: true,
+        status: true,
       },
     });
 
@@ -87,7 +97,7 @@ export async function updateClinicUserRoleAction(
 
   if (targetUser.role === nextRole) {
     return {
-      userId: targetUser.id,
+      id: targetUser.id,
       name: targetUser.name,
       role: targetUser.role,
     };
@@ -97,37 +107,55 @@ export async function updateClinicUserRoleAction(
     targetUser.role === AppUserRole.OWNER &&
     nextRole !== AppUserRole.OWNER
   ) {
-    const ownerCount =
-      await prisma.appUser.count({
-        where: {
-          clinicId:
-            currentUser.clinicId,
-          role: AppUserRole.OWNER,
-        },
-      });
-
-    if (ownerCount <= 1) {
-      throw new Error(
-        "The last owner in a clinic cannot be reassigned."
-      );
-    }
+    await assertNotLastActiveOwner(
+      currentUser.clinicId,
+      targetUser.id
+    );
   }
 
   const updatedUser =
-    await prisma.appUser.update({
-      where: {
-        id: targetUser.id,
-      },
-      data: {
-        role:
-          nextRole as AppUserRole,
-      },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-      },
-    });
+    await prisma.$transaction(
+      async (tx) => {
+        const nextUser =
+          await tx.appUser.update({
+            where: {
+              id: targetUser.id,
+            },
+            data: {
+              role:
+                nextRole as AppUserRole,
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          });
+
+        await createAuditLog(tx, {
+          clinicId:
+            currentUser.clinicId,
+          actor: actor.displayName,
+          actorUserId: actor.id,
+          action: "UPDATE",
+          entity: "APP_USER",
+          entityId: nextUser.id,
+          entityLabel:
+            nextUser.email,
+          metadata: {
+            previousRole:
+              targetUser.role,
+            nextRole:
+              nextUser.role,
+            targetStatus:
+              targetUser.status,
+          },
+        });
+
+        return nextUser;
+      }
+    );
 
   await safeRevalidatePath(
     "/dashboard/users"

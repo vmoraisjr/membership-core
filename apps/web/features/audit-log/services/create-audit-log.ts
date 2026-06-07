@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { AuditAction, AuditEntity, Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
@@ -12,8 +14,11 @@ type CreateAuditLogInput = {
   clinicId?: string | null;
   actor: string;
   actorUserId?: string | null;
-  action: AuditAction;
-  entity: AuditEntity;
+  action: AuditAction | "LOGIN";
+  entity:
+    | AuditEntity
+    | "APP_USER"
+    | "USER_INVITE";
   entityId: string;
   entityLabel?: string | null;
   metadata?: Prisma.InputJsonValue;
@@ -38,12 +43,29 @@ export async function getCurrentAuditActor() {
   };
 }
 
+async function getAuditContextUser() {
+  try {
+    return await getCurrentAppUser();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes(
+        "outside a request scope"
+      )
+    ) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 export async function createAuditLog(
   client: AuditLogClient,
   input: CreateAuditLogInput
 ) {
   const currentUser =
-    await getCurrentAppUser();
+    await getAuditContextUser();
 
   if (
     currentUser?.clinicId &&
@@ -56,17 +78,41 @@ export async function createAuditLog(
     );
   }
 
-  return client.auditLog.create({
-    data: {
-      clinicId: input.clinicId ?? null,
-      actor: input.actor,
-      actorUserId:
-        input.actorUserId ?? null,
-      action: input.action,
-      entity: input.entity,
-      entityId: input.entityId,
-      entityLabel: input.entityLabel ?? null,
-      metadata: input.metadata,
-    },
-  });
+  const metadata =
+    input.metadata == null
+      ? null
+      : JSON.stringify(input.metadata);
+  const auditLogId =
+    randomUUID();
+
+  const result =
+    await client.$queryRaw<
+      Array<{ id: string }>
+    >`
+      INSERT INTO "AuditLog" (
+        "id",
+        "clinicId",
+        "actor",
+        "action",
+        "entity",
+        "entityId",
+        "entityLabel",
+        "metadata",
+        "actorUserId"
+      )
+      VALUES (
+        ${auditLogId},
+        ${input.clinicId ?? null},
+        ${input.actor},
+        ${input.action}::"AuditAction",
+        ${input.entity}::"AuditEntity",
+        ${input.entityId},
+        ${input.entityLabel ?? null},
+        ${metadata}::jsonb,
+        ${input.actorUserId ?? null}
+      )
+      RETURNING "id"
+    `;
+
+  return result[0] ?? null;
 }

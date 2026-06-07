@@ -2,8 +2,6 @@
 
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
-import { revalidatePath } from "next/cache";
-
 import {
   AuditAction,
   AuditEntity,
@@ -12,6 +10,7 @@ import {
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import { safeRevalidatePath } from "@/lib/revalidation";
 import {
   createAuditLog,
   getCurrentAuditActor,
@@ -122,9 +121,17 @@ export async function deactivateMembershipPlan(
     }
   );
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/plans");
-  revalidatePath("/dashboard/benefits");
-  revalidatePath("/dashboard/patients");
-  revalidatePath("/dashboard/subscriptions");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath(
+    "/dashboard/plans"
+  );
+  safeRevalidatePath(
+    "/dashboard/benefits"
+  );
+  safeRevalidatePath(
+    "/dashboard/patients"
+  );
+  safeRevalidatePath(
+    "/dashboard/subscriptions"
+  );
 }

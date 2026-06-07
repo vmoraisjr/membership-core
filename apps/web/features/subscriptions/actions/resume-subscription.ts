@@ -2,8 +2,6 @@
 
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
-import { revalidatePath } from "next/cache";
-
 import {
   AuditAction,
   AuditEntity,
@@ -12,6 +10,7 @@ import {
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import { safeRevalidatePath } from "@/lib/revalidation";
 import {
   createAuditLog,
   getCurrentAuditActor,
@@ -97,7 +96,7 @@ export async function resumeSubscription(
     }
   );
 
-  revalidatePath(
+  safeRevalidatePath(
     "/dashboard/subscriptions"
   );
 }

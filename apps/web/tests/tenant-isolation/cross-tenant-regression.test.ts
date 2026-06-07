@@ -26,6 +26,8 @@ import {
   ClinicStatus,
   ClinicSubscriptionStatus,
   ContractType,
+  ModuleKey,
+  ModuleStatus,
   PatientContractStatus,
   PatientStatus,
   PaymentStatus,
@@ -49,6 +51,7 @@ import { markPatientInvoiceOverdueAction } from "@/features/billing/actions/mark
 import { acceptPatientContractAction } from "@/features/contracts/actions/accept-patient-contract";
 import { getClinicUsersOverview } from "@/features/users/services/get-clinic-users-overview";
 import { updateClinicUserRoleAction } from "@/features/users/actions/update-clinic-user-role";
+import { ensureClinicModules } from "@/features/modules/services/module-access";
 import {
   clearCurrentAppUserForTests,
   setCurrentAppUserForTests,
@@ -56,6 +59,14 @@ import {
 } from "@/features/auth/services/get-current-app-user";
 
 type FixtureState = {
+  baselinePlatformMetrics: {
+    activeClinics: number;
+    trialClinics: number;
+    pastDueClinics: number;
+    monthlySaasRevenue: number;
+    membershipEnabledClinicCount: number;
+    crmEnabledClinicCount: number;
+  };
   alphaClinic: {
     id: string;
     brandName: string | null;
@@ -64,9 +75,13 @@ type FixtureState = {
   betaClinic: {
     id: string;
   };
+  gammaClinic: {
+    id: string;
+  };
   alphaUser: CurrentAppUser;
   betaUser: CurrentAppUser;
   alphaOwnerUser: CurrentAppUser;
+  workspaceAdminUser: CurrentAppUser;
   alphaPatientId: string;
   betaPatientId: string;
   betaInactivePatientId: string;
@@ -86,6 +101,85 @@ type FixtureState = {
 
 let fixtures: FixtureState;
 
+async function getPlatformBaseline() {
+  const [
+    activeClinics,
+    trialClinics,
+    pastDueClinics,
+    monthlySaasRevenue,
+    moduleCounts,
+  ] = await Promise.all([
+    prisma.clinic.count({
+      where: {
+        status: ClinicStatus.ACTIVE,
+      },
+    }),
+    prisma.clinicSubscription.count({
+      where: {
+        status:
+          ClinicSubscriptionStatus.TRIAL,
+      },
+    }),
+    prisma.clinicSubscription.count({
+      where: {
+        status:
+          ClinicSubscriptionStatus.PAST_DUE,
+      },
+    }),
+    prisma.clinicInvoice.aggregate({
+      where: {
+        status: PaymentStatus.PAID,
+        paidAt: {
+          gte: new Date(
+            new Date().getFullYear(),
+            new Date().getMonth(),
+            1
+          ),
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    }),
+    prisma.module.findMany({
+      select: {
+        key: true,
+        _count: {
+          select: {
+            clinicModules: {
+              where: {
+                status:
+                  ModuleStatus.ENABLED,
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    activeClinics,
+    trialClinics,
+    pastDueClinics,
+    monthlySaasRevenue:
+      monthlySaasRevenue._sum.amount ??
+      0,
+    membershipEnabledClinicCount:
+      moduleCounts.find(
+        (moduleCount) =>
+          moduleCount.key ===
+          ModuleKey.MEMBERSHIP
+      )?._count.clinicModules ?? 0,
+    crmEnabledClinicCount:
+      moduleCounts.find(
+        (moduleCount) =>
+          moduleCount.key ===
+          ModuleKey.CRM
+      )?._count.clinicModules ?? 0,
+  };
+}
+
 async function cleanupFixtures() {
   const clinics =
     await prisma.clinic.findMany({
@@ -94,6 +188,7 @@ async function cleanupFixtures() {
           in: [
             "clinic-alpha",
             "clinic-beta",
+            "clinic-gamma",
           ],
         },
       },
@@ -250,9 +345,17 @@ async function cleanupFixtures() {
     }),
     prisma.appUser.deleteMany({
       where: {
-        clinicId: {
-          in: clinicIds,
-        },
+        OR: [
+          {
+            clinicId: {
+              in: clinicIds,
+            },
+          },
+          {
+            email:
+              "workspace.admin@test.local",
+          },
+        ],
       },
     }),
     prisma.clinic.deleteMany({
@@ -272,7 +375,13 @@ async function cleanupFixtures() {
 }
 
 async function seedFixtures(): Promise<FixtureState> {
-  const [alphaClinic, betaClinic] =
+  const baselinePlatformMetrics =
+    await getPlatformBaseline();
+  const [
+    alphaClinic,
+    betaClinic,
+    gammaClinic,
+  ] =
     await Promise.all([
       prisma.clinic.create({
         data: {
@@ -304,12 +413,28 @@ async function seedFixtures(): Promise<FixtureState> {
           status: ClinicStatus.ACTIVE,
         },
       }),
+      prisma.clinic.create({
+        data: {
+          name: "Clinic Gamma",
+          brandName: "Gamma",
+          slug: "clinic-gamma",
+          document: "33.333.333/0001-33",
+          email: "gamma@clinic.test",
+          phone: "33333333333",
+          zipCode: "03000-000",
+          city: "Belo Horizonte",
+          state: "MG",
+          address: "Rua Gamma, 3",
+          status: ClinicStatus.ACTIVE,
+        },
+      }),
     ]);
 
   const [
     alphaOwnerRecord,
     alphaUserRecord,
     betaUserRecord,
+    workspaceAdminRecord,
   ] =
     await Promise.all([
       prisma.appUser.create({
@@ -333,6 +458,15 @@ async function seedFixtures(): Promise<FixtureState> {
           clinicId: betaClinic.id,
           name: "User Beta",
           email: "beta.user@test.local",
+          role: AppUserRole.ADMIN,
+        },
+      }),
+      prisma.appUser.create({
+        data: {
+          clinicId: null,
+          name: "Workspace Admin",
+          email:
+            "workspace.admin@test.local",
           role: AppUserRole.ADMIN,
         },
       }),
@@ -593,6 +727,7 @@ async function seedFixtures(): Promise<FixtureState> {
   const [
     alphaClinicSubscription,
     betaClinicSubscription,
+    gammaClinicSubscription,
   ] = await Promise.all([
     prisma.clinicSubscription.create({
       data: {
@@ -611,11 +746,28 @@ async function seedFixtures(): Promise<FixtureState> {
         clinicBillingPlanId:
           billingPlan.id,
         status:
-          ClinicSubscriptionStatus.ACTIVE,
+          ClinicSubscriptionStatus.PAST_DUE,
         startedAt: now,
         expiresAt: inThirtyDays,
       },
     }),
+    prisma.clinicSubscription.create({
+      data: {
+        clinicId: gammaClinic.id,
+        clinicBillingPlanId:
+          billingPlan.id,
+        status:
+          ClinicSubscriptionStatus.TRIAL,
+        startedAt: now,
+        expiresAt: inThirtyDays,
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    ensureClinicModules(alphaClinic.id),
+    ensureClinicModules(betaClinic.id),
+    ensureClinicModules(gammaClinic.id),
   ]);
 
   await Promise.all([
@@ -642,6 +794,18 @@ async function seedFixtures(): Promise<FixtureState> {
         dueDate: now,
         description:
           "Beta SaaS invoice",
+      },
+    }),
+    prisma.clinicInvoice.create({
+      data: {
+        clinicId: gammaClinic.id,
+        clinicSubscriptionId:
+          gammaClinicSubscription.id,
+        status: PaymentStatus.PENDING,
+        amount: 249,
+        dueDate: now,
+        description:
+          "Gamma SaaS invoice",
       },
     }),
   ]);
@@ -691,7 +855,7 @@ async function seedFixtures(): Promise<FixtureState> {
         contentSnapshot:
           "Alpha patient contract snapshot",
         status:
-          PatientContractStatus.PENDING_ACCEPTANCE,
+          PatientContractStatus.ACTIVE,
       },
     }),
     prisma.patientContract.create({
@@ -707,7 +871,7 @@ async function seedFixtures(): Promise<FixtureState> {
         contentSnapshot:
           "Beta patient contract snapshot",
         status:
-          PatientContractStatus.PENDING_ACCEPTANCE,
+          PatientContractStatus.ACTIVE,
       },
     }),
   ]);
@@ -740,6 +904,7 @@ async function seedFixtures(): Promise<FixtureState> {
   ]);
 
   return {
+    baselinePlatformMetrics,
     alphaClinic: {
       id: alphaClinic.id,
       brandName:
@@ -748,6 +913,9 @@ async function seedFixtures(): Promise<FixtureState> {
     },
     betaClinic: {
       id: betaClinic.id,
+    },
+    gammaClinic: {
+      id: gammaClinic.id,
     },
     alphaUser: {
       id: alphaUserRecord.id,
@@ -771,6 +939,14 @@ async function seedFixtures(): Promise<FixtureState> {
       name: betaUserRecord.name,
       email: betaUserRecord.email,
       role: betaUserRecord.role,
+    },
+    workspaceAdminUser: {
+      id: workspaceAdminRecord.id,
+      clinicId: null,
+      name: workspaceAdminRecord.name,
+      email: workspaceAdminRecord.email,
+      role:
+        workspaceAdminRecord.role,
     },
     alphaPatientId: alphaPatient.id,
     betaPatientId: betaPatient.id,
@@ -951,12 +1127,88 @@ async function main() {
           120
         );
         assert.equal(
+          metrics.activePlansCount,
+          1
+        );
+        assert.equal(
           metrics.benefitUsageEvents,
           1
         );
         assert.equal(
           metrics.platformMetrics,
           null
+        );
+      }
+    );
+
+    await runCase(
+      "Platform dashboard metrics stay production-relevant and scoped to real SaaS data",
+      async () => {
+        asUser(
+          fixtures.workspaceAdminUser
+        );
+
+        const metrics =
+          await getDashboardMetrics();
+
+        assert.equal(
+          metrics.scope,
+          "platform"
+        );
+        assert.equal(
+          metrics.platformMetrics
+            ?.activeClinics,
+          fixtures
+            .baselinePlatformMetrics
+            .activeClinics + 3
+        );
+        assert.equal(
+          metrics.platformMetrics
+            ?.trialClinics,
+          fixtures
+            .baselinePlatformMetrics
+            .trialClinics + 1
+        );
+        assert.equal(
+          metrics.platformMetrics
+            ?.pastDueClinics,
+          fixtures
+            .baselinePlatformMetrics
+            .pastDueClinics + 1
+        );
+        assert.equal(
+          metrics.platformMetrics
+            ?.monthlySaasRevenue,
+          fixtures
+            .baselinePlatformMetrics
+            .monthlySaasRevenue + 249
+        );
+
+        const membershipModuleMetric =
+          metrics.platformMetrics?.activeModuleCounts.find(
+            (moduleMetric) =>
+              moduleMetric.key ===
+              "MEMBERSHIP"
+          );
+        const crmModuleMetric =
+          metrics.platformMetrics?.activeModuleCounts.find(
+            (moduleMetric) =>
+              moduleMetric.key ===
+              "CRM"
+          );
+
+        assert.equal(
+          membershipModuleMetric?.enabledClinicCount,
+          fixtures
+            .baselinePlatformMetrics
+            .membershipEnabledClinicCount +
+            3
+        );
+        assert.equal(
+          crmModuleMetric?.enabledClinicCount,
+          fixtures
+            .baselinePlatformMetrics
+            .crmEnabledClinicCount
         );
       }
     );

@@ -1,4 +1,6 @@
 import {
+  AuditAction,
+  AuditEntity,
   BillingCycle,
   ClinicStatus,
   ClinicSubscriptionStatus,
@@ -14,11 +16,52 @@ import {
   filterByClinic,
   getCurrentClinicContext,
 } from "@/lib/auth/tenant";
+import { createAuditLog } from "@/features/audit-log/services/create-audit-log";
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
 
 type BillingClient =
   | typeof prisma
   | Prisma.TransactionClient;
+
+type AuditContext = {
+  actor: string;
+  actorUserId?: string | null;
+};
+
+const CLINIC_SUBSCRIPTION_REUSABLE_STATUSES = [
+  ClinicSubscriptionStatus.TRIAL,
+  ClinicSubscriptionStatus.ACTIVE,
+  ClinicSubscriptionStatus.PAST_DUE,
+  ClinicSubscriptionStatus.SUSPENDED,
+  ClinicSubscriptionStatus.CANCELED,
+] as const;
+
+const CLINIC_SUBSCRIPTION_TRANSITIONS: Record<
+  ClinicSubscriptionStatus,
+  readonly ClinicSubscriptionStatus[]
+> = {
+  TRIAL: [
+    ClinicSubscriptionStatus.ACTIVE,
+    ClinicSubscriptionStatus.PAST_DUE,
+    ClinicSubscriptionStatus.SUSPENDED,
+    ClinicSubscriptionStatus.CANCELED,
+  ],
+  ACTIVE: [
+    ClinicSubscriptionStatus.PAST_DUE,
+    ClinicSubscriptionStatus.SUSPENDED,
+    ClinicSubscriptionStatus.CANCELED,
+  ],
+  PAST_DUE: [
+    ClinicSubscriptionStatus.ACTIVE,
+    ClinicSubscriptionStatus.SUSPENDED,
+    ClinicSubscriptionStatus.CANCELED,
+  ],
+  SUSPENDED: [
+    ClinicSubscriptionStatus.ACTIVE,
+    ClinicSubscriptionStatus.CANCELED,
+  ],
+  CANCELED: [],
+};
 
 function getDefaultDueDate(days = 7) {
   const dueDate = new Date();
@@ -30,8 +73,16 @@ function getDefaultDueDate(days = 7) {
 }
 
 function getClinicStatusFromInvoiceStatus(
+  currentStatus: ClinicSubscriptionStatus,
   status: PaymentStatus
 ) {
+  if (
+    currentStatus ===
+    ClinicSubscriptionStatus.CANCELED
+  ) {
+    return currentStatus;
+  }
+
   switch (status) {
     case PaymentStatus.PAID:
       return ClinicSubscriptionStatus.ACTIVE;
@@ -141,9 +192,11 @@ export async function createClinicInvoiceForSubscription(
     description: string;
     dueDate?: Date;
   },
-  client: BillingClient = prisma
+  client: BillingClient = prisma,
+  audit?: AuditContext
 ) {
-  return client.clinicInvoice.create({
+  const invoice =
+    await client.clinicInvoice.create({
     data: {
       clinicId: input.clinicId,
       clinicSubscriptionId:
@@ -157,29 +210,42 @@ export async function createClinicInvoiceForSubscription(
       status: PaymentStatus.PENDING,
     },
   });
+
+  await createAuditLog(client, {
+    clinicId: input.clinicId,
+    actor:
+      audit?.actor ?? "System",
+    actorUserId:
+      audit?.actorUserId ?? null,
+    action: AuditAction.CREATE,
+    entity: AuditEntity.CLINIC_INVOICE,
+    entityId: invoice.id,
+    entityLabel:
+      invoice.description,
+    metadata: {
+      clinicSubscriptionId:
+        input.clinicSubscriptionId,
+      amount: invoice.amount,
+      dueDate:
+        invoice.dueDate.toISOString(),
+      status: invoice.status,
+    },
+  });
+
+  return invoice;
 }
 
 export async function ensureClinicBillingFoundation(
   clinicId: string,
   client: BillingClient = prisma
 ) {
-  const defaultPlan =
-    await ensureDefaultClinicBillingPlan(
-      client
-    );
-
   const existing =
     await client.clinicSubscription.findFirst(
       {
         where: {
           clinicId,
           status: {
-            in: [
-              ClinicSubscriptionStatus.TRIAL,
-              ClinicSubscriptionStatus.ACTIVE,
-              ClinicSubscriptionStatus.PAST_DUE,
-              ClinicSubscriptionStatus.SUSPENDED,
-            ],
+            in: CLINIC_SUBSCRIPTION_REUSABLE_STATUSES.slice(),
           },
         },
         include: {
@@ -195,6 +261,11 @@ export async function ensureClinicBillingFoundation(
   if (existing) {
     return existing;
   }
+
+  const defaultPlan =
+    await ensureDefaultClinicBillingPlan(
+      client
+    );
 
   const startedAt = new Date();
   const trialEndsAt = new Date(
@@ -269,7 +340,8 @@ export async function createPatientInvoiceForSubscription(
     dueDate?: Date;
     description?: string;
   },
-  client: BillingClient = prisma
+  client: BillingClient = prisma,
+  audit?: AuditContext
 ) {
   const terms =
     resolveMembershipInvoiceTerms(
@@ -277,7 +349,8 @@ export async function createPatientInvoiceForSubscription(
       input.billingCycle
     );
 
-  return client.patientInvoice.create({
+  const invoice =
+    await client.patientInvoice.create({
     data: {
       clinicId: input.clinicId,
       patientId: input.patientId,
@@ -295,6 +368,32 @@ export async function createPatientInvoiceForSubscription(
       status: PaymentStatus.PENDING,
     },
   });
+
+  await createAuditLog(client, {
+    clinicId: input.clinicId,
+    actor:
+      audit?.actor ?? "System",
+    actorUserId:
+      audit?.actorUserId ?? null,
+    action: AuditAction.CREATE,
+    entity: AuditEntity.PATIENT_INVOICE,
+    entityId: invoice.id,
+    entityLabel:
+      invoice.description,
+    metadata: {
+      patientId: input.patientId,
+      subscriptionId:
+        input.subscriptionId,
+      billingCycle:
+        invoice.billingCycle,
+      amount: invoice.amount,
+      dueDate:
+        invoice.dueDate.toISOString(),
+      status: invoice.status,
+    },
+  });
+
+  return invoice;
 }
 
 export async function getBillingOverview() {
@@ -326,6 +425,18 @@ export async function getBillingOverview() {
         subscription: {
           select: {
             id: true,
+            status: true,
+          },
+        },
+        payments: {
+          orderBy: {
+            paidAt: "desc",
+          },
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+            status: true,
           },
         },
       },
@@ -335,6 +446,25 @@ export async function getBillingOverview() {
     }),
     prisma.clinicInvoice.findMany({
       where: filterByClinic(clinicId),
+      include: {
+        clinicSubscription: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        payments: {
+          orderBy: {
+            paidAt: "desc",
+          },
+          select: {
+            id: true,
+            amount: true,
+            paidAt: true,
+            status: true,
+          },
+        },
+      },
       orderBy: {
         dueDate: "asc",
       },
@@ -443,6 +573,11 @@ export async function syncClinicSubscriptionStatusFromInvoice(
       },
       select: {
         clinicSubscriptionId: true,
+        clinicSubscription: {
+          select: {
+            status: true,
+          },
+        },
       },
     });
 
@@ -457,10 +592,116 @@ export async function syncClinicSubscriptionStatusFromInvoice(
     data: {
       status:
         getClinicStatusFromInvoiceStatus(
+          invoice.clinicSubscription
+            .status,
           status
         ),
     },
   });
+}
+
+export function canTransitionClinicSubscriptionStatus(
+  currentStatus: ClinicSubscriptionStatus,
+  nextStatus: ClinicSubscriptionStatus
+) {
+  return CLINIC_SUBSCRIPTION_TRANSITIONS[
+    currentStatus
+  ].includes(nextStatus);
+}
+
+export async function updateClinicSubscriptionStatus(
+  input: {
+    clinicId: string;
+    subscriptionId: string;
+    status: ClinicSubscriptionStatus;
+  },
+  client: BillingClient = prisma,
+  audit?: AuditContext
+) {
+  const subscription =
+    await client.clinicSubscription.findFirst({
+      where: {
+        id: input.subscriptionId,
+        clinicId: input.clinicId,
+      },
+      include: {
+        clinicBillingPlan: true,
+        invoices: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
+      },
+    });
+
+  if (!subscription) {
+    throw new Error(
+      "Clinic subscription not found."
+    );
+  }
+
+  if (subscription.status === input.status) {
+    return subscription;
+  }
+
+  if (
+    !canTransitionClinicSubscriptionStatus(
+      subscription.status,
+      input.status
+    )
+  ) {
+    throw new Error(
+      `Clinic subscription cannot transition from ${subscription.status} to ${input.status}.`
+    );
+  }
+
+  const now = new Date();
+  const updated =
+    await client.clinicSubscription.update({
+      where: {
+        id: subscription.id,
+      },
+      data: {
+        status: input.status,
+        canceledAt:
+          input.status ===
+          ClinicSubscriptionStatus.CANCELED
+            ? now
+            : null,
+      },
+      include: {
+        clinicBillingPlan: true,
+        invoices: true,
+      },
+    });
+
+  await createAuditLog(client, {
+    clinicId: input.clinicId,
+    actor:
+      audit?.actor ?? "System",
+    actorUserId:
+      audit?.actorUserId ?? null,
+    action:
+      input.status ===
+      ClinicSubscriptionStatus.CANCELED
+        ? AuditAction.DEACTIVATE
+        : AuditAction.UPDATE,
+    entity: AuditEntity.CLINIC_SUBSCRIPTION,
+    entityId: subscription.id,
+    entityLabel:
+      subscription.clinicBillingPlan.name,
+    metadata: {
+      previousStatus:
+        subscription.status,
+      nextStatus: input.status,
+      lastInvoiceStatus:
+        subscription.invoices[0]?.status ??
+        null,
+    },
+  });
+
+  return updated;
 }
 
 export async function getPatientInvoicesByFilters(

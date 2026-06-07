@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
 
-import { AppUserRole } from "@prisma/client";
+import {
+  AppUserRole,
+  AppUserStatus,
+} from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { env, isProduction } from "@/lib/env";
@@ -52,6 +55,7 @@ export type CurrentAppUser = {
   name: string;
   email: string;
   role: AppRole;
+  status?: AppUserStatus;
 };
 
 let currentAppUserOverride:
@@ -137,6 +141,8 @@ export async function ensureDefaultAppUsers() {
                 clinic?.id ?? null,
               role:
                 role as AppUserRole,
+              status:
+                AppUserStatus.ACTIVE,
               passwordHash:
                 existingUser.passwordHash ??
                 defaultPasswordHash,
@@ -153,6 +159,8 @@ export async function ensureDefaultAppUsers() {
             email,
             role:
               role as AppUserRole,
+            status:
+              AppUserStatus.ACTIVE,
             passwordHash:
               defaultPasswordHash,
           },
@@ -204,6 +212,7 @@ function toCurrentAppUser(
     name: string;
     email: string;
     role: AppUserRole;
+    status: AppUserStatus;
   }
 ): CurrentAppUser {
   return {
@@ -212,6 +221,7 @@ function toCurrentAppUser(
     name: user.name,
     email: user.email,
     role: user.role as AppRole,
+    status: user.status,
   };
 }
 
@@ -246,6 +256,13 @@ export async function getCurrentAppUser() {
     });
 
   if (!session) {
+    return null;
+  }
+
+  if (
+    session.appUser.status !==
+    AppUserStatus.ACTIVE
+  ) {
     return null;
   }
 

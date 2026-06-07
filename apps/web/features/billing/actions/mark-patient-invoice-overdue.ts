@@ -14,6 +14,11 @@ import {
   getCurrentAuditActor,
 } from "@/features/audit-log/services/create-audit-log";
 
+import {
+  canMarkInvoiceOverdue,
+  isFinalizedInvoiceStatus,
+} from "../services/billing-status";
+
 export async function markPatientInvoiceOverdueAction(
   formData: FormData
 ) {
@@ -38,12 +43,33 @@ export async function markPatientInvoiceOverdueAction(
       },
       select: {
         id: true,
+        status: true,
       },
     });
 
   if (!invoice) {
     throw new Error(
       "Patient invoice not found."
+    );
+  }
+
+  if (
+    invoice.status ===
+    PaymentStatus.OVERDUE
+  ) {
+    return;
+  }
+
+  if (
+    isFinalizedInvoiceStatus(
+      invoice.status
+    ) ||
+    !canMarkInvoiceOverdue(
+      invoice.status
+    )
+  ) {
+    throw new Error(
+      "Only pending patient invoices can be marked as overdue."
     );
   }
 
@@ -69,6 +95,12 @@ export async function markPatientInvoiceOverdueAction(
           AuditEntity.PATIENT_INVOICE,
         entityId: invoice.id,
         entityLabel: invoice.id,
+        metadata: {
+          previousStatus:
+            invoice.status,
+          nextStatus:
+            PaymentStatus.OVERDUE,
+        },
       });
     }
   );

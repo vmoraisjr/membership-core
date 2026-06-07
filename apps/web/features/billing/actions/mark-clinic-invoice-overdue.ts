@@ -15,6 +15,10 @@ import {
 } from "@/features/audit-log/services/create-audit-log";
 
 import { syncClinicSubscriptionStatusFromInvoice } from "../services/billing-foundation";
+import {
+  canMarkInvoiceOverdue,
+  isFinalizedInvoiceStatus,
+} from "../services/billing-status";
 
 export async function markClinicInvoiceOverdueAction(
   formData: FormData
@@ -40,12 +44,33 @@ export async function markClinicInvoiceOverdueAction(
       },
       select: {
         id: true,
+        status: true,
       },
     });
 
   if (!invoice) {
     throw new Error(
       "Clinic invoice not found."
+    );
+  }
+
+  if (
+    invoice.status ===
+    PaymentStatus.OVERDUE
+  ) {
+    return;
+  }
+
+  if (
+    isFinalizedInvoiceStatus(
+      invoice.status
+    ) ||
+    !canMarkInvoiceOverdue(
+      invoice.status
+    )
+  ) {
+    throw new Error(
+      "Only pending clinic invoices can be marked as overdue."
     );
   }
 
@@ -77,6 +102,12 @@ export async function markClinicInvoiceOverdueAction(
           AuditEntity.CLINIC_INVOICE,
         entityId: invoice.id,
         entityLabel: invoice.id,
+        metadata: {
+          previousStatus:
+            invoice.status,
+          nextStatus:
+            PaymentStatus.OVERDUE,
+        },
       });
     }
   );

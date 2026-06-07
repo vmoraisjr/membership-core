@@ -806,7 +806,7 @@ async function upsertContracts(input: {
         contentSnapshot:
           patientTemplate.content,
         status:
-          PatientContractStatus.PENDING_ACCEPTANCE,
+          PatientContractStatus.ACTIVE,
       },
     });
   } else {
@@ -823,7 +823,7 @@ async function upsertContracts(input: {
         contentSnapshot:
           patientTemplate.content,
         status:
-          PatientContractStatus.PENDING_ACCEPTANCE,
+          PatientContractStatus.ACTIVE,
       },
     });
   }

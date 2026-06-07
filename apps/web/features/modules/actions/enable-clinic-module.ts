@@ -16,6 +16,7 @@ import {
 } from "@/features/audit-log/services/create-audit-log";
 
 import { ensureClinicModules } from "../services/module-access";
+import { isModuleV1Active } from "../services/module-policy";
 
 export async function enableClinicModuleAction(
   formData: FormData
@@ -47,6 +48,21 @@ export async function enableClinicModuleAction(
     );
   }
 
+  if (
+    !isModuleV1Active(moduleKey)
+  ) {
+    throw new Error(
+      "This module cannot be enabled in V1."
+    );
+  }
+
+  if (
+    clinicModule.status ===
+    ModuleStatus.ENABLED
+  ) {
+    return;
+  }
+
   await prisma.$transaction(
     async (tx) => {
       await tx.clinicModule.update({
@@ -72,6 +88,11 @@ export async function enableClinicModuleAction(
         entityId: clinicModule.id,
         entityLabel:
           clinicModule.module.name,
+        metadata: {
+          moduleKey,
+          nextStatus:
+            ModuleStatus.ENABLED,
+        },
       });
     }
   );

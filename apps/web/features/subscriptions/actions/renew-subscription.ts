@@ -2,8 +2,6 @@
 
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
-import { revalidatePath } from "next/cache";
-
 import {
   AuditAction,
   AuditEntity,
@@ -12,6 +10,7 @@ import {
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
+import { safeRevalidatePath } from "@/lib/revalidation";
 import {
   createAuditLog,
   getCurrentAuditActor,
@@ -144,7 +143,11 @@ export async function renewSubscription(
           description:
             `${subscription.membershipPlan.name} renewal invoice`,
         },
-        tx
+        tx,
+        {
+          actor: actor.displayName,
+          actorUserId: actor.id,
+        }
       );
 
       await createAuditLog(tx, {
@@ -167,9 +170,11 @@ export async function renewSubscription(
     }
   );
 
-  revalidatePath(
+  safeRevalidatePath(
     "/dashboard/subscriptions"
   );
-  revalidatePath("/dashboard/billing");
-  revalidatePath("/dashboard");
+  safeRevalidatePath(
+    "/dashboard/billing"
+  );
+  safeRevalidatePath("/dashboard");
 }

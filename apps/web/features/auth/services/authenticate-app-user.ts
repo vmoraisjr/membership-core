@@ -1,3 +1,5 @@
+import { AppUserStatus } from "@prisma/client";
+
 import prisma from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 
@@ -21,6 +23,13 @@ export async function authenticateAppUser({
   });
 
   if (!user?.passwordHash) {
+    return null;
+  }
+
+  if (
+    user.status !==
+    AppUserStatus.ACTIVE
+  ) {
     return null;
   }
 

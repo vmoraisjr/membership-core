@@ -14,6 +14,11 @@ import {
   getCurrentAuditActor,
 } from "@/features/audit-log/services/create-audit-log";
 
+import {
+  canMarkInvoicePaid,
+  isFinalizedInvoiceStatus,
+} from "../services/billing-status";
+
 export async function markPatientInvoicePaidAction(
   formData: FormData
 ) {
@@ -40,6 +45,8 @@ export async function markPatientInvoicePaidAction(
         id: true,
         clinicId: true,
         amount: true,
+        status: true,
+        paidAt: true,
       },
     });
 
@@ -49,29 +56,65 @@ export async function markPatientInvoicePaidAction(
     );
   }
 
+  if (
+    invoice.status ===
+    PaymentStatus.PAID
+  ) {
+    return;
+  }
+
+  if (
+    isFinalizedInvoiceStatus(
+      invoice.status
+    ) ||
+    !canMarkInvoicePaid(
+      invoice.status
+    )
+  ) {
+    throw new Error(
+      "Only pending or overdue patient invoices can be marked as paid."
+    );
+  }
+
   await prisma.$transaction(
     async (tx) => {
+      const paidAt = new Date();
+
       await tx.patientInvoice.update({
         where: {
           id: invoice.id,
         },
         data: {
           status: PaymentStatus.PAID,
-          paidAt: new Date(),
+          paidAt,
         },
       });
+      const existingPayment =
+        await tx.patientPayment.findFirst({
+          where: {
+            patientInvoiceId:
+              invoice.id,
+            status: PaymentStatus.PAID,
+          },
+          select: {
+            id: true,
+          },
+        });
 
-      await tx.patientPayment.create({
-        data: {
-          clinicId: clinic.id,
-          patientInvoiceId:
-            invoice.id,
-          amount: invoice.amount,
-          status: PaymentStatus.PAID,
-          confirmedByUserId:
-            actor.id,
-        },
-      });
+      if (!existingPayment) {
+        await tx.patientPayment.create({
+          data: {
+            clinicId: clinic.id,
+            patientInvoiceId:
+              invoice.id,
+            amount: invoice.amount,
+            status: PaymentStatus.PAID,
+            paidAt,
+            confirmedByUserId:
+              actor.id,
+          },
+        });
+      }
 
       await createAuditLog(tx, {
         clinicId: clinic.id,
@@ -83,6 +126,12 @@ export async function markPatientInvoicePaidAction(
           AuditEntity.PATIENT_INVOICE,
         entityId: invoice.id,
         entityLabel: invoice.id,
+        metadata: {
+          previousStatus:
+            invoice.status,
+          nextStatus:
+            PaymentStatus.PAID,
+        },
       });
     }
   );

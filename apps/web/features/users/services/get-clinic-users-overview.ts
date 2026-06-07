@@ -1,4 +1,7 @@
-import { AppUserRole } from "@prisma/client";
+import {
+  AppUserRole,
+  AppUserStatus,
+} from "@prisma/client";
 
 import { getCurrentClinicId } from "@/lib/auth/get-current-clinic";
 import prisma from "@/lib/prisma";
@@ -9,6 +12,7 @@ export type ClinicUsersOverview = {
     name: string;
     email: string;
     role: AppUserRole;
+    status: AppUserStatus;
     createdAt: Date;
     lastLoginAt: Date | null;
   }>;
@@ -19,17 +23,27 @@ export type ClinicUsersOverview = {
     createdAt: Date;
     expiresAt: Date;
     acceptedAt: Date | null;
+    revokedAt: Date | null;
     invitedByName: string | null;
-    status: "PENDING" | "ACCEPTED" | "EXPIRED";
+    status:
+      | "PENDING"
+      | "ACCEPTED"
+      | "REVOKED"
+      | "EXPIRED";
   }>;
 };
 
 function getInviteStatus(invite: {
   acceptedAt: Date | null;
+  revokedAt: Date | null;
   expiresAt: Date;
 }) {
   if (invite.acceptedAt) {
     return "ACCEPTED" as const;
+  }
+
+  if (invite.revokedAt) {
+    return "REVOKED" as const;
   }
 
   if (invite.expiresAt.getTime() <= Date.now()) {
@@ -60,6 +74,7 @@ export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
           name: true,
           email: true,
           role: true,
+          status: true,
           createdAt: true,
           lastLoginAt: true,
         },
@@ -80,6 +95,7 @@ export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
           createdAt: true,
           expiresAt: true,
           acceptedAt: true,
+          revokedAt: true,
           invitedByUserId: true,
         },
       }),
@@ -110,6 +126,7 @@ export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
       createdAt: invite.createdAt,
       expiresAt: invite.expiresAt,
       acceptedAt: invite.acceptedAt,
+      revokedAt: invite.revokedAt,
       invitedByName:
         invite.invitedByUserId
           ? inviterMap.get(

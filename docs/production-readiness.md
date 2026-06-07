@@ -1,101 +1,158 @@
 # Production Readiness
 
-## Scope
+## Status
 
-This readiness pass is limited to the V1 membership platform scope:
+Membership Core V1 is suitable for a controlled production pilot, not a broad
+production rollout.
 
-- Authentication and clinic tenancy
-- Patients, plans, benefits and subscriptions
-- Benefit usage validation
-- Patient billing
+Pilot readiness is based on:
+
+- passing production build
+- current Prisma schema being up to date
+- tenant isolation regression coverage
+- RBAC regression coverage
+- core membership, billing, contracts, modules, users and audit regression coverage
+
+Pilot readiness is still conditional on the known limitations in
+`docs/known-limitations.md`.
+
+## Validated Baseline
+
+Validated on June 7, 2026:
+
+- `pnpm --dir apps/web exec prisma generate` ✅
+- `pnpm --dir apps/web exec prisma migrate status` ✅
+- `pnpm build` ✅
+- `pnpm lint` ✅
+- `pnpm --dir apps/web typecheck` ✅
+- `pnpm test:tenant` ✅
+- `pnpm test:rbac` ✅
+- `pnpm test:membership` ✅
+- `pnpm test:contracts` ✅
+- `pnpm test:billing` ✅
+- `pnpm test:modules` ✅
+- `pnpm test:audit` ✅
+- `pnpm test:users` ✅
+
+## V1 Scope
+
+In scope for pilot deployment:
+
+- authentication
+- clinic tenancy isolation
+- users and RBAC
+- patients
+- membership plans and benefits
+- subscriptions and benefit usage
+- patient billing
 - Nortex SaaS billing
-- Contracts
-- Basic dashboard
+- contracts
+- dashboard
+- audit log
 
-The following remain intentionally out of scope for V1 and must stay dormant:
+Out of scope and not required for pilot sign-off:
 
-- CRM expansion beyond the existing foundation
-- Scheduling
-- Communication hub
-- Social channels
-- Automation workflows
+- CRM expansion
+- scheduling
+- communication hub
+- social integrations
+- workflow automation
+- payment gateway integrations
 
-## Runtime Configuration
+## Environment Variables
 
-Required environment variables:
+Required:
 
 - `DATABASE_URL`
 
-Optional environment variables:
+Optional:
 
-- `ALLOW_AUTH_BOOTSTRAP=true`
-  Use only in local or controlled demo environments when seeded fallback users
-  are desired.
 - `APP_LOG_LEVEL=debug|info|warn|error`
-  Defaults to `debug` outside production and `info` in production.
+- `ALLOW_AUTH_BOOTSTRAP=true`
+- `NEXT_PUBLIC_ALLOW_ADMIN_BILLING=true`
 
-## Seeded Demo Environment
+Production guidance:
 
-The seed now provisions:
+- keep `ALLOW_AUTH_BOOTSTRAP` disabled in production
+- keep `NEXT_PUBLIC_ALLOW_ADMIN_BILLING` disabled unless that temporary override
+  is explicitly part of the pilot operating model
+- set `APP_LOG_LEVEL=info` or `warn` in pilot environments
 
-- Demo clinic `nortex-medical`
-- One active patient
-- One active membership plan
-- Active and inactive benefits
-- One active subscription
-- Paid and overdue patient invoices
-- Nortex clinic billing plan, clinic subscription and clinic invoice
-- Global contract templates
-- Patient and clinic contract records
-- Module catalog plus clinic entitlements
-- Demo users for `OWNER`, `ADMIN`, `STAFF`, `FINANCE` and `READ_ONLY`
+## Migrations
 
-Default demo password:
+Current audit result:
 
-- `ChangeMe123!`
+- 14 Prisma migrations are present
+- `prisma migrate status` reports the database schema is up to date
+- the current local pilot database is aligned with the checked-in migration history
 
-## Manual Test Focus
+Operational guidance:
 
-Run these flows before production testing:
+- always take a backup before `prisma migrate deploy`
+- rehearse migrations against a staging copy before production pilot deployment
+- do not resolve failed migrations manually in production without capturing an
+  incident note
 
-1. Login with `OWNER` and confirm dashboard, billing, contracts and modules are visible.
-2. Login with `STAFF` and confirm billing/contracts/modules admin actions stay hidden.
-3. Create a new subscription for an active plan and verify an invoice plus patient contract are generated.
-4. Try to create a subscription for an inactive plan and confirm the action is blocked.
-5. Attempt to consume an inactive benefit and confirm validation fails.
-6. Attempt to consume a benefit from a canceled or expired subscription and confirm validation fails.
-7. Mark a patient invoice as paid and verify payment records and dashboard revenue update.
-8. Mark a clinic invoice as overdue and verify the clinic SaaS subscription moves to `PAST_DUE`.
-9. Visit billing, contracts and modules pages with a clinic-scoped admin account and confirm tenant data isolation.
-10. Run the full validation commands from the deployment checklist before shipping.
+## Build and Runtime Readiness
 
-## Migration Sanity
+Validated:
 
-Before promoting the app:
+- `next build` completes successfully
+- TypeScript passes during build
+- route generation completes for dashboard, auth and V1 operational pages
 
-1. Apply Prisma migrations against a fresh database.
-2. Apply Prisma migrations against a copy of a populated environment.
-3. Run `pnpm exec prisma generate`.
-4. Run the seed in a demo environment and confirm it is idempotent enough for repeated local resets.
-5. Validate that the new billing, module and contract enums exist in PostgreSQL.
+Warnings observed during build:
 
-## Logging and Failure Handling
+- `middleware.ts` uses a deprecated Next.js file convention and should be moved
+  to the newer `proxy` convention in a follow-up hardening pass
+- Prisma initialization currently logs a prefix of `DATABASE_URL`, which should
+  be removed before a broader rollout
 
-- Server-side Prisma initialization now uses a shared logger instead of ad hoc
-  console noise.
-- Global and dashboard route error boundaries are present so production testing
-  does not fail silently.
-- Keep logs centralized in the target runtime platform and retain them across
-  deploys to diagnose auth, billing and migration failures.
+## Logging Readiness
 
-## Backups
+Current state:
 
-Take a database backup:
+- server-side logging is centralized through `apps/web/lib/logger.ts`
+- Prisma bootstrap failures are logged
+- runtime log verbosity is configurable through `APP_LOG_LEVEL`
 
-- Before applying the new billing/contracts/modules migration in shared
-  environments
-- Before retrying a failed migration manually
-- Before seeding data into any environment that already contains operator data
+Current gaps:
 
-For production-like validation, prefer restoring the backup into a staging
-database and rehearsing the migration there first.
+- logs are console-based and not yet structured for a centralized log pipeline
+- sensitive connection metadata is partially exposed by the Prisma bootstrap log
+- there is no documented alerting or error-budget policy yet
+
+## Test Coverage Readiness
+
+Automated regression coverage currently exists for:
+
+- tenant isolation
+- RBAC
+- membership engine
+- contracts
+- billing
+- modules
+- audit log
+- user management
+
+Coverage that still depends on manual QA:
+
+- end-to-end browser flows across the full login-to-dashboard journey
+- deployment smoke tests in the target runtime
+- operator workflow validation with real pilot data volume
+
+## Deployment Readiness Summary
+
+Ready for pilot if all of the following are true:
+
+- production or staging database backup is current
+- deployment checklist is executed in full
+- manual QA checklist is executed in full
+- known limitations are accepted by the pilot stakeholders
+
+Not yet ready for a broader production launch if any of the following remain
+unaddressed:
+
+- connection-string prefix logging
+- deprecated Next middleware convention
+- absence of a fully documented app container or hosting runbook

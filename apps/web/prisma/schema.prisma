@@ -46,6 +46,7 @@ model AppUser {
   email      String      @unique
   passwordHash String?
   role       AppUserRole
+  status     AppUserStatus @default(ACTIVE)
   createdAt  DateTime    @default(now())
   lastLoginAt DateTime?
   updatedAt  DateTime    @updatedAt
@@ -95,6 +96,7 @@ model UserInvite {
   tokenHash       String      @unique
   expiresAt       DateTime
   acceptedAt      DateTime?
+  revokedAt       DateTime?
   invitedByUserId String?
   createdAt       DateTime    @default(now())
 
@@ -422,7 +424,7 @@ model PatientContract {
   templateId     String?
   title          String
   contentSnapshot String
-  status         PatientContractStatus @default(PENDING_ACCEPTANCE)
+  status         PatientContractStatus @default(ACTIVE)
   acceptedAt     DateTime?
   createdAt      DateTime              @default(now())
 
@@ -511,6 +513,12 @@ enum AppUserRole {
   READ_ONLY
 }
 
+enum AppUserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
 enum PatientStatus {
   ACTIVE
   INACTIVE
@@ -561,6 +569,7 @@ enum ResetPeriod {
 }
 
 enum AuditAction {
+  LOGIN
   CREATE
   UPDATE
   DELETE
@@ -581,6 +590,8 @@ enum AuditAction {
 
 enum AuditEntity {
   CLINIC
+  APP_USER
+  USER_INVITE
   PATIENT
   LEAD
   MEMBERSHIP_PLAN
@@ -637,10 +648,10 @@ enum ContractType {
 }
 
 enum PatientContractStatus {
-  PENDING_ACCEPTANCE
+  DRAFT
+  ACTIVE
   ACCEPTED
-  CANCELED
-  EXPIRED
+  ARCHIVED
 }
 
 enum ClinicContractStatus {

@@ -10,7 +10,13 @@
     "typecheck": "tsc --noEmit",
     "db:seed": "tsx prisma/seed.ts",
     "test:tenant": "tsx tests/tenant-isolation/cross-tenant-regression.test.ts",
-    "test:rbac": "tsx tests/rbac/rbac-hardening.test.ts"
+    "test:rbac": "tsx tests/rbac/rbac-hardening.test.ts",
+    "test:membership": "tsx tests/membership/membership-regression.test.ts",
+    "test:contracts": "tsx tests/contracts/contracts-hardening.test.ts",
+    "test:billing": "tsx tests/billing/billing-hardening.test.ts",
+    "test:modules": "tsx tests/modules/module-management-hardening.test.ts",
+    "test:audit": "tsx tests/audit/audit-log-hardening.test.ts",
+    "test:users": "tsx tests/users/user-management-completion.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

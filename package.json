@@ -7,7 +7,13 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test:tenant": "pnpm --dir apps/web test:tenant",
-    "test:rbac": "pnpm --dir apps/web test:rbac"
+    "test:rbac": "pnpm --dir apps/web test:rbac",
+    "test:membership": "pnpm --dir apps/web test:membership",
+    "test:contracts": "pnpm --dir apps/web test:contracts",
+    "test:billing": "pnpm --dir apps/web test:billing",
+    "test:modules": "pnpm --dir apps/web test:modules",
+    "test:audit": "pnpm --dir apps/web test:audit",
+    "test:users": "pnpm --dir apps/web test:users"
   },
   "devDependencies": {
     "turbo": "^2.0.0"

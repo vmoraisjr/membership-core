@@ -7,6 +7,8 @@ import {
 import prisma from "@/lib/prisma";
 import { getCurrentClinicId } from "@/lib/auth/get-current-clinic";
 
+import { isModuleV1Active } from "./module-policy";
+
 type ModuleClient =
   | typeof prisma
   | Prisma.TransactionClient;
@@ -106,40 +108,36 @@ export async function ensureClinicModules(
           },
         },
         update: {
-          status:
-            moduleRecord.key ===
-            ModuleKey.MEMBERSHIP
-              ? ModuleStatus.ENABLED
-              : ModuleStatus.DISABLED,
-          enabledAt:
-            moduleRecord.key ===
-            ModuleKey.MEMBERSHIP
-              ? new Date()
-              : null,
-          disabledAt:
-            moduleRecord.key ===
-            ModuleKey.MEMBERSHIP
-              ? null
-              : new Date(),
+          ...(isModuleV1Active(
+            moduleRecord.key
+          )
+            ? {
+                status:
+                  ModuleStatus.ENABLED,
+                enabledAt:
+                  new Date(),
+                disabledAt: null,
+              }
+            : {}),
         },
         create: {
           clinicId,
           moduleId: moduleRecord.id,
-          status:
-            moduleRecord.key ===
-            ModuleKey.MEMBERSHIP
-              ? ModuleStatus.ENABLED
-              : ModuleStatus.DISABLED,
-          enabledAt:
-            moduleRecord.key ===
-            ModuleKey.MEMBERSHIP
-              ? new Date()
-              : null,
-          disabledAt:
-            moduleRecord.key ===
-            ModuleKey.MEMBERSHIP
-              ? null
-              : new Date(),
+          status: isModuleV1Active(
+            moduleRecord.key
+          )
+            ? ModuleStatus.ENABLED
+            : ModuleStatus.DISABLED,
+          enabledAt: isModuleV1Active(
+            moduleRecord.key
+          )
+            ? new Date()
+            : null,
+          disabledAt: isModuleV1Active(
+            moduleRecord.key
+          )
+            ? null
+            : new Date(),
         },
       })
     )
@@ -169,6 +167,10 @@ export async function isModuleEnabled(
   key: ModuleKey,
   clinicId?: string
 ) {
+  if (!isModuleV1Active(key)) {
+    return false;
+  }
+
   const resolvedClinicId =
     clinicId ??
     (await getCurrentClinicId());

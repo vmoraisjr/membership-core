@@ -29,6 +29,23 @@ const DEFAULT_CONTRACT_TEMPLATES = [
   },
 ] as const;
 
+export type ResolvedContractTemplate = {
+  id: string;
+  type: ContractType;
+  title: string;
+  content: string;
+  scope: "DEFAULT" | "CLINIC";
+};
+
+export type ClinicContractTemplateRecord = {
+  id: string;
+  type: ContractType;
+  title: string;
+  content: string;
+  active: boolean;
+  createdAt: Date;
+};
+
 export async function ensureDefaultContractTemplates(
   client: ContractClient = prisma
 ) {
@@ -80,6 +97,7 @@ export async function ensureDefaultContractTemplates(
 
   return client.contractTemplate.findMany({
     where: {
+      clinicId: null,
       active: true,
     },
     orderBy: {
@@ -88,19 +106,206 @@ export async function ensureDefaultContractTemplates(
   });
 }
 
+export async function getEffectiveContractTemplate(
+  clinicId: string,
+  type: ContractType,
+  client: ContractClient = prisma
+): Promise<ResolvedContractTemplate | null> {
+  const clinicTemplate =
+    await client.contractTemplate.findFirst({
+      where: {
+        clinicId,
+        type,
+        active: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        content: true,
+      },
+    });
+
+  if (clinicTemplate) {
+    return {
+      ...clinicTemplate,
+      scope: "CLINIC",
+    };
+  }
+
+  const defaultTemplates =
+    await ensureDefaultContractTemplates(
+      client
+    );
+  const defaultTemplate =
+    defaultTemplates.find(
+      (template) =>
+        template.type === type
+    );
+
+  if (!defaultTemplate) {
+    return null;
+  }
+
+  return {
+    id: defaultTemplate.id,
+    type: defaultTemplate.type,
+    title: defaultTemplate.title,
+    content: defaultTemplate.content,
+    scope: "DEFAULT",
+  };
+}
+
+export async function upsertClinicContractTemplate(
+  input: {
+    clinicId: string;
+    type: ContractType;
+    title: string;
+    content: string;
+    templateId?: string | null;
+  },
+  client: ContractClient = prisma
+) {
+  if (input.templateId) {
+    return client.contractTemplate.update({
+      where: {
+        id: input.templateId,
+      },
+      data: {
+        title: input.title,
+        content: input.content,
+      },
+    });
+  }
+
+  const activeTemplate =
+    await client.contractTemplate.findFirst({
+      where: {
+        clinicId: input.clinicId,
+        type: input.type,
+        active: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  if (!activeTemplate) {
+    return client.contractTemplate.create({
+      data: {
+        clinicId: input.clinicId,
+        type: input.type,
+        title: input.title,
+        content: input.content,
+        active: true,
+      },
+    });
+  }
+
+  return client.contractTemplate.create({
+    data: {
+      clinicId: input.clinicId,
+      type: input.type,
+      title: input.title,
+      content: input.content,
+      active: false,
+    },
+  });
+}
+
+export async function getClinicContractTemplates(
+  clinicId: string,
+  type: ContractType,
+  client: ContractClient = prisma
+): Promise<
+  ClinicContractTemplateRecord[]
+> {
+  return client.contractTemplate.findMany({
+    where: {
+      clinicId,
+      type,
+    },
+    orderBy: [
+      {
+        active: "desc",
+      },
+      {
+        createdAt: "desc",
+      },
+    ],
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      content: true,
+      active: true,
+      createdAt: true,
+    },
+  });
+}
+
+export async function setClinicContractTemplateActive(
+  input: {
+    clinicId: string;
+    templateId: string;
+    active: boolean;
+  },
+  client: ContractClient = prisma
+) {
+  const template =
+    await client.contractTemplate.findFirst({
+      where: {
+        id: input.templateId,
+        clinicId: input.clinicId,
+      },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        active: true,
+      },
+    });
+
+  if (!template) {
+    throw new Error(
+      "Contract template not found."
+    );
+  }
+
+  if (input.active) {
+    await client.contractTemplate.updateMany({
+      where: {
+        clinicId: input.clinicId,
+        type: template.type,
+      },
+      data: {
+        active: false,
+      },
+    });
+  }
+
+  return client.contractTemplate.update({
+    where: {
+      id: template.id,
+    },
+    data: {
+      active: input.active,
+    },
+  });
+}
+
 export async function ensureClinicContractRecord(
   clinicId: string,
   client: ContractClient = prisma
 ) {
-  const templates =
-    await ensureDefaultContractTemplates(
-      client
-    );
   const clinicTemplate =
-    templates.find(
-      (template) =>
-        template.type ===
-        ContractType.CLINIC_PLATFORM
+    await getEffectiveContractTemplate(
+      clinicId,
+      ContractType.CLINIC_PLATFORM,
+      client
     );
 
   if (!clinicTemplate) {
@@ -113,8 +318,10 @@ export async function ensureClinicContractRecord(
         clinicId,
         status: {
           in: [
+            ClinicContractStatus.DRAFT,
             ClinicContractStatus.PENDING_SIGNATURE,
             ClinicContractStatus.ACTIVE,
+            ClinicContractStatus.SUSPENDED,
           ],
         },
       },
@@ -154,15 +361,37 @@ export async function generatePatientContractForSubscription(
   },
   client: ContractClient = prisma
 ) {
-  const templates =
-    await ensureDefaultContractTemplates(
-      client
+  const subscription =
+    await client.subscription.findFirst({
+      where: {
+        id: input.subscriptionId,
+        patientId: input.patientId,
+        patient: {
+          clinicId: input.clinicId,
+        },
+      },
+      select: {
+        id: true,
+        patientId: true,
+        patient: {
+          select: {
+            clinicId: true,
+          },
+        },
+      },
+    });
+
+  if (!subscription) {
+    throw new Error(
+      "Subscription-to-contract linkage is invalid."
     );
+  }
+
   const patientTemplate =
-    templates.find(
-      (template) =>
-        template.type ===
-        ContractType.PATIENT_MEMBERSHIP
+    await getEffectiveContractTemplate(
+      input.clinicId,
+      ContractType.PATIENT_MEMBERSHIP,
+      client
     );
 
   if (!patientTemplate) {
@@ -177,10 +406,27 @@ export async function generatePatientContractForSubscription(
       },
       select: {
         id: true,
+        patient: {
+          select: {
+            id: true,
+            clinicId: true,
+          },
+        },
       },
     });
 
   if (existing) {
+    if (
+      existing.patient.id !==
+        input.patientId ||
+      existing.patient.clinicId !==
+        input.clinicId
+    ) {
+      throw new Error(
+        "Subscription contract is already linked to another patient record."
+      );
+    }
+
     return client.patientContract.findUnique(
       {
         where: {
@@ -203,7 +449,7 @@ export async function generatePatientContractForSubscription(
       contentSnapshot:
         patientTemplate.content,
       status:
-        PatientContractStatus.PENDING_ACCEPTANCE,
+        PatientContractStatus.ACTIVE,
     },
   });
 }
@@ -217,8 +463,23 @@ export async function getContractsOverview() {
     clinicId
   );
 
-  const [patientContracts, clinicContracts] =
+  const [
+    patientTemplate,
+    clinicTemplate,
+    patientContracts,
+    clinicContracts,
+    patientClinicTemplates,
+    clinicClinicTemplates,
+  ] =
     await Promise.all([
+      getEffectiveContractTemplate(
+        clinicId,
+        ContractType.PATIENT_MEMBERSHIP
+      ),
+      getEffectiveContractTemplate(
+        clinicId,
+        ContractType.CLINIC_PLATFORM
+      ),
       prisma.patientContract.findMany({
         where: {
           clinicId,
@@ -250,16 +511,32 @@ export async function getContractsOverview() {
           clinicId,
         },
         include: {
-          files: true,
+          files: {
+            orderBy: {
+              uploadedAt: "desc",
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
         },
       }),
+      getClinicContractTemplates(
+        clinicId,
+        ContractType.PATIENT_MEMBERSHIP
+      ),
+      getClinicContractTemplates(
+        clinicId,
+        ContractType.CLINIC_PLATFORM
+      ),
     ]);
 
   return {
+    patientTemplate,
+    clinicTemplate,
     patientContracts,
     clinicContracts,
+    patientClinicTemplates,
+    clinicClinicTemplates,
   };
 }

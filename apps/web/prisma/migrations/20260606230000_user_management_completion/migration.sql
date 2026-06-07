@@ -1,0 +1,11 @@
+CREATE TYPE "AppUserStatus" AS ENUM (
+  'ACTIVE',
+  'INACTIVE',
+  'PENDING'
+);
+
+ALTER TABLE "AppUser"
+ADD COLUMN "status" "AppUserStatus" NOT NULL DEFAULT 'ACTIVE';
+
+ALTER TABLE "UserInvite"
+ADD COLUMN "revokedAt" TIMESTAMP(3);

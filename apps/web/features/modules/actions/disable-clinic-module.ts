@@ -53,6 +53,13 @@ export async function disableClinicModuleAction(
     );
   }
 
+  if (
+    clinicModule.status ===
+    ModuleStatus.DISABLED
+  ) {
+    return;
+  }
+
   await prisma.$transaction(
     async (tx) => {
       await tx.clinicModule.update({
@@ -77,6 +84,11 @@ export async function disableClinicModuleAction(
         entityId: clinicModule.id,
         entityLabel:
           clinicModule.module.name,
+        metadata: {
+          moduleKey,
+          nextStatus:
+            ModuleStatus.DISABLED,
+        },
       });
     }
   );

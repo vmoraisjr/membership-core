@@ -13,6 +13,7 @@ import { hasPermission } from "@/features/rbac/permissions";
 import { disableClinicModuleAction } from "../actions/disable-clinic-module";
 import { enableClinicModuleAction } from "../actions/enable-clinic-module";
 import { getClinicModules } from "../services/module-access";
+import { isModuleV1Active } from "../services/module-policy";
 
 export async function ModulesPage() {
   const role =
@@ -101,9 +102,9 @@ export async function ModulesPage() {
                       }
                     </td>
                     <td className="py-3">
-                      {clinicModule
-                        .module
-                        .isV1Active
+                      {isModuleV1Active(
+                        clinicModule.module.key
+                      )
                         ? "Active"
                         : "Future"}
                     </td>
@@ -117,6 +118,12 @@ export async function ModulesPage() {
                           ModuleKey.MEMBERSHIP
                             ? "Core module"
                             : "Read only"}
+                        </span>
+                      ) : !isModuleV1Active(
+                          clinicModule.module.key
+                        ) ? (
+                        <span className="text-xs text-muted-foreground">
+                          V2 only
                         </span>
                       ) : clinicModule.status ===
                         ModuleStatus.ENABLED ? (
