@@ -11,8 +11,8 @@ import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { formatDate } from "@/lib/formatters";
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
 import { SectionCard } from "@/components/dashboard/section-card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { submitUserInviteAction } from "../actions/submit-user-invite";
@@ -214,6 +214,7 @@ export async function UsersPage({
         >
           <form
             action={submitUserInviteAction}
+            id="create-user-invite-form"
             className="grid gap-4 p-4 md:grid-cols-[minmax(0,1.6fr)_220px_auto]"
           >
             <label className="grid gap-2 text-sm">
@@ -266,9 +267,13 @@ export async function UsersPage({
             </label>
 
             <div className="flex items-end">
-              <Button type="submit">
-                Create invite
-              </Button>
+              <ConfirmSubmitButton
+                formId="create-user-invite-form"
+                title="Create user invite?"
+                description="This will create a new invite for the selected email and role."
+                actionLabel="Create invite"
+                label="Create invite"
+              />
             </div>
           </form>
         </SectionCard>
@@ -343,6 +348,7 @@ export async function UsersPage({
                             action={
                               submitClinicUserRoleAction
                             }
+                            id={`update-user-role-${user.id}`}
                             className="flex items-center gap-2"
                           >
                             <input
@@ -376,12 +382,13 @@ export async function UsersPage({
                                 )
                               )}
                             </select>
-                            <Button
-                              type="submit"
-                              variant="outline"
-                            >
-                              Save
-                            </Button>
+                            <ConfirmSubmitButton
+                              formId={`update-user-role-${user.id}`}
+                              title="Update user role?"
+                              description={`This will change ${user.name}'s role.`}
+                              actionLabel="Save role"
+                              label="Save"
+                            />
                           </form>
                         ) : (
                           <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
@@ -421,6 +428,7 @@ export async function UsersPage({
                               action={
                                 updateClinicUserStatusAction
                               }
+                              id={`update-user-status-${user.id}`}
                               className="flex items-center gap-2"
                             >
                               <input
@@ -438,33 +446,48 @@ export async function UsersPage({
                                     : AppUserStatus.ACTIVE
                                 }
                               />
-                              <Button
-                                type="submit"
-                                variant="outline"
-                              >
-                                {user.status ===
-                                AppUserStatus.ACTIVE
-                                  ? "Deactivate"
-                                  : "Reactivate"}
-                              </Button>
+                              <ConfirmSubmitButton
+                                formId={`update-user-status-${user.id}`}
+                                title={
+                                  user.status ===
+                                  AppUserStatus.ACTIVE
+                                    ? "Deactivate user?"
+                                    : "Reactivate user?"
+                                }
+                                description={`This will update ${user.name}'s account status.`}
+                                actionLabel={
+                                  user.status ===
+                                  AppUserStatus.ACTIVE
+                                    ? "Deactivate"
+                                    : "Reactivate"
+                                }
+                                label={
+                                  user.status ===
+                                  AppUserStatus.ACTIVE
+                                    ? "Deactivate"
+                                    : "Reactivate"
+                                }
+                              />
                             </form>
 
                             <form
                               action={
                                 removeClinicUserAction
                               }
+                              id={`remove-user-${user.id}`}
                             >
                               <input
                                 type="hidden"
                                 name="userId"
                                 value={user.id}
                               />
-                              <Button
-                                type="submit"
-                                variant="outline"
-                              >
-                                Remove
-                              </Button>
+                              <ConfirmSubmitButton
+                                formId={`remove-user-${user.id}`}
+                                title="Remove user from clinic?"
+                                description={`This will remove ${user.name} from the clinic roster.`}
+                                actionLabel="Remove user"
+                                label="Remove"
+                              />
                             </form>
                           </div>
                         ) : (
@@ -569,6 +592,7 @@ export async function UsersPage({
                             action={
                               revokeUserInviteAction
                             }
+                            id={`revoke-invite-${invite.id}`}
                             className="inline-flex"
                           >
                             <input
@@ -576,12 +600,13 @@ export async function UsersPage({
                               name="inviteId"
                               value={invite.id}
                             />
-                            <Button
-                              type="submit"
-                              variant="outline"
-                            >
-                              Revoke
-                            </Button>
+                            <ConfirmSubmitButton
+                              formId={`revoke-invite-${invite.id}`}
+                              title="Revoke invite?"
+                              description={`This will revoke the pending invite for ${invite.email}.`}
+                              actionLabel="Revoke invite"
+                              label="Revoke"
+                            />
                           </form>
                         ) : (
                           <span className="text-xs text-muted-foreground">

@@ -36,3 +36,5 @@
 
 - CRM, Scheduling and Communication remain intentionally dormant for V1 and should not be treated as pilot-ready modules.
 - Any route or navigation exposure for dormant modules should be treated as a regression.
+- Contracts remain internally implemented but are not exposed as an active V1
+  navigation module.

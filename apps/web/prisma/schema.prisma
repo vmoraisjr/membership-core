@@ -249,8 +249,10 @@ model BenefitUsage {
 
   quantity              Int      @default(1)
   usedBy                String
+  status                BenefitUsageStatus @default(ACTIVE)
 
   usedAt                DateTime @default(now())
+  canceledAt            DateTime?
 
   notes                 String?
 
@@ -265,6 +267,7 @@ model PatientInvoice {
   patientId       String
   subscriptionId  String?
   status          PaymentStatus @default(PENDING)
+  paymentMethod   PaymentMethod?
   billingCycle    BillingCycle
   amount          Float
   currency        String        @default("BRL")
@@ -290,6 +293,7 @@ model PatientPayment {
   patientInvoiceId  String
   amount            Float
   status            PaymentStatus @default(PAID)
+  paymentMethod     PaymentMethod?
   paidAt            DateTime      @default(now())
   notes             String?
   confirmedByUserId String?
@@ -533,6 +537,11 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum BenefitUsageStatus {
+  ACTIVE
+  CANCELED
+}
+
 enum PaymentStatus {
   PENDING
   PAID
@@ -546,6 +555,14 @@ enum BillingCycle {
   MONTHLY
   ANNUAL
   MANUAL
+}
+
+enum PaymentMethod {
+  CARD
+  PIX
+  CASH
+  BANK_TRANSFER
+  OTHER
 }
 
 enum ClinicSubscriptionStatus {

@@ -18,6 +18,7 @@ import { createMembershipPlan } from "../actions/create-membership-plan";
 import { updateMembershipPlan } from "../actions/update-membership-plan";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
 import {
   Dialog,
@@ -165,12 +166,7 @@ export function MembershipPlanDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form
-          onSubmit={form.handleSubmit(
-            onSubmit
-          )}
-          className="flex flex-col gap-4"
-        >
+        <form className="flex flex-col gap-4">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
               Plan name
@@ -210,11 +206,35 @@ export function MembershipPlanDialog({
             />
           </div>
 
-          <Button type="submit">
-            {mode === "edit"
-              ? "Save Changes"
-              : "Create Plan"}
-          </Button>
+          <ConfirmDialog
+            title={
+              mode === "edit"
+                ? "Save membership plan changes?"
+                : "Create membership plan?"
+            }
+            description={
+              mode === "edit"
+                ? "This updates the selected membership plan."
+                : "This creates a new membership plan."
+            }
+            actionLabel={
+              mode === "edit"
+                ? "Save changes"
+                : "Create plan"
+            }
+            trigger={
+              <Button type="button">
+                {mode === "edit"
+                  ? "Save Changes"
+                  : "Create Plan"}
+              </Button>
+            }
+            onConfirm={() =>
+              void form.handleSubmit(
+                onSubmit
+              )()
+            }
+          />
         </form>
       </DialogContent>
     </Dialog>

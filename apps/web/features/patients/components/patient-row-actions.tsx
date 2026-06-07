@@ -6,6 +6,7 @@ import {
   RotateCcw,
   Trash2,
   Plus,
+  Activity,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -20,6 +21,21 @@ import { deletePatientPermanently } from "../actions/delete-patient-permanently"
 
 import { PatientDialog } from "./patient-dialog";
 import { SubscriptionDialog } from "@/features/subscriptions/components/subscription-dialog";
+import { ConsumeBenefitDialog } from "@/features/benefit-usage/components/consume-benefit-dialog";
+
+type PatientBenefitBalance = {
+  subscriptionId: string;
+  patientId: string;
+  patientName: string;
+  membershipPlanId: string;
+  membershipPlanName: string;
+  membershipBenefitId: string;
+  membershipBenefitTitle: string;
+  usageLimit: number | null;
+  resetPeriod: "MONTHLY" | "YEARLY" | null;
+  usedQuantity: number;
+  remainingQuantity: number | null;
+};
 
 type Props = {
   patient: {
@@ -46,17 +62,21 @@ type Props = {
     status?: "ACTIVE" | "INACTIVE";
   };
   plans?: Array<{ id: string; name: string }>;
+  benefitBalances?: PatientBenefitBalance[];
   canManagePatients?: boolean;
   canDeletePatientsPermanently?: boolean;
   canManageSubscriptions?: boolean;
+  canManageBenefitUsage?: boolean;
 };
 
 export function PatientRowActions({
   patient,
   plans = [],
+  benefitBalances = [],
   canManagePatients = true,
   canDeletePatientsPermanently = true,
   canManageSubscriptions = true,
+  canManageBenefitUsage = true,
 }: Props) {
   async function handleSuspend({
     detailsValue,
@@ -120,7 +140,8 @@ export function PatientRowActions({
 
   const canShowActions =
     canManagePatients ||
-    canManageSubscriptions;
+    canManageSubscriptions ||
+    canManageBenefitUsage;
 
   if (!canShowActions) {
     return (
@@ -157,6 +178,19 @@ export function PatientRowActions({
               trigger={
                 <Button size="icon" variant="outline">
                   <Plus className="size-4" />
+                </Button>
+              }
+            />
+          ) : null}
+
+          {canManageBenefitUsage ? (
+            <ConsumeBenefitDialog
+              balances={benefitBalances}
+              title={`Record benefit usage for ${patient.fullName}`}
+              trigger={
+                <Button variant="outline">
+                  <Activity className="size-4" />
+                  Use Benefit
                 </Button>
               }
             />

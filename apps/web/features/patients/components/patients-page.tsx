@@ -1,5 +1,6 @@
 import { getPatients } from "../services/get-patients";
 import { getMembershipPlans } from "@/features/membership-plans/services/get-membership-plans";
+import { getPatientBenefitBalance } from "@/features/benefit-usage/services/get-patient-benefit-balance";
 
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -31,9 +32,11 @@ export async function PatientsPage() {
     );
   }
 
-  const [patients, plans] = await Promise.all([
+  const [patients, plans, benefitBalances] =
+    await Promise.all([
     getPatients(),
     getMembershipPlans(),
+    getPatientBenefitBalance(),
   ]);
 
   const canManagePatients =
@@ -54,12 +57,18 @@ export async function PatientsPage() {
       "subscriptions",
       "manage"
     );
+  const canManageBenefitUsage =
+    hasPermission(
+      role,
+      "benefitUsage",
+      "manage"
+    );
 
   return (
     <DashboardPage>
       <PageHeader
         title="Patients"
-        description="Manage active and inactive patients, review their current plan, and create subscriptions from the patient roster."
+        description="Manage active and inactive patients, review their current plan, create subscriptions, and record benefit usage directly from the patient roster."
         action={
           canManagePatients ? (
             <PatientDialog />
@@ -70,6 +79,9 @@ export async function PatientsPage() {
       <PatientsTable
         patients={patients}
         plans={plans.map((p) => ({ id: p.id, name: p.name }))}
+        benefitBalances={
+          benefitBalances
+        }
         canManagePatients={
           canManagePatients
         }
@@ -78,6 +90,9 @@ export async function PatientsPage() {
         }
         canManageSubscriptions={
           canManageSubscriptions
+        }
+        canManageBenefitUsage={
+          canManageBenefitUsage
         }
       />
     </DashboardPage>

@@ -1,6 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+
+import { BenefitUsageStatus } from "@prisma/client";
+import { toast } from "sonner";
+
+import { cancelBenefitUsageAction } from "../actions/cancel-benefit-usage";
 
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -18,6 +23,8 @@ type BenefitUsageHistoryItem = {
   quantity: number;
   usedBy: string;
   usedAt: Date;
+  status: BenefitUsageStatus;
+  canceledAt: Date | null;
   notes: string | null;
   subscription: {
     id: string;
@@ -39,13 +46,17 @@ type BenefitUsageHistoryItem = {
 
 type Props = {
   usages: BenefitUsageHistoryItem[];
+  canCancelBenefitUsage?: boolean;
 };
 
 export function BenefitUsageTable({
   usages,
+  canCancelBenefitUsage = false,
 }: Props) {
   const [search, setSearch] =
     useState("");
+  const [isPending, startTransition] =
+    useTransition();
 
   const normalizedSearch =
     search.trim().toLowerCase();
@@ -72,6 +83,30 @@ export function BenefitUsageTable({
       );
     }
   );
+
+  async function handleCancelUsage(
+    usageId: string
+  ) {
+    startTransition(async () => {
+      try {
+        const formData =
+          new FormData();
+        formData.set("usageId", usageId);
+        await cancelBenefitUsageAction(
+          formData
+        );
+        toast.success(
+          "Benefit usage canceled."
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to cancel benefit usage."
+        );
+      }
+    });
+  }
 
   return (
     <DataTableContainer
@@ -111,6 +146,12 @@ export function BenefitUsageTable({
             <TableHead>
               Quantity
             </TableHead>
+            <TableHead>
+              Status
+            </TableHead>
+            <TableHead>
+              Actions
+            </TableHead>
           </TableRow>
         </TableHeader>
 
@@ -137,6 +178,39 @@ export function BenefitUsageTable({
               <TableCell>
                 {usage.quantity}
               </TableCell>
+              <TableCell>
+                {usage.status ===
+                BenefitUsageStatus.CANCELED
+                  ? `Canceled${usage.canceledAt ? ` on ${new Date(
+                      usage.canceledAt
+                    ).toLocaleString()}` : ""}`
+                  : "Active"}
+              </TableCell>
+              <TableCell>
+                {canCancelBenefitUsage &&
+                usage.status ===
+                  BenefitUsageStatus.ACTIVE ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCancelUsage(
+                        usage.id
+                      )
+                    }
+                    disabled={isPending}
+                    className="rounded-md border px-3 py-1.5 text-sm"
+                  >
+                    Cancel usage
+                  </button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {usage.status ===
+                    BenefitUsageStatus.CANCELED
+                      ? "Historical record"
+                      : "No actions"}
+                  </span>
+                )}
+              </TableCell>
             </TableRow>
           ))}
 
@@ -144,7 +218,7 @@ export function BenefitUsageTable({
             0 && (
             <TableRow>
               <TableCell
-                colSpan={4}
+                colSpan={6}
                 className="p-0"
               >
                 <EmptyState

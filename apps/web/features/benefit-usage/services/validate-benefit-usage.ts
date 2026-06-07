@@ -1,4 +1,5 @@
 import {
+  BenefitUsageStatus,
   ResetPeriod,
   SubscriptionStatus,
 } from "@prisma/client";
@@ -199,6 +200,8 @@ export async function validateBenefitUsage({
               usedAt: usageFilter,
             }
           : {}),
+        status:
+          BenefitUsageStatus.ACTIVE,
       },
       _sum: {
         quantity: true,

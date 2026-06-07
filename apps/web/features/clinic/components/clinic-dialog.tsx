@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -142,12 +143,7 @@ export function ClinicDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form
-          onSubmit={form.handleSubmit(
-            onSubmit
-          )}
-          className="grid grid-cols-2 gap-4"
-        >
+        <form className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
               Clinic name
@@ -256,14 +252,40 @@ export function ClinicDialog({
             />
           </div>
 
-          <Button
-            type="submit"
-            className="col-span-2"
-          >
-            {mode === "edit"
-              ? "Save Changes"
-              : "Create Clinic"}
-          </Button>
+          <div className="col-span-2">
+            <ConfirmDialog
+              title={
+                mode === "edit"
+                  ? "Save clinic changes?"
+                  : "Create clinic?"
+              }
+              description={
+                mode === "edit"
+                  ? "This updates the selected clinic record."
+                  : "This creates a new clinic tenant."
+              }
+              actionLabel={
+                mode === "edit"
+                  ? "Save changes"
+                  : "Create clinic"
+              }
+              trigger={
+                <Button
+                  type="button"
+                  className="w-full"
+                >
+                  {mode === "edit"
+                    ? "Save Changes"
+                    : "Create Clinic"}
+                </Button>
+              }
+              onConfirm={() =>
+                void form.handleSubmit(
+                  onSubmit
+                )()
+              }
+            />
+          </div>
         </form>
       </DialogContent>
     </Dialog>

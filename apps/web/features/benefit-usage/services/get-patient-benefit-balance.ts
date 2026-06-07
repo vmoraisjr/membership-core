@@ -1,4 +1,5 @@
 import {
+  BenefitUsageStatus,
   ResetPeriod,
   SubscriptionStatus,
 } from "@prisma/client";
@@ -124,6 +125,8 @@ export async function getPatientBenefitBalance() {
             subscriptionId: {
               in: subscriptionIds,
             },
+            status:
+              BenefitUsageStatus.ACTIVE,
           },
           select: {
             subscriptionId: true,

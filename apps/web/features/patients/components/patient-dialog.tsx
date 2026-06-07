@@ -19,6 +19,7 @@ import {
 import { formatDateForInput } from "@/features/shared/utils/format-date-for-input";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
 import {
   Dialog,
@@ -163,12 +164,7 @@ export function PatientDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form
-          onSubmit={form.handleSubmit(
-            onSubmit
-          )}
-          className="grid grid-cols-2 gap-4"
-        >
+        <form className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
               Full name
@@ -269,14 +265,40 @@ export function PatientDialog({
             />
           </div>
 
-          <Button
-            type="submit"
-            className="col-span-2"
-          >
-            {mode === "edit"
-              ? "Save Changes"
-              : "Create Patient"}
-          </Button>
+          <div className="col-span-2">
+            <ConfirmDialog
+              title={
+                mode === "edit"
+                  ? "Save patient changes?"
+                  : "Create patient?"
+              }
+              description={
+                mode === "edit"
+                  ? "This updates the selected patient record."
+                  : "This creates a new patient record."
+              }
+              actionLabel={
+                mode === "edit"
+                  ? "Save changes"
+                  : "Create patient"
+              }
+              trigger={
+                <Button
+                  type="button"
+                  className="w-full"
+                >
+                  {mode === "edit"
+                    ? "Save Changes"
+                    : "Create Patient"}
+                </Button>
+              }
+              onConfirm={() =>
+                void form.handleSubmit(
+                  onSubmit
+                )()
+              }
+            />
+          </div>
         </form>
       </DialogContent>
     </Dialog>

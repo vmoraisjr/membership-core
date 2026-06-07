@@ -73,17 +73,10 @@ const items = [
   },
 
   {
-    label: "Billing",
-    href: "/dashboard/billing",
+    label: "Payments",
+    href: "/dashboard/payments",
     icon: ReceiptText,
     resource: "billing",
-  },
-
-  {
-    label: "Contracts",
-    href: "/dashboard/contracts",
-    icon: ClipboardList,
-    resource: "contracts",
   },
 
   {

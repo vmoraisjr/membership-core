@@ -4,6 +4,7 @@ import {
 } from "@prisma/client";
 
 import { DashboardPage } from "@/components/layout/dashboard-page";
+import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
@@ -131,6 +132,7 @@ export async function ModulesPage() {
                           action={
                             disableClinicModuleAction
                           }
+                          id={`disable-module-${clinicModule.id}`}
                           className="inline-flex"
                         >
                           <input
@@ -141,18 +143,20 @@ export async function ModulesPage() {
                                 .module.key
                             }
                           />
-                          <button
-                            type="submit"
-                            className="rounded-md border px-3 py-1.5"
-                          >
-                            Disable
-                          </button>
+                          <ConfirmSubmitButton
+                            formId={`disable-module-${clinicModule.id}`}
+                            title="Disable module?"
+                            description={`This will disable ${clinicModule.module.name} for the current clinic.`}
+                            actionLabel="Disable module"
+                            label="Disable"
+                          />
                         </form>
                       ) : (
                         <form
                           action={
                             enableClinicModuleAction
                           }
+                          id={`enable-module-${clinicModule.id}`}
                           className="inline-flex"
                         >
                           <input
@@ -163,12 +167,13 @@ export async function ModulesPage() {
                                 .module.key
                             }
                           />
-                          <button
-                            type="submit"
-                            className="rounded-md border px-3 py-1.5"
-                          >
-                            Enable
-                          </button>
+                          <ConfirmSubmitButton
+                            formId={`enable-module-${clinicModule.id}`}
+                            title="Enable module?"
+                            description={`This will enable ${clinicModule.module.name} for the current clinic.`}
+                            actionLabel="Enable module"
+                            label="Enable"
+                          />
                         </form>
                       )}
                     </td>

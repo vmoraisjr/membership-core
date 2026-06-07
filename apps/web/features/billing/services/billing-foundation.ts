@@ -426,6 +426,11 @@ export async function getBillingOverview() {
           select: {
             id: true,
             status: true,
+            membershipPlan: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
         payments: {
@@ -437,6 +442,7 @@ export async function getBillingOverview() {
             amount: true,
             paidAt: true,
             status: true,
+            paymentMethod: true,
           },
         },
       },
@@ -737,6 +743,23 @@ export async function getPatientInvoicesByFilters(
       subscription: {
         select: {
           id: true,
+          membershipPlan: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      payments: {
+        orderBy: {
+          paidAt: "desc",
+        },
+        select: {
+          id: true,
+          amount: true,
+          paidAt: true,
+          status: true,
+          paymentMethod: true,
         },
       },
     },

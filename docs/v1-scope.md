@@ -16,7 +16,6 @@ Ship a production-testable SaaS version as fast as possible.
 - Benefit Usage
 - Patient billing
 - Nortex SaaS billing
-- Contracts
 - Basic dashboard
 - Production readiness
 
@@ -33,6 +32,12 @@ Ship a production-testable SaaS version as fast as possible.
 - Instagram
 - Email automation
 - Advanced visual refresh
+- Contracts as an active operator-facing V1 module
+
+## Internal / Future Modules
+
+- Contracts remain implemented internally for downstream automation and
+  regression coverage, but are intentionally removed from active V1 navigation.
 
 ## Principle
 

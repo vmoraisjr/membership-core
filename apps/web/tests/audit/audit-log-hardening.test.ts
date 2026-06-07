@@ -12,8 +12,13 @@ process.env.APP_LOG_LEVEL = "error";
 
 import {
   AppUserRole,
+  BenefitType,
+  BillingCycle,
   ClinicStatus,
   ContractType,
+  PaymentMethod,
+  PaymentStatus,
+  ResetPeriod,
 } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
@@ -24,7 +29,12 @@ import {
   setCurrentAppUserForTests,
   type CurrentAppUser,
 } from "@/features/auth/services/get-current-app-user";
+import { markPatientInvoiceOverdueAction } from "@/features/billing/actions/mark-patient-invoice-overdue";
+import { markPatientInvoicePaidAction } from "@/features/billing/actions/mark-patient-invoice-paid";
 import { ensureClinicBillingFoundation } from "@/features/billing/services/billing-foundation";
+import { cancelBenefitUsageAction } from "@/features/benefit-usage/actions/cancel-benefit-usage";
+import { consumeBenefit } from "@/features/benefit-usage/actions/consume-benefit";
+import { createMembershipBenefit } from "@/features/membership-benefits/actions/create-membership-benefit";
 import { saveContractTemplateAction } from "@/features/contracts/actions/save-contract-template";
 import { createSubscription } from "@/features/subscriptions/actions/create-subscription";
 import { updateClinicUserRoleAction } from "@/features/users/actions/update-clinic-user-role";
@@ -117,9 +127,25 @@ async function cleanupFixtures() {
         clinicId: clinic.id,
       },
     }),
+    prisma.benefitUsage.deleteMany({
+      where: {
+        subscription: {
+          patient: {
+            clinicId: clinic.id,
+          },
+        },
+      },
+    }),
     prisma.subscription.deleteMany({
       where: {
         patient: {
+          clinicId: clinic.id,
+        },
+      },
+    }),
+    prisma.membershipBenefit.deleteMany({
+      where: {
+        membershipPlan: {
           clinicId: clinic.id,
         },
       },
@@ -414,6 +440,224 @@ async function main() {
           subscriptionLog.action,
           "CREATE"
         );
+      }
+    );
+
+    await runCase(
+      "patient invoice paid and overdue transitions generate audit records",
+      async () => {
+        asUser(fixtures.ownerUser);
+
+        const subscription =
+          await prisma.subscription.findFirstOrThrow(
+            {
+              where: {
+                patientId:
+                  fixtures.patientId,
+                membershipPlanId:
+                  fixtures.planId,
+              },
+              orderBy: {
+                startedAt: "desc",
+              },
+            }
+          );
+
+        const invoice =
+          await prisma.patientInvoice.create({
+            data: {
+              clinicId:
+                fixtures.clinicId,
+              patientId:
+                fixtures.patientId,
+              subscriptionId:
+                subscription.id,
+              billingCycle:
+                BillingCycle.MONTHLY,
+              amount: 149,
+              dueDate: new Date(),
+              status:
+                PaymentStatus.PENDING,
+              description:
+                "Audit invoice transition",
+            },
+          });
+
+        const overdueForm =
+          new FormData();
+        overdueForm.set(
+          "invoiceId",
+          invoice.id
+        );
+
+        await markPatientInvoiceOverdueAction(
+          overdueForm
+        );
+
+        const paidForm = new FormData();
+        paidForm.set(
+          "invoiceId",
+          invoice.id
+        );
+        paidForm.set(
+          "paymentMethod",
+          PaymentMethod.CARD
+        );
+
+        await markPatientInvoicePaidAction(
+          paidForm
+        );
+
+        const invoiceLogs =
+          (
+            await getClinicAuditLogs()
+          ).filter(
+            (entry) =>
+              entry.entity ===
+                "PATIENT_INVOICE" &&
+              entry.entityId ===
+                invoice.id &&
+              (entry.action ===
+                "MARK_INVOICE_OVERDUE" ||
+                entry.action ===
+                  "MARK_INVOICE_PAID")
+          );
+
+        assert.equal(
+          invoiceLogs.length,
+          2
+        );
+        assert.deepEqual(
+          invoiceLogs.map(
+            (entry) => entry.action
+          ),
+          [
+            "MARK_INVOICE_OVERDUE",
+            "MARK_INVOICE_PAID",
+          ]
+        );
+        assert.deepEqual(
+          invoiceLogs[1]?.metadata,
+          {
+            previousStatus:
+              PaymentStatus.OVERDUE,
+            nextStatus:
+              PaymentStatus.PAID,
+            paymentMethod:
+              PaymentMethod.CARD,
+          }
+        );
+      }
+    );
+
+    await runCase(
+      "benefit usage cancellation generates an audit record",
+      async () => {
+        asUser(fixtures.ownerUser);
+
+        await createMembershipBenefit({
+          membershipPlanId:
+            fixtures.planId,
+          type: BenefitType.LIMITED,
+          title:
+            "Audit Benefit Cancellation",
+          description:
+            "Audit coverage for benefit usage cancellation",
+          usageLimit: 2,
+          resetPeriod:
+            ResetPeriod.MONTHLY,
+        });
+
+        const subscription =
+          await prisma.subscription.findFirstOrThrow(
+            {
+              where: {
+                patientId:
+                  fixtures.patientId,
+                membershipPlanId:
+                  fixtures.planId,
+              },
+              orderBy: {
+                startedAt: "desc",
+              },
+            }
+          );
+        const benefit =
+          await prisma.membershipBenefit.findFirstOrThrow(
+            {
+              where: {
+                membershipPlanId:
+                  fixtures.planId,
+                title:
+                  "Audit Benefit Cancellation",
+              },
+            }
+          );
+
+        await consumeBenefit({
+          subscriptionId:
+            subscription.id,
+          membershipBenefitId:
+            benefit.id,
+          quantity: 1,
+          usedBy: "Audit Desk",
+        });
+
+        const usage =
+          await prisma.benefitUsage.findFirstOrThrow(
+            {
+              where: {
+                subscriptionId:
+                  subscription.id,
+                membershipBenefitId:
+                  benefit.id,
+              },
+              orderBy: {
+                usedAt: "desc",
+              },
+            }
+          );
+
+        const cancelFormData =
+          new FormData();
+        cancelFormData.set(
+          "usageId",
+          usage.id
+        );
+
+        await cancelBenefitUsageAction(
+          cancelFormData
+        );
+
+        const log =
+          await prisma.auditLog.findFirstOrThrow(
+            {
+              where: {
+                clinicId:
+                  fixtures.clinicId,
+                entity:
+                  "BENEFIT_USAGE",
+                entityId: usage.id,
+                action:
+                  "DEACTIVATE",
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+            }
+          );
+
+        assert.deepEqual(log.metadata, {
+          previousStatus:
+            "ACTIVE",
+          nextStatus:
+            "CANCELED",
+          quantity: 1,
+          subscriptionId:
+            subscription.id,
+          membershipBenefitId:
+            benefit.id,
+        });
       }
     );
 

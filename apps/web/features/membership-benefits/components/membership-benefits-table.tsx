@@ -240,7 +240,12 @@ export function MembershipBenefitsTable({
               </TableCell>
 
               <TableCell>
-                {benefit.type}
+                {benefit.type === "LIMITED"
+                  ? benefit.usageLimit ==
+                    null
+                    ? "LIMITED · unlimited/month"
+                    : `LIMITED · ${benefit.usageLimit}/month`
+                  : benefit.type}
               </TableCell>
 
               <TableCell>

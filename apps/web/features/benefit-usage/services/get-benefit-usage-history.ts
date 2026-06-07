@@ -17,6 +17,8 @@ export async function getBenefitUsageHistory() {
       quantity: true,
       usedBy: true,
       usedAt: true,
+      status: true,
+      canceledAt: true,
       notes: true,
       subscription: {
         select: {

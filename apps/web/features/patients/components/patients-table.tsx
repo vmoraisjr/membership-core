@@ -39,12 +39,28 @@ type PatientWithCurrentSubscription = {
     | null;
 };
 
+type PatientBenefitBalance = {
+  subscriptionId: string;
+  patientId: string;
+  patientName: string;
+  membershipPlanId: string;
+  membershipPlanName: string;
+  membershipBenefitId: string;
+  membershipBenefitTitle: string;
+  usageLimit: number | null;
+  resetPeriod: "MONTHLY" | "YEARLY" | null;
+  usedQuantity: number;
+  remainingQuantity: number | null;
+};
+
 type Props = {
   patients: PatientWithCurrentSubscription[];
   plans: Array<{ id: string; name: string }>;
+  benefitBalances?: PatientBenefitBalance[];
   canManagePatients?: boolean;
   canDeletePatientsPermanently?: boolean;
   canManageSubscriptions?: boolean;
+  canManageBenefitUsage?: boolean;
 };
 
 function maskDocument(doc: string) {
@@ -68,9 +84,11 @@ function formatBirthDate(
 export function PatientsTable({
   patients,
   plans,
+  benefitBalances = [],
   canManagePatients = true,
   canDeletePatientsPermanently = true,
   canManageSubscriptions = true,
+  canManageBenefitUsage = true,
 }: Props) {
   const [statusFilter, setStatusFilter] =
     useState("active");
@@ -181,9 +199,14 @@ export function PatientsTable({
                 <TableCell className="align-top">
                   <div className="space-y-1">
                     <div className="font-medium">
-                      {
-                        patient.fullName
-                      }
+                      <Link
+                        href={`/dashboard/patients/${patient.id}`}
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        {
+                          patient.fullName
+                        }
+                      </Link>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {patient.email}
@@ -245,6 +268,11 @@ export function PatientsTable({
                         patient.status,
                     }}
                     plans={plans}
+                    benefitBalances={benefitBalances.filter(
+                      (balance) =>
+                        balance.patientId ===
+                        patient.id
+                    )}
                     canManagePatients={
                       canManagePatients
                     }
@@ -253,6 +281,11 @@ export function PatientsTable({
                     }
                     canManageSubscriptions={
                       canManageSubscriptions
+                    }
+                    canManageBenefitUsage={
+                      canManageBenefitUsage &&
+                      patient.status ===
+                        "ACTIVE"
                     }
                   />
                 </TableCell>

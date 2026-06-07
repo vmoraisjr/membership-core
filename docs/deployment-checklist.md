@@ -58,18 +58,18 @@ pnpm --dir apps/web start
 ## Smoke Test
 
 1. Login with an owner user.
-2. Open dashboard, patients, plans, subscriptions, billing, contracts, modules, users and audit log.
+2. Open dashboard, patients, plans, subscriptions, billing, modules, users and audit log.
 3. Confirm tenant-scoped data loads without cross-clinic leakage.
-4. Confirm staff users cannot access billing, contracts, modules or user-management actions.
+4. Confirm staff users cannot access billing, modules or user-management actions.
 5. Confirm a subscription can still generate expected downstream records.
 6. Confirm patient billing actions still work.
 7. Confirm clinic SaaS billing status and invoices still render correctly.
-8. Confirm contract templates and patient contract lifecycle still work.
+8. Confirm Contracts is not exposed in active V1 navigation.
 9. Confirm Membership remains active and future modules stay dormant.
 
 ## Post-Deploy Monitoring
 
-1. Watch logs during first login, subscription, billing and contract operations.
+1. Watch logs during first login, subscription, billing and any internal contract operations exercised by support workflows.
 2. Confirm no unexpected Prisma initialization noise is exposing sensitive connection data.
 3. Confirm no migration warnings remain unresolved.
 4. Record any pilot-only workarounds in the release note or handoff note.

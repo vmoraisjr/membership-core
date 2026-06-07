@@ -12,17 +12,21 @@ process.env.APP_LOG_LEVEL = "error";
 
 import {
   AppUserRole,
+  BenefitType,
   BillingCycle,
   ClinicStatus,
   ModuleKey,
   ModuleStatus,
   PatientContractStatus,
   PatientStatus,
+  PaymentMethod,
   PaymentStatus,
+  ResetPeriod,
   SubscriptionStatus,
 } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { cancelBenefitUsageAction } from "@/features/benefit-usage/actions/cancel-benefit-usage";
 import {
   clearCurrentAppUserForTests,
   setCurrentAppUserForTests,
@@ -48,6 +52,7 @@ type FixtureState = {
   inactivePatientId: string;
   invoiceId: string;
   contractId: string;
+  usageId: string;
 };
 
 let fixtures: FixtureState;
@@ -103,6 +108,22 @@ async function cleanupFixtures() {
     prisma.contractTemplate.deleteMany({
       where: {
         clinicId: clinic.id,
+      },
+    }),
+    prisma.benefitUsage.deleteMany({
+      where: {
+        subscription: {
+          patient: {
+            clinicId: clinic.id,
+          },
+        },
+      },
+    }),
+    prisma.membershipBenefit.deleteMany({
+      where: {
+        membershipPlan: {
+          clinicId: clinic.id,
+        },
       },
     }),
     prisma.subscription.deleteMany({
@@ -191,6 +212,18 @@ async function seedFixtures(): Promise<FixtureState> {
         clinicId: clinic.id,
         name: "RBAC Prime",
         monthlyPrice: 130,
+        active: true,
+      },
+    });
+  const benefit =
+    await prisma.membershipBenefit.create({
+      data: {
+        membershipPlanId: plan.id,
+        type: BenefitType.LIMITED,
+        title: "RBAC Benefit",
+        usageLimit: 2,
+        resetPeriod:
+          ResetPeriod.MONTHLY,
         active: true,
       },
     });
@@ -291,6 +324,17 @@ async function seedFixtures(): Promise<FixtureState> {
           PatientContractStatus.ACTIVE,
       },
     });
+  const usage =
+    await prisma.benefitUsage.create({
+      data: {
+        subscriptionId:
+          subscription.id,
+        membershipBenefitId:
+          benefit.id,
+        quantity: 1,
+        usedBy: "RBAC Desk",
+      },
+    });
 
   const crmModule =
     await prisma.module.upsert({
@@ -349,6 +393,7 @@ async function seedFixtures(): Promise<FixtureState> {
     invoiceId: invoice.id,
     contractId:
       patientContract.id,
+    usageId: usage.id,
   };
 }
 
@@ -586,6 +631,10 @@ async function main() {
           "invoiceId",
           fixtures.invoiceId
         );
+        billingFormData.set(
+          "paymentMethod",
+          PaymentMethod.CARD
+        );
 
         await assert.rejects(
           () =>
@@ -694,6 +743,51 @@ async function main() {
               contractFormData
             ),
           /permission/i
+        );
+
+        const cancelUsageFormData =
+          new FormData();
+        cancelUsageFormData.set(
+          "usageId",
+          fixtures.usageId
+        );
+
+        await assert.rejects(
+          () =>
+            cancelBenefitUsageAction(
+              cancelUsageFormData
+            ),
+          /Only owners or admins can cancel benefit usage\./i
+        );
+      }
+    );
+
+    await runCase(
+      "owner or admin can cancel benefit usage within RBAC rules",
+      async () => {
+        asUser(fixtures.ownerUser);
+
+        const cancelUsageFormData =
+          new FormData();
+        cancelUsageFormData.set(
+          "usageId",
+          fixtures.usageId
+        );
+
+        await cancelBenefitUsageAction(
+          cancelUsageFormData
+        );
+
+        const canceledUsage =
+          await prisma.benefitUsage.findUnique({
+            where: {
+              id: fixtures.usageId,
+            },
+          });
+
+        assert.equal(
+          canceledUsage?.status,
+          "CANCELED"
         );
       }
     );

@@ -45,10 +45,12 @@ Prepare at minimum:
 
 1. Open billing as owner or finance.
 2. Confirm patient invoices are visible only for the current clinic.
-3. Mark a pending patient invoice as overdue.
-4. Mark an overdue patient invoice as paid.
-5. Confirm duplicate payment rows are not created by repeated submissions.
-6. Confirm staff users cannot perform billing mutations.
+3. Update a patient invoice payment method.
+4. Mark a pending patient invoice as overdue.
+5. Mark an overdue patient invoice as paid.
+6. Cancel a pending or overdue patient invoice if needed.
+7. Confirm duplicate payment rows are not created by repeated submissions.
+8. Confirm staff users cannot perform billing mutations.
 
 ## SaaS Billing
 
@@ -62,12 +64,8 @@ Prepare at minimum:
 
 ## Contracts
 
-1. Open contracts as owner or finance.
-2. Create or edit a patient contract template.
-3. Activate or deactivate a clinic-owned contract template.
-4. Confirm a patient contract can move through its allowed lifecycle.
-5. Confirm patient acceptance is recorded once and remains idempotent.
-6. Confirm clinic contract records remain scoped to the current clinic.
+1. Confirm Contracts is not exposed in active V1 navigation.
+2. If internal support access is used, confirm contract records remain clinic-scoped.
 
 ## Users and RBAC
 
@@ -89,7 +87,7 @@ Prepare at minimum:
 ## Audit Log
 
 1. Open the audit log.
-2. Confirm recent actions appear for invite, role change, billing and contracts.
+2. Confirm recent actions appear for invite, role change, billing and any internal contract operations that were exercised.
 3. Confirm audit data is clinic-scoped.
 4. Confirm log filters do not crash when used with real data.
 

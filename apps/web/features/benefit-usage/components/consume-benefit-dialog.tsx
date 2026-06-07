@@ -40,10 +40,14 @@ type BenefitBalance = {
 
 type Props = {
   balances: BenefitBalance[];
+  trigger?: React.ReactNode;
+  title?: string;
 };
 
 export function ConsumeBenefitDialog({
   balances,
+  trigger,
+  title = "Record Benefit Usage",
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -154,15 +158,17 @@ export function ConsumeBenefitDialog({
       onOpenChange={setOpen}
     >
       <DialogTrigger asChild>
-        <Button>
-          Consume Benefit
-        </Button>
+        {trigger ?? (
+          <Button>
+            Consume Benefit
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            Record Benefit Usage
+            {title}
           </DialogTitle>
         </DialogHeader>
 

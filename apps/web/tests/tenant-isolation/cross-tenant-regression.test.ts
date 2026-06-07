@@ -37,6 +37,7 @@ import {
 
 import prisma from "@/lib/prisma";
 import { getPatients } from "@/features/patients/services/get-patients";
+import { getPatientProfile } from "@/features/patients/services/get-patient-profile";
 import { getMembershipPlans } from "@/features/membership-plans/services/get-membership-plans";
 import { getMembershipBenefits } from "@/features/membership-benefits/services/get-membership-benefits";
 import { getSubscriptions } from "@/features/subscriptions/services/get-subscriptions";
@@ -1004,6 +1005,7 @@ async function main() {
           billingOverview,
           contractsOverview,
           usersOverview,
+          profile,
         ] = await Promise.all([
           getPatients(),
           getMembershipPlans(),
@@ -1014,6 +1016,9 @@ async function main() {
           getBillingOverview(),
           getContractsOverview(),
           getClinicUsersOverview(),
+          getPatientProfile(
+            fixtures.alphaPatientId
+          ),
         ]);
 
         assert.deepEqual(
@@ -1093,6 +1098,38 @@ async function main() {
           ),
           [fixtures.alphaInviteId]
         );
+        assert.equal(
+          profile.patient.id,
+          fixtures.alphaPatientId
+        );
+        assert.ok(
+          profile.timeline.every(
+            (entry) =>
+              entry.entityId !==
+                fixtures.betaPatientId &&
+              entry.entityId !==
+                fixtures.betaSubscriptionId &&
+              entry.entityId !==
+                fixtures.betaInvoiceId &&
+              entry.entityId !==
+                fixtures.betaPatientContractId
+          )
+        );
+      }
+    );
+
+    await runCase(
+      "Alpha cannot access Beta patient detail",
+      async () => {
+        asUser(fixtures.alphaUser);
+
+        await assert.rejects(
+          () =>
+            getPatientProfile(
+              fixtures.betaPatientId
+            ),
+          /Patient not found\./
+        );
       }
     );
 
@@ -1148,6 +1185,46 @@ async function main() {
           fixtures.workspaceAdminUser
         );
 
+        const [
+          expectedActiveClinics,
+          expectedTrialClinics,
+          expectedPastDueClinics,
+          expectedMonthlySaasRevenue,
+        ] = await Promise.all([
+          prisma.clinic.count({
+            where: {
+              status: ClinicStatus.ACTIVE,
+            },
+          }),
+          prisma.clinicSubscription.count({
+            where: {
+              status:
+                ClinicSubscriptionStatus.TRIAL,
+            },
+          }),
+          prisma.clinicSubscription.count({
+            where: {
+              status:
+                ClinicSubscriptionStatus.PAST_DUE,
+            },
+          }),
+          prisma.clinicInvoice.aggregate({
+            where: {
+              status: PaymentStatus.PAID,
+              paidAt: {
+                gte: new Date(
+                  new Date().getFullYear(),
+                  new Date().getMonth(),
+                  1
+                ),
+              },
+            },
+            _sum: {
+              amount: true,
+            },
+          }),
+        ]);
+
         const metrics =
           await getDashboardMetrics();
 
@@ -1158,30 +1235,23 @@ async function main() {
         assert.equal(
           metrics.platformMetrics
             ?.activeClinics,
-          fixtures
-            .baselinePlatformMetrics
-            .activeClinics + 3
+          expectedActiveClinics
         );
         assert.equal(
           metrics.platformMetrics
             ?.trialClinics,
-          fixtures
-            .baselinePlatformMetrics
-            .trialClinics + 1
+          expectedTrialClinics
         );
         assert.equal(
           metrics.platformMetrics
             ?.pastDueClinics,
-          fixtures
-            .baselinePlatformMetrics
-            .pastDueClinics + 1
+          expectedPastDueClinics
         );
         assert.equal(
           metrics.platformMetrics
             ?.monthlySaasRevenue,
-          fixtures
-            .baselinePlatformMetrics
-            .monthlySaasRevenue + 249
+          expectedMonthlySaasRevenue
+            ._sum.amount ?? 0
         );
 
         const membershipModuleMetric =

@@ -4,7 +4,12 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { revalidatePath } from "next/cache";
 
-import { AuditAction, AuditEntity } from "@prisma/client";
+import {
+  AuditAction,
+  AuditEntity,
+  BenefitType,
+  ResetPeriod,
+} from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
@@ -104,11 +109,17 @@ export async function updateMembershipBenefit(
               parsed.data.discountAmount,
 
             usageLimit:
-              parsed.data.usageLimit,
+              parsed.data.type ===
+              BenefitType.LIMITED
+                ? parsed.data.usageLimit ??
+                  null
+                : null,
 
             resetPeriod:
-              parsed.data.resetPeriod ||
-              null,
+              parsed.data.type ===
+              BenefitType.LIMITED
+                ? ResetPeriod.MONTHLY
+                : null,
           },
           select: {
             id: true,

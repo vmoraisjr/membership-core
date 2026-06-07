@@ -77,14 +77,14 @@ export const membershipBenefitSchema =
       }
 
       if (
-        data.type === BenefitType.LIMITED &&
-        data.usageLimit == null
+        data.type !== BenefitType.LIMITED &&
+        data.usageLimit != null
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["usageLimit"],
           message:
-            "Usage limit is required for limited benefits.",
+            "Usage limits only apply to limited benefits.",
         });
       }
     });

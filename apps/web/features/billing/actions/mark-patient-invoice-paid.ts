@@ -16,6 +16,7 @@ import {
 
 import {
   canMarkInvoicePaid,
+  isPaymentMethod,
   isFinalizedInvoiceStatus,
 } from "../services/billing-status";
 
@@ -30,6 +31,11 @@ export async function markPatientInvoicePaidAction(
   const invoiceId = String(
     formData.get("invoiceId") ?? ""
   );
+  const paymentMethodValue = String(
+    formData.get(
+      "paymentMethod"
+    ) ?? ""
+  ).trim();
   const clinic =
     await getCurrentClinic();
   const actor =
@@ -47,6 +53,7 @@ export async function markPatientInvoicePaidAction(
         amount: true,
         status: true,
         paidAt: true,
+        paymentMethod: true,
       },
     });
 
@@ -76,6 +83,21 @@ export async function markPatientInvoicePaidAction(
     );
   }
 
+  const paymentMethod =
+    paymentMethodValue.length === 0
+      ? invoice.paymentMethod
+      : isPaymentMethod(
+            paymentMethodValue
+          )
+        ? paymentMethodValue
+        : null;
+
+  if (paymentMethod == null) {
+    throw new Error(
+      "A valid payment method is required to mark the invoice as paid."
+    );
+  }
+
   await prisma.$transaction(
     async (tx) => {
       const paidAt = new Date();
@@ -87,6 +109,7 @@ export async function markPatientInvoicePaidAction(
         data: {
           status: PaymentStatus.PAID,
           paidAt,
+          paymentMethod,
         },
       });
       const existingPayment =
@@ -109,6 +132,7 @@ export async function markPatientInvoicePaidAction(
               invoice.id,
             amount: invoice.amount,
             status: PaymentStatus.PAID,
+            paymentMethod,
             paidAt,
             confirmedByUserId:
               actor.id,
@@ -131,6 +155,7 @@ export async function markPatientInvoicePaidAction(
             invoice.status,
           nextStatus:
             PaymentStatus.PAID,
+          paymentMethod,
         },
       });
     }
@@ -138,6 +163,9 @@ export async function markPatientInvoicePaidAction(
 
   safeRevalidatePath(
     "/dashboard/billing"
+  );
+  safeRevalidatePath(
+    "/dashboard/payments"
   );
   safeRevalidatePath("/dashboard");
 }

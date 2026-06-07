@@ -15,6 +15,7 @@ import {
 } from "@prisma/client";
 
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
 import { createMembershipBenefit } from "../actions/create-membership-benefit";
 
@@ -93,7 +94,7 @@ export function MembershipBenefitDialog({
 
         discountAmount: 0,
 
-        usageLimit: 1,
+        usageLimit: undefined,
 
         resetPeriod: "",
       },
@@ -126,7 +127,7 @@ export function MembershipBenefitDialog({
 
         usageLimit:
           initialData.usageLimit ??
-          1,
+          undefined,
 
         resetPeriod:
           initialData.resetPeriod ??
@@ -145,7 +146,7 @@ export function MembershipBenefitDialog({
       description: "",
       discountPercentage: 0,
       discountAmount: 0,
-      usageLimit: 1,
+      usageLimit: undefined,
       resetPeriod: "",
     });
   }, [
@@ -159,8 +160,20 @@ export function MembershipBenefitDialog({
     control: form.control,
     name: "type",
   });
+  const usageLimit = useWatch({
+    control: form.control,
+    name: "usageLimit",
+  });
+  const hasMonthlyUsageLimit =
+    usageLimit != null;
+  const monthlyUsageMode =
+    type === BenefitType.LIMITED
+      ? hasMonthlyUsageLimit
+        ? "limited"
+        : "unlimited"
+      : "not-applicable";
 
-  async function onSubmit(
+  async function saveBenefit(
     values: MembershipBenefitSchema
   ) {
     try {
@@ -219,9 +232,6 @@ export function MembershipBenefitDialog({
         </DialogHeader>
 
         <form
-          onSubmit={form.handleSubmit(
-            onSubmit
-          )}
           className="flex flex-col gap-4"
         >
           <div className="space-y-2">
@@ -330,59 +340,120 @@ export function MembershipBenefitDialog({
             </div>
           )}
 
-          {type ===
-            BenefitType.LIMITED && (
-            <>
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  Usage limit
-                </label>
-                <Input
-                  type="number"
-                  placeholder="Usage limit"
-                  {...form.register(
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Monthly usage mode
+            </label>
+            <select
+              value={monthlyUsageMode}
+              onChange={(event) => {
+                if (
+                  type !==
+                  BenefitType.LIMITED
+                ) {
+                  return;
+                }
+
+                if (
+                  event.target.value ===
+                  "limited"
+                ) {
+                  form.setValue(
                     "usageLimit",
-                    {
-                      valueAsNumber: true,
-                    }
-                  )}
-                />
-              </div>
+                    1
+                  );
+                  return;
+                }
 
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  Reset period
-                </label>
-                <select
-                  {...form.register(
-                    "resetPeriod"
-                  )}
-                  className="h-10 rounded-md border px-3"
-                >
-                  <option value="">
-                    Select reset period
+                form.setValue(
+                  "usageLimit",
+                  undefined
+                );
+              }}
+              className="h-10 rounded-md border px-3"
+              disabled={
+                type !== BenefitType.LIMITED
+              }
+            >
+              {type === BenefitType.LIMITED ? (
+                <>
+                  <option value="unlimited">
+                    Unlimited monthly usage
                   </option>
+                  <option value="limited">
+                    Limited monthly usage
+                  </option>
+                </>
+              ) : (
+                <option value="not-applicable">
+                  Not usage-based for this benefit type
+                </option>
+              )}
+            </select>
+          </div>
 
-                  {Object.values(
-                    ResetPeriod
-                  ).map((period) => (
-                    <option
-                      key={period}
-                      value={period}
-                    >
-                      {period}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
+          {type === BenefitType.LIMITED &&
+          hasMonthlyUsageLimit ? (
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">
+                Monthly usage limit
+              </label>
+              <Input
+                type="number"
+                placeholder="Monthly usage limit"
+                {...form.register(
+                  "usageLimit",
+                  {
+                    valueAsNumber: true,
+                  }
+                )}
+              />
+            </div>
+          ) : null}
 
-          <Button type="submit">
-            {mode === "edit"
-              ? "Save Changes"
-              : "Create Benefit"}
-          </Button>
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Reset period
+            </label>
+            <Input
+              value={
+                type === BenefitType.LIMITED
+                  ? "MONTHLY"
+                  : "Not applicable"
+              }
+              readOnly
+            />
+          </div>
+
+          <ConfirmDialog
+            title={
+              mode === "edit"
+                ? "Save benefit changes?"
+                : "Create benefit?"
+            }
+            description={
+              mode === "edit"
+                ? "This will update the benefit configuration for the selected plan."
+                : "This will create a new benefit for the selected plan."
+            }
+            actionLabel={
+              mode === "edit"
+                ? "Save changes"
+                : "Create benefit"
+            }
+            trigger={
+              <Button type="button">
+                {mode === "edit"
+                  ? "Save Changes"
+                  : "Create Benefit"}
+              </Button>
+            }
+            onConfirm={() =>
+              void form.handleSubmit(
+                saveBenefit
+              )()
+            }
+          />
         </form>
       </DialogContent>
     </Dialog>

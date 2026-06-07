@@ -12,6 +12,7 @@ process.env.APP_LOG_LEVEL = "error";
 
 import {
   AppUserRole,
+  BenefitUsageStatus,
   BenefitType,
   ClinicStatus,
   PatientStatus,
@@ -20,6 +21,7 @@ import {
 } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { cancelBenefitUsageAction } from "@/features/benefit-usage/actions/cancel-benefit-usage";
 import {
   clearCurrentAppUserForTests,
   setCurrentAppUserForTests,
@@ -33,6 +35,7 @@ import { createMembershipPlan } from "@/features/membership-plans/actions/create
 import { deactivateMembershipPlan } from "@/features/membership-plans/actions/deactivate-membership-plan";
 import { reactivateMembershipPlan } from "@/features/membership-plans/actions/reactivate-membership-plan";
 import { createPatient } from "@/features/patients/actions/create-patient";
+import { getPatientProfile } from "@/features/patients/services/get-patient-profile";
 import { cancelSubscription } from "@/features/subscriptions/actions/cancel-subscription";
 import { createSubscription } from "@/features/subscriptions/actions/create-subscription";
 import { expireSubscription } from "@/features/subscriptions/actions/expire-subscription";
@@ -294,6 +297,19 @@ async function main() {
             ResetPeriod.MONTHLY,
         });
 
+        await createMembershipBenefit({
+          membershipPlanId:
+            plan!.id,
+          type: BenefitType.LIMITED,
+          title:
+            "Open Wellness Session",
+          description:
+            "Unlimited monthly access",
+          usageLimit: undefined,
+          resetPeriod:
+            ResetPeriod.MONTHLY,
+        });
+
         const benefit =
           await prisma.membershipBenefit.findFirst(
             {
@@ -310,6 +326,24 @@ async function main() {
         assert.equal(
           benefit?.active,
           true
+        );
+        const unlimitedBenefit =
+          await prisma.membershipBenefit.findFirst(
+            {
+              where: {
+                membershipPlanId:
+                  plan!.id,
+                title:
+                  "Open Wellness Session",
+              },
+            }
+          );
+
+        assert.ok(unlimitedBenefit);
+        assert.equal(
+          unlimitedBenefit
+            ?.usageLimit,
+          null
         );
 
         await createSubscription({
@@ -411,6 +445,17 @@ async function main() {
               },
             }
           );
+        const unlimitedBenefit =
+          await prisma.membershipBenefit.findFirstOrThrow(
+            {
+              where: {
+                membershipPlanId:
+                  plan.id,
+                title:
+                  "Open Wellness Session",
+              },
+            }
+          );
         const subscription =
           await prisma.subscription.findFirstOrThrow(
             {
@@ -498,6 +543,24 @@ async function main() {
           /Benefit usage limit exceeded/
         );
 
+        await consumeBenefit({
+          subscriptionId:
+            subscription.id,
+          membershipBenefitId:
+            unlimitedBenefit.id,
+          quantity: 5,
+          usedBy: "Frontdesk QA",
+        });
+
+        await consumeBenefit({
+          subscriptionId:
+            subscription.id,
+          membershipBenefitId:
+            unlimitedBenefit.id,
+          quantity: 8,
+          usedBy: "Frontdesk QA",
+        });
+
         const usages =
           await prisma.benefitUsage.findMany(
             {
@@ -523,6 +586,142 @@ async function main() {
               usage.quantity
           ),
           [2, 1]
+        );
+
+        const unlimitedUsages =
+          await prisma.benefitUsage.findMany(
+            {
+              where: {
+                subscriptionId:
+                  subscription.id,
+                membershipBenefitId:
+                  unlimitedBenefit.id,
+              },
+              orderBy: {
+                usedAt: "asc",
+              },
+            }
+          );
+
+        assert.equal(
+          unlimitedUsages.length,
+          2
+        );
+        assert.deepEqual(
+          unlimitedUsages.map(
+            (usage) =>
+              usage.quantity
+          ),
+          [5, 8]
+        );
+
+        const cancelFormData =
+          new FormData();
+        cancelFormData.set(
+          "usageId",
+          usages[0]!.id
+        );
+
+        await cancelBenefitUsageAction(
+          cancelFormData
+        );
+
+        const canceledUsage =
+          await prisma.benefitUsage.findUniqueOrThrow(
+            {
+              where: {
+                id: usages[0]!.id,
+              },
+            }
+          );
+
+        assert.equal(
+          canceledUsage.status,
+          BenefitUsageStatus.CANCELED
+        );
+        assert.ok(
+          canceledUsage.canceledAt
+        );
+
+        await consumeBenefit({
+          subscriptionId:
+            subscription.id,
+          membershipBenefitId:
+            benefit.id,
+          quantity: 2,
+          usedBy: "Frontdesk QA",
+        });
+
+        const activeUsageCount =
+          await prisma.benefitUsage.aggregate(
+            {
+              where: {
+                subscriptionId:
+                  subscription.id,
+                membershipBenefitId:
+                  benefit.id,
+                status:
+                  BenefitUsageStatus.ACTIVE,
+              },
+              _sum: {
+                quantity: true,
+              },
+            }
+          );
+
+        assert.equal(
+          activeUsageCount._sum
+            .quantity,
+          3
+        );
+
+        const profile =
+          await getPatientProfile(
+            patient.id
+          );
+
+        assert.equal(
+          profile.patient.id,
+          patient.id
+        );
+        assert.ok(
+          profile.patient.subscriptions.some(
+            (currentSubscription) =>
+              currentSubscription.id ===
+              subscription.id
+          )
+        );
+        assert.ok(
+          profile.patient.subscriptions
+            .flatMap(
+              (currentSubscription) =>
+                currentSubscription.benefitUsages
+            )
+            .some(
+              (usage) =>
+                usage.id ===
+                  usages[0]!.id &&
+                usage.status ===
+                  BenefitUsageStatus.CANCELED
+            )
+        );
+        assert.ok(
+          profile.timeline.some(
+            (entry) =>
+              entry.entity ===
+                "BENEFIT_USAGE" &&
+              entry.action ===
+                "CONSUME_BENEFIT"
+          )
+        );
+        assert.ok(
+          profile.timeline.some(
+            (entry) =>
+              entry.entity ===
+                "BENEFIT_USAGE" &&
+              entry.action ===
+                "DEACTIVATE"
+          )
         );
       }
     );

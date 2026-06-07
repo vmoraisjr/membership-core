@@ -20,7 +20,6 @@ platform for clinics.
 - Benefit usage
 - Patient billing
 - Nortex SaaS billing
-- Contracts
 - Basic dashboard
 - Production readiness
 
@@ -55,4 +54,6 @@ platform for clinics.
 - Future modules may remain in the repository as dormant code.
 - Dormant modules must not appear in active navigation.
 - Dormant modules must not be required for the production build.
+- Contracts currently follow the same dormant-navigation rule for V1 even though
+  the internal foundation remains in the repository.
 - New tasks should follow this roadmap unless a later scope-reset task changes it.

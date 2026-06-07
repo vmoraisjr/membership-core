@@ -1,5 +1,6 @@
 import {
   ClinicSubscriptionStatus,
+  PaymentMethod,
   PaymentStatus,
   SubscriptionStatus,
 } from "@prisma/client";
@@ -12,13 +13,9 @@ import { getCurrentUserRole } from "@/features/auth/services/get-current-user-ro
 import { hasPermission } from "@/features/rbac/permissions";
 import { formatCurrency } from "@/lib/formatters";
 
-import { activateClinicSubscriptionAction } from "../actions/activate-clinic-subscription";
-import { cancelClinicSubscriptionAction } from "../actions/cancel-clinic-subscription";
-import { markClinicInvoiceOverdueAction } from "../actions/mark-clinic-invoice-overdue";
-import { markClinicInvoicePaidAction } from "../actions/mark-clinic-invoice-paid";
-import { markPatientInvoiceOverdueAction } from "../actions/mark-patient-invoice-overdue";
-import { markPatientInvoicePaidAction } from "../actions/mark-patient-invoice-paid";
-import { suspendClinicSubscriptionAction } from "../actions/suspend-clinic-subscription";
+import { ClinicInvoiceActions } from "./clinic-invoice-actions";
+import { ClinicSubscriptionActions } from "./clinic-subscription-actions";
+import { PatientInvoiceActions } from "./patient-invoice-actions";
 import { getBillingOverview } from "../services/billing-foundation";
 
 function getStatusClass(status: PaymentStatus) {
@@ -68,6 +65,25 @@ function formatOptionalDate(
   return new Date(value).toLocaleDateString();
 }
 
+function getPaymentMethodLabel(
+  value: PaymentMethod | null | undefined
+) {
+  switch (value) {
+    case PaymentMethod.CARD:
+      return "Card";
+    case PaymentMethod.PIX:
+      return "Pix";
+    case PaymentMethod.CASH:
+      return "Cash";
+    case PaymentMethod.BANK_TRANSFER:
+      return "Bank transfer";
+    case PaymentMethod.OTHER:
+      return "Other";
+    default:
+      return "Not set";
+  }
+}
+
 export async function BillingPage() {
   const role =
     await getCurrentUserRole();
@@ -101,8 +117,8 @@ export async function BillingPage() {
   return (
     <DashboardPage>
       <PageHeader
-        title="Billing"
-        description="Track patient invoices, manual payment confirmation, and the clinic's Nortex SaaS subscription status."
+        title="Payments"
+        description="Track patient payments, manual invoice handling, and the clinic's Nortex SaaS billing status."
       />
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -188,94 +204,18 @@ export async function BillingPage() {
               {canManageBilling &&
               overview
                 .clinicSubscription ? (
-                <div className="flex flex-wrap gap-2">
-                  {overview
-                    .clinicSubscription
-                    .status !==
-                  ClinicSubscriptionStatus.ACTIVE ? (
-                    <form
-                      action={
-                        activateClinicSubscriptionAction
-                      }
-                    >
-                      <input
-                        type="hidden"
-                        name="subscriptionId"
-                        value={
-                          overview
-                            .clinicSubscription
-                            .id
-                        }
-                      />
-                      <button
-                        type="submit"
-                        className="rounded-md border px-3 py-1.5"
-                      >
-                        Mark active
-                      </button>
-                    </form>
-                  ) : null}
-                  {overview
-                    .clinicSubscription
-                    .status !==
-                    ClinicSubscriptionStatus.SUSPENDED &&
-                  overview
-                    .clinicSubscription
-                    .status !==
-                    ClinicSubscriptionStatus.CANCELED ? (
-                    <form
-                      action={
-                        suspendClinicSubscriptionAction
-                      }
-                    >
-                      <input
-                        type="hidden"
-                        name="subscriptionId"
-                        value={
-                          overview
-                            .clinicSubscription
-                            .id
-                        }
-                      />
-                      <button
-                        type="submit"
-                        className="rounded-md border px-3 py-1.5"
-                      >
-                        Suspend
-                      </button>
-                    </form>
-                  ) : null}
-                  {overview
-                    .clinicSubscription
-                    .status !==
-                  ClinicSubscriptionStatus.CANCELED ? (
-                    <form
-                      action={
-                        cancelClinicSubscriptionAction
-                      }
-                    >
-                      <input
-                        type="hidden"
-                        name="subscriptionId"
-                        value={
-                          overview
-                            .clinicSubscription
-                            .id
-                        }
-                      />
-                      <button
-                        type="submit"
-                        className="rounded-md border px-3 py-1.5"
-                      >
-                        Cancel
-                      </button>
-                    </form>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      Canceled subscriptions stay visible for history and are not auto-recreated.
-                    </span>
-                  )}
-                </div>
+                <ClinicSubscriptionActions
+                  subscriptionId={
+                    overview
+                      .clinicSubscription
+                      .id
+                  }
+                  status={
+                    overview
+                      .clinicSubscription
+                      .status
+                  }
+                />
               ) : null}
             </div>
           </div>
@@ -294,6 +234,9 @@ export async function BillingPage() {
                   Patient
                 </th>
                 <th className="py-2">
+                  Plan
+                </th>
+                <th className="py-2">
                   Amount
                 </th>
                 <th className="py-2">
@@ -306,7 +249,13 @@ export async function BillingPage() {
                   Status
                 </th>
                 <th className="py-2">
-                  Payment
+                  Payment date
+                </th>
+                <th className="py-2">
+                  Method
+                </th>
+                <th className="py-2">
+                  Payment history
                 </th>
                 <th className="py-2 text-right">
                   Actions
@@ -318,7 +267,7 @@ export async function BillingPage() {
                 .length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={10}
                     className="py-6 text-center text-muted-foreground"
                   >
                     No patient invoices found.
@@ -336,6 +285,12 @@ export async function BillingPage() {
                           invoice.patient
                             .fullName
                         }
+                      </td>
+                      <td className="py-3">
+                        {invoice.subscription
+                          ?.membershipPlan
+                          ?.name ??
+                          "Detached"}
                       </td>
                       <td className="py-3">
                         {formatCurrency(
@@ -391,9 +346,6 @@ export async function BillingPage() {
                         {invoice.payments
                           .length > 0 ? (
                           <div className="text-xs">
-                            <div className="font-medium">
-                              Last paid:
-                            </div>
                             <div>
                               {new Date(
                                 invoice
@@ -404,68 +356,67 @@ export async function BillingPage() {
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            No payment record
+                            Not paid
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        <span className="text-xs">
+                          {getPaymentMethodLabel(
+                            invoice.payments[0]
+                              ?.paymentMethod ??
+                              invoice.paymentMethod
+                          )}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        {invoice.payments
+                          .length > 0 ? (
+                          <div className="space-y-1 text-xs">
+                            {invoice.payments.map(
+                              (payment) => (
+                                <div
+                                  key={
+                                    payment.id
+                                  }
+                                >
+                                  {[
+                                    payment.status,
+                                    getPaymentMethodLabel(
+                                      payment.paymentMethod
+                                    ),
+                                    new Date(
+                                      payment.paidAt
+                                    ).toLocaleDateString(),
+                                  ].join(
+                                    " · "
+                                  )}
+                                </div>
+                              )
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            No payment history
                           </span>
                         )}
                       </td>
                       <td className="py-3 text-right">
                         {canManageBilling ? (
-                          <div className="flex justify-end gap-2">
-                            {invoice.status ===
-                              PaymentStatus.PENDING ||
-                            invoice.status ===
-                              PaymentStatus.OVERDUE ? (
-                              <form
-                                action={
-                                  markPatientInvoicePaidAction
-                                }
-                              >
-                                <input
-                                  type="hidden"
-                                  name="invoiceId"
-                                  value={
-                                    invoice.id
-                                  }
-                                />
-                                <button
-                                  type="submit"
-                                  className="rounded-md border px-3 py-1.5"
-                                >
-                                  Mark paid
-                                </button>
-                              </form>
-                            ) : null}
-                            {invoice.status ===
-                            PaymentStatus.PENDING ? (
-                              <form
-                                action={
-                                  markPatientInvoiceOverdueAction
-                                }
-                              >
-                                <input
-                                  type="hidden"
-                                  name="invoiceId"
-                                  value={
-                                    invoice.id
-                                  }
-                                />
-                                <button
-                                  type="submit"
-                                  className="rounded-md border px-3 py-1.5"
-                                >
-                                  Mark overdue
-                                </button>
-                              </form>
-                            ) : null}
-                            {invoice.status !==
-                              PaymentStatus.PENDING &&
-                            invoice.status !==
-                              PaymentStatus.OVERDUE ? (
-                              <span className="text-xs text-muted-foreground">
-                                Locked status
-                              </span>
-                            ) : null}
-                          </div>
+                          <PatientInvoiceActions
+                            invoiceId={
+                              invoice.id
+                            }
+                            status={
+                              invoice.status
+                            }
+                            defaultPaymentMethod={
+                              invoice.paymentMethod ??
+                              invoice
+                                .payments[0]
+                                ?.paymentMethod
+                            }
+                          />
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             Read only
@@ -602,62 +553,14 @@ export async function BillingPage() {
                       </td>
                       <td className="py-3 text-right">
                         {canManageBilling ? (
-                          <div className="flex justify-end gap-2">
-                            {invoice.status ===
-                              PaymentStatus.PENDING ||
-                            invoice.status ===
-                              PaymentStatus.OVERDUE ? (
-                              <form
-                                action={
-                                  markClinicInvoicePaidAction
-                                }
-                              >
-                                <input
-                                  type="hidden"
-                                  name="invoiceId"
-                                  value={
-                                    invoice.id
-                                  }
-                                />
-                                <button
-                                  type="submit"
-                                  className="rounded-md border px-3 py-1.5"
-                                >
-                                  Mark paid
-                                </button>
-                              </form>
-                            ) : null}
-                            {invoice.status ===
-                            PaymentStatus.PENDING ? (
-                              <form
-                                action={
-                                  markClinicInvoiceOverdueAction
-                                }
-                              >
-                                <input
-                                  type="hidden"
-                                  name="invoiceId"
-                                  value={
-                                    invoice.id
-                                  }
-                                />
-                                <button
-                                  type="submit"
-                                  className="rounded-md border px-3 py-1.5"
-                                >
-                                  Mark overdue
-                                </button>
-                              </form>
-                            ) : null}
-                            {invoice.status !==
-                              PaymentStatus.PENDING &&
-                            invoice.status !==
-                              PaymentStatus.OVERDUE ? (
-                              <span className="text-xs text-muted-foreground">
-                                Locked status
-                              </span>
-                            ) : null}
-                          </div>
+                          <ClinicInvoiceActions
+                            invoiceId={
+                              invoice.id
+                            }
+                            status={
+                              invoice.status
+                            }
+                          />
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             Read only

@@ -43,6 +43,9 @@ export async function BenefitUsageHistoryPage() {
       "benefitUsage",
       "manage"
     );
+  const canCancelBenefitUsage =
+    role === "OWNER" ||
+    role === "ADMIN";
 
   return (
     <DashboardPage>
@@ -60,6 +63,9 @@ export async function BenefitUsageHistoryPage() {
 
       <BenefitUsageTable
         usages={usages}
+        canCancelBenefitUsage={
+          canCancelBenefitUsage
+        }
       />
     </DashboardPage>
   );

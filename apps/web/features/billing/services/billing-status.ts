@@ -1,4 +1,7 @@
-import { PaymentStatus } from "@prisma/client";
+import {
+  PaymentMethod,
+  PaymentStatus,
+} from "@prisma/client";
 
 export function canMarkInvoicePaid(
   status: PaymentStatus
@@ -22,5 +25,24 @@ export function isFinalizedInvoiceStatus(
     status === PaymentStatus.CANCELED ||
     status === PaymentStatus.FAILED ||
     status === PaymentStatus.REFUNDED
+  );
+}
+
+export function canCancelInvoice(
+  status: PaymentStatus
+) {
+  return (
+    status === PaymentStatus.PENDING ||
+    status === PaymentStatus.OVERDUE
+  );
+}
+
+export function isPaymentMethod(
+  value: string
+): value is PaymentMethod {
+  return Object.values(
+    PaymentMethod
+  ).includes(
+    value as PaymentMethod
   );
 }

@@ -19,6 +19,7 @@ import {
 import { formatDateForInput } from "@/features/shared/utils/format-date-for-input";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
 import {
   Dialog,
@@ -227,12 +228,7 @@ export function SubscriptionDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form
-          onSubmit={form.handleSubmit(
-            onSubmit
-          )}
-          className="flex flex-col gap-4"
-        >
+        <form className="flex flex-col gap-4">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
               Patient
@@ -317,11 +313,35 @@ export function SubscriptionDialog({
             />
           </div>
 
-          <Button type="submit">
-            {mode === "edit"
-              ? "Save Changes"
-              : "Create Subscription"}
-          </Button>
+          <ConfirmDialog
+            title={
+              mode === "edit"
+                ? "Save subscription changes?"
+                : "Create subscription?"
+            }
+            description={
+              mode === "edit"
+                ? "This updates the selected subscription."
+                : "This creates a new patient subscription and its downstream records."
+            }
+            actionLabel={
+              mode === "edit"
+                ? "Save changes"
+                : "Create subscription"
+            }
+            trigger={
+              <Button type="button">
+                {mode === "edit"
+                  ? "Save Changes"
+                  : "Create Subscription"}
+              </Button>
+            }
+            onConfirm={() =>
+              void form.handleSubmit(
+                onSubmit
+              )()
+            }
+          />
         </form>
       </DialogContent>
     </Dialog>

@@ -15,6 +15,7 @@ import {
   BillingCycle,
   ClinicStatus,
   ClinicSubscriptionStatus,
+  PaymentMethod,
   PaymentStatus,
   PatientStatus,
   SubscriptionStatus,
@@ -30,8 +31,10 @@ import { getBillingOverview } from "@/features/billing/services/billing-foundati
 import { updateClinicSubscriptionStatus } from "@/features/billing/services/billing-foundation";
 import { markClinicInvoiceOverdueAction } from "@/features/billing/actions/mark-clinic-invoice-overdue";
 import { markClinicInvoicePaidAction } from "@/features/billing/actions/mark-clinic-invoice-paid";
+import { cancelPatientInvoiceAction } from "@/features/billing/actions/cancel-patient-invoice";
 import { markPatientInvoiceOverdueAction } from "@/features/billing/actions/mark-patient-invoice-overdue";
 import { markPatientInvoicePaidAction } from "@/features/billing/actions/mark-patient-invoice-paid";
+import { updatePatientInvoicePaymentMethodAction } from "@/features/billing/actions/update-patient-invoice-payment-method";
 import { cancelSubscription } from "@/features/subscriptions/actions/cancel-subscription";
 
 type FixtureState = {
@@ -552,6 +555,21 @@ async function main() {
       async () => {
         asUser(fixtures.alphaFinance);
 
+        const methodForm =
+          new FormData();
+        methodForm.set(
+          "invoiceId",
+          fixtures.alphaPatientInvoiceId
+        );
+        methodForm.set(
+          "paymentMethod",
+          PaymentMethod.PIX
+        );
+
+        await updatePatientInvoicePaymentMethodAction(
+          methodForm
+        );
+
         const overdueForm =
           new FormData();
         overdueForm.set(
@@ -581,6 +599,10 @@ async function main() {
         payForm.set(
           "invoiceId",
           fixtures.alphaPatientInvoiceId
+        );
+        payForm.set(
+          "paymentMethod",
+          PaymentMethod.PIX
         );
 
         await markPatientInvoicePaidAction(
@@ -615,8 +637,16 @@ async function main() {
         );
         assert.ok(invoice.paidAt);
         assert.equal(
+          invoice.paymentMethod,
+          PaymentMethod.PIX
+        );
+        assert.equal(
           payments.length,
           1
+        );
+        assert.equal(
+          payments[0]?.paymentMethod,
+          PaymentMethod.PIX
         );
 
         await assert.rejects(
@@ -625,6 +655,128 @@ async function main() {
               overdueForm
             ),
           /Only pending patient invoices can be marked as overdue\./
+        );
+
+        const overview =
+          await getBillingOverview();
+        const paidOverviewInvoice =
+          overview.patientInvoices.find(
+            (entry) =>
+              entry.id ===
+              fixtures.alphaPatientInvoiceId
+          );
+
+        assert.equal(
+          paidOverviewInvoice?.subscription
+            ?.membershipPlan.name,
+          "Alpha Billing Plan"
+        );
+        assert.equal(
+          paidOverviewInvoice?.payments[0]
+            ?.paymentMethod,
+          PaymentMethod.PIX
+        );
+      }
+    );
+
+    await runCase(
+      "finance can update payment method and cancel pending invoices manually",
+      async () => {
+        asUser(fixtures.alphaFinance);
+
+        const invoice =
+          await prisma.patientInvoice.create({
+            data: {
+              clinicId:
+                fixtures.alphaClinicId,
+              patientId:
+                (
+                  await prisma.patient.findFirstOrThrow(
+                    {
+                      where: {
+                        clinicId:
+                          fixtures.alphaClinicId,
+                      },
+                    }
+                  )
+                ).id,
+              subscriptionId:
+                fixtures.alphaSubscriptionId,
+              status:
+                PaymentStatus.PENDING,
+              billingCycle:
+                BillingCycle.MONTHLY,
+              amount: 150,
+              dueDate: new Date(),
+              description:
+                "Alpha patient cancelable invoice",
+            },
+          });
+
+        const methodForm =
+          new FormData();
+        methodForm.set(
+          "invoiceId",
+          invoice.id
+        );
+        methodForm.set(
+          "paymentMethod",
+          PaymentMethod.CARD
+        );
+
+        await updatePatientInvoicePaymentMethodAction(
+          methodForm
+        );
+
+        let updatedInvoice =
+          await prisma.patientInvoice.findUniqueOrThrow(
+            {
+              where: {
+                id: invoice.id,
+              },
+            }
+          );
+
+        assert.equal(
+          updatedInvoice.paymentMethod,
+          PaymentMethod.CARD
+        );
+
+        const cancelForm =
+          new FormData();
+        cancelForm.set(
+          "invoiceId",
+          invoice.id
+        );
+
+        await cancelPatientInvoiceAction(
+          cancelForm
+        );
+
+        updatedInvoice =
+          await prisma.patientInvoice.findUniqueOrThrow(
+            {
+              where: {
+                id: invoice.id,
+              },
+            }
+          );
+
+        assert.equal(
+          updatedInvoice.status,
+          PaymentStatus.CANCELED
+        );
+        assert.equal(
+          updatedInvoice.paymentMethod,
+          PaymentMethod.CARD
+        );
+
+        await assert.rejects(
+          () =>
+            markPatientInvoicePaidAction(
+              cancelForm
+            ),
+          /Only pending or overdue patient invoices can be marked as paid\./
         );
       }
     );
