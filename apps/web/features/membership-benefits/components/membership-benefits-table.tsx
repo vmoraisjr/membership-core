@@ -52,6 +52,22 @@ type Props = {
   canDeleteBenefitsPermanently?: boolean;
 };
 
+function getUsagePolicyLabel(
+  benefit: BenefitWithPlan
+) {
+  if (benefit.resetPeriod === "MONTHLY") {
+    return benefit.usageLimit == null
+      ? "Uso mensal sem limite"
+      : `Uso mensal · ${benefit.usageLimit}/mês`;
+  }
+
+  if (benefit.usageLimit != null) {
+    return `Uso total · ${benefit.usageLimit} usos`;
+  }
+
+  return "Sem limite";
+}
+
 export function MembershipBenefitsTable({
   benefits,
   plans,
@@ -61,7 +77,8 @@ export function MembershipBenefitsTable({
 }: Props) {
   const [statusFilter, setStatusFilter] =
     useState("all");
-  const [planFilter, setPlanFilter] = useState(selectedPlanId ?? 'all');
+  const [planFilter, setPlanFilter] =
+    useState(selectedPlanId ?? "all");
   const [search, setSearch] =
     useState("");
 
@@ -70,7 +87,12 @@ export function MembershipBenefitsTable({
 
   const visibleBenefits = benefits.filter(
     (benefit) => {
-      if (planFilter && planFilter !== 'all' && benefit.membershipPlanId !== planFilter) {
+      if (
+        planFilter &&
+        planFilter !== "all" &&
+        benefit.membershipPlanId !==
+          planFilter
+      ) {
         return false;
       }
 
@@ -106,89 +128,101 @@ export function MembershipBenefitsTable({
 
   return (
     <DataTableContainer
-      title="Benefits Catalog"
+      title="Catálogo de benefícios"
       description={
         selectedPlanId
-          ? "Showing only benefits from the selected plan."
-          : "Plan-linked benefits kept for support and history."
+          ? "Mostrando apenas benefícios do plano selecionado."
+          : "Benefícios vinculados a planos para operação e histórico."
+      }
+      toolbar={
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Filtro de status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value
+                )
+              }
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            >
+              <option value="all">
+                Todos
+              </option>
+              <option value="active">
+                Ativos
+              </option>
+              <option value="inactive">
+                Inativos
+              </option>
+            </select>
+          </div>
+
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Filtro de plano
+            </label>
+            <select
+              value={planFilter}
+              onChange={(e) =>
+                setPlanFilter(
+                  e.target.value
+                )
+              }
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            >
+              <option value="all">
+                Todos os planos
+              </option>
+              {plans.map((plan) => (
+                <option
+                  key={plan.id}
+                  value={plan.id}
+                >
+                  {plan.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid gap-2 sm:min-w-80">
+            <label className="text-sm font-medium text-muted-foreground">
+              Buscar benefício
+            </label>
+            <input
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value
+                )
+              }
+              placeholder="Buscar nome do benefício"
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            />
+          </div>
+        </div>
       }
     >
-      <div className="flex flex-col gap-4 border-b p-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="grid gap-2">
-          <label className="text-sm text-muted-foreground">
-            Status filter
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value
-              )
-            }
-            className="h-10 rounded-md border px-3"
-          >
-            <option value="all">
-              All
-            </option>
-            <option value="active">
-              Active
-            </option>
-            <option value="inactive">
-              Inactive
-            </option>
-          </select>
-        </div>
-
-        <div className="grid gap-2">
-          <label className="text-sm text-muted-foreground">Plan filter</label>
-          <select
-            value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-            className="h-10 rounded-md border px-3"
-          >
-            <option value="all">All plans</option>
-            {plans.map((plan) => (
-              <option key={plan.id} value={plan.id}>
-                {plan.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid gap-2 sm:min-w-80">
-          <label className="text-sm text-muted-foreground">
-            Filter by benefit name
-          </label>
-          <input
-            value={search}
-            onChange={(event) =>
-              setSearch(
-                event.target.value
-              )
-            }
-            placeholder="Search benefit name"
-            className="h-10 rounded-md border px-3"
-          />
-        </div>
-      </div>
-
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>
-              Benefit
+              Benefício
             </TableHead>
 
             <TableHead>
-              Description
+              Descrição
             </TableHead>
 
             <TableHead>
-              Percentage
+              Percentual
             </TableHead>
 
             <TableHead>
-              Plan
+              Plano
             </TableHead>
 
             <TableHead>
@@ -196,11 +230,11 @@ export function MembershipBenefitsTable({
             </TableHead>
 
             <TableHead>
-              Type
+              Uso
             </TableHead>
 
             <TableHead>
-              Actions
+              Ações
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -210,13 +244,13 @@ export function MembershipBenefitsTable({
             <TableRow
               key={benefit.id}
             >
-              <TableCell>
+              <TableCell className="min-w-[14rem]">
                 {benefit.title}
               </TableCell>
 
-              <TableCell>
+              <TableCell className="min-w-[18rem] whitespace-normal">
                 {benefit.description ||
-                  "No description"}
+                  "Sem descrição"}
               </TableCell>
 
               <TableCell>
@@ -234,18 +268,17 @@ export function MembershipBenefitsTable({
               </TableCell>
 
               <TableCell>
-                {benefit.active
-                  ? "Active"
-                  : "Inactive"}
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                  {benefit.active
+                    ? "Ativo"
+                    : "Inativo"}
+                </span>
               </TableCell>
 
               <TableCell>
-                {benefit.type === "LIMITED"
-                  ? benefit.usageLimit ==
-                    null
-                    ? "LIMITED · unlimited/month"
-                    : `LIMITED · ${benefit.usageLimit}/month`
-                  : benefit.type}
+                {getUsagePolicyLabel(
+                  benefit
+                )}
               </TableCell>
 
               <TableCell>
@@ -275,8 +308,8 @@ export function MembershipBenefitsTable({
                 className="p-0"
               >
                 <EmptyState
-                  title="No benefits found"
-                  description="No benefits match the current filters."
+                  title="Nenhum benefício encontrado"
+                  description="Nenhum benefício corresponde aos filtros atuais."
                 />
               </TableCell>
             </TableRow>

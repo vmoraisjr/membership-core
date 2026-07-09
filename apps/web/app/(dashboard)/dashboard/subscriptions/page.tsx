@@ -1,4 +1,5 @@
 import { SubscriptionsPage } from "@/features/subscriptions/components/subscriptions-page";
+import { renderOperationalClinicScopedPage } from "@/features/shared/components/render-clinic-scoped-page";
 
 type Props = {
   searchParams: Promise<{
@@ -12,7 +13,7 @@ export default async function Page({
 }: Props) {
   const params = await searchParams;
 
-  return (
+  return renderOperationalClinicScopedPage(
     <SubscriptionsPage
       contextPlanId={params.planId}
       contextPatientId={

@@ -14,7 +14,10 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 import { safeRevalidatePath } from "@/lib/revalidation";
 import prisma from "@/lib/prisma";
 
-import { assertNotLastActiveOwner } from "../services/manage-clinic-user";
+import {
+  assertNotLastActiveOwner,
+  assertUserIsNotClinicMaster,
+} from "../services/manage-clinic-user";
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
@@ -77,23 +80,10 @@ export async function updateClinicUserRoleAction(
   }
 
   const targetUser =
-    await prisma.appUser.findFirst({
-      where: {
-        id: userId,
-        clinicId: currentUser.clinicId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-      },
-    });
-
-  if (!targetUser) {
-    throw new Error("User not found.");
-  }
+    await assertUserIsNotClinicMaster(
+      currentUser.clinicId,
+      userId
+    );
 
   if (targetUser.role === nextRole) {
     return {

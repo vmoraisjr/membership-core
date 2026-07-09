@@ -1,8 +1,7 @@
-import { randomUUID } from "node:crypto";
-
 import { AuditAction, AuditEntity, Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 import { getCurrentAppUser } from "@/features/auth/services/get-current-app-user";
 
@@ -78,41 +77,118 @@ export async function createAuditLog(
     );
   }
 
-  const metadata =
-    input.metadata == null
-      ? null
-      : JSON.stringify(input.metadata);
-  const auditLogId =
-    randomUUID();
+  const auditLogDelegate = (
+    client as AuditLogClient & {
+      auditLog?: {
+        create?: (
+          args: {
+            data: {
+              clinicId: string | null;
+              actor: string;
+              action: AuditAction;
+              entity: AuditEntity;
+              entityId: string;
+              entityLabel: string | null;
+              metadata:
+                | Prisma.InputJsonValue
+                | typeof Prisma.JsonNull;
+              actorUserId: string | null;
+            };
+            select: {
+              id: true;
+            };
+          }
+        ) => Promise<{ id: string }>;
+      };
+    }
+  ).auditLog;
+
+  if (
+    typeof auditLogDelegate?.create ===
+    "function"
+  ) {
+    return auditLogDelegate.create({
+      data: {
+        clinicId: input.clinicId ?? null,
+        actor: input.actor,
+        action: input.action as AuditAction,
+        entity: input.entity as AuditEntity,
+        entityId: input.entityId,
+        entityLabel:
+          input.entityLabel ?? null,
+        metadata:
+          input.metadata == null
+            ? Prisma.JsonNull
+            : input.metadata,
+        actorUserId:
+          input.actorUserId ?? null,
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
 
   const result =
     await client.$queryRaw<
       Array<{ id: string }>
     >`
       INSERT INTO "AuditLog" (
-        "id",
         "clinicId",
+        "actorUserId",
         "actor",
         "action",
         "entity",
         "entityId",
         "entityLabel",
-        "metadata",
-        "actorUserId"
+        "metadata"
       )
       VALUES (
-        ${auditLogId},
         ${input.clinicId ?? null},
+        ${input.actorUserId ?? null},
         ${input.actor},
-        ${input.action}::"AuditAction",
-        ${input.entity}::"AuditEntity",
+        CAST(${input.action} AS "AuditAction"),
+        CAST(${input.entity} AS "AuditEntity"),
         ${input.entityId},
         ${input.entityLabel ?? null},
-        ${metadata}::jsonb,
-        ${input.actorUserId ?? null}
+        CAST(${
+          input.metadata == null
+            ? null
+            : JSON.stringify(input.metadata)
+        } AS jsonb)
       )
       RETURNING "id"
     `;
 
-  return result[0] ?? null;
+  return result[0];
+}
+
+export async function createAuditLogSafely(
+  client: AuditLogClient,
+  input: CreateAuditLogInput
+) {
+  try {
+    return await createAuditLog(
+      client,
+      input
+    );
+  } catch (error) {
+    logger.warn(
+      "Audit log write failed.",
+      {
+        clinicId:
+          input.clinicId ?? null,
+        actor: input.actor,
+        action: input.action,
+        entity: input.entity,
+        entityId: input.entityId,
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
+      }
+    );
+
+    return null;
+  }
 }

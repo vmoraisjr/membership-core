@@ -1,4 +1,5 @@
 import { PatientProfilePage } from "@/features/patients/components/patient-profile-page";
+import { renderOperationalClinicScopedPage } from "@/features/shared/components/render-clinic-scoped-page";
 
 type PageProps = {
   params: Promise<{
@@ -12,7 +13,7 @@ export default async function Page({
   const { patientId } =
     await params;
 
-  return (
+  return renderOperationalClinicScopedPage(
     <PatientProfilePage
       patientId={patientId}
     />

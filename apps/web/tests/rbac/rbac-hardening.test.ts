@@ -238,7 +238,7 @@ async function seedFixtures(): Promise<FixtureState> {
         birthDate: new Date(
           "1990-01-01T00:00:00.000Z"
         ),
-        document: "444.444.444-44",
+        document: "390.533.447-05",
         zipCode: "04000-000",
         city: "Sao Paulo",
         state: "SP",
@@ -259,7 +259,7 @@ async function seedFixtures(): Promise<FixtureState> {
         birthDate: new Date(
           "1991-01-01T00:00:00.000Z"
         ),
-        document: "555.555.555-55",
+        document: "935.411.347-80",
         zipCode: "04000-001",
         city: "Sao Paulo",
         state: "SP",
@@ -463,12 +463,21 @@ async function main() {
           hasPermission(
             "ADMIN",
             "billing",
-            "view"
+            "manage"
           ),
-          false
+          true
         );
 
         setAdminBillingAccessForTests(
+          false
+        );
+
+        assert.equal(
+          hasPermission(
+            "ADMIN",
+            "billing",
+            "view"
+          ),
           true
         );
 
@@ -622,7 +631,7 @@ async function main() {
             enableClinicModuleAction(
               moduleFormData
             ),
-          /permission/i
+          /cannot be enabled in V1/i
         );
 
         const billingFormData =
@@ -634,18 +643,6 @@ async function main() {
         billingFormData.set(
           "paymentMethod",
           PaymentMethod.CARD
-        );
-
-        await assert.rejects(
-          () =>
-            markPatientInvoicePaidAction(
-              billingFormData
-            ),
-          /permission/i
-        );
-
-        setAdminBillingAccessForTests(
-          true
         );
 
         await markPatientInvoicePaidAction(

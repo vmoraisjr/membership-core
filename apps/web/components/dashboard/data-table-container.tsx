@@ -3,33 +3,44 @@ type Props = {
 
   description?: string;
 
+  toolbar?: React.ReactNode;
+
   children: React.ReactNode;
 };
 
 export function DataTableContainer({
   title,
   description,
+  toolbar,
   children,
 }: Props) {
   return (
-    <div className="rounded-2xl border">
+    <div className="workspace-section">
       {(title || description) && (
-        <div className="border-b p-6">
-          {title && (
-            <h2 className="font-semibold">
-              {title}
-            </h2>
-          )}
+        <div className="workspace-section-header">
+          <div className="space-y-1">
+            {title ? (
+              <h2 className="workspace-section-title">
+                {title}
+              </h2>
+            ) : null}
 
-          {description && (
-            <p className="text-sm text-muted-foreground">
-              {description}
-            </p>
-          )}
+            {description ? (
+              <p className="workspace-section-description">
+                {description}
+              </p>
+            ) : null}
+          </div>
         </div>
       )}
 
-      <div>{children}</div>
+      {toolbar ? (
+        <div className="workspace-toolbar">
+          {toolbar}
+        </div>
+      ) : null}
+
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }

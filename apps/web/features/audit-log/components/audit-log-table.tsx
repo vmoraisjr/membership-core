@@ -34,6 +34,11 @@ type AuditLogItem = {
   entityLabel: string | null;
   metadata: Prisma.JsonValue | null;
   createdAt: Date;
+  clinic?: {
+    id: string;
+    name: string;
+    brandName: string | null;
+  } | null;
 };
 
 type Props = {
@@ -41,6 +46,11 @@ type Props = {
   filters: AuditLogFilters;
   actorOptions: string[];
   entityOptions: AuditEntity[];
+  clinicOptions: Array<{
+    id: string;
+    name: string;
+  }>;
+  isPlatformView: boolean;
 };
 
 function formatMetadata(
@@ -83,6 +93,8 @@ export function AuditLogTable({
   filters,
   actorOptions,
   entityOptions,
+  clinicOptions,
+  isPlatformView,
 }: Props) {
   const t = getTranslations();
   return (
@@ -92,7 +104,7 @@ export function AuditLogTable({
     >
       <form
         method="get"
-        className="grid gap-4 border-b p-6 lg:grid-cols-4"
+        className={`grid gap-4 border-b p-6 ${isPlatformView ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}
       >
         <div className="grid gap-2">
           <label
@@ -173,6 +185,37 @@ export function AuditLogTable({
           />
         </div>
 
+        {isPlatformView ? (
+          <div className="grid gap-2">
+            <label
+              htmlFor="clinicId"
+              className="text-sm text-muted-foreground"
+            >
+              Clínica
+            </label>
+            <select
+              id="clinicId"
+              name="clinicId"
+              defaultValue={
+                filters.clinicId ?? ""
+              }
+              className="h-10 rounded-md border bg-background px-3"
+            >
+              <option value="">
+                Todas as clínicas
+              </option>
+              {clinicOptions.map((clinic) => (
+                <option
+                  key={clinic.id}
+                  value={clinic.id}
+                >
+                  {clinic.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
         <div className="flex items-end gap-2">
           <Button type="submit">
             {t("shared.actions.applyFilters")}
@@ -192,6 +235,9 @@ export function AuditLogTable({
         <TableHeader>
           <TableRow>
             <TableHead>{t("shared.labels.when")}</TableHead>
+            {isPlatformView ? (
+              <TableHead>Clínica</TableHead>
+            ) : null}
             <TableHead>{t("shared.labels.user")}</TableHead>
             <TableHead>{t("shared.labels.actions")}</TableHead>
             <TableHead>{t("shared.labels.entity")}</TableHead>
@@ -213,6 +259,14 @@ export function AuditLogTable({
                     log.createdAt
                   )}
                 </TableCell>
+                {isPlatformView ? (
+                  <TableCell className="align-top">
+                    {log.clinic
+                      ? log.clinic.brandName ??
+                        log.clinic.name
+                      : "Plataforma"}
+                  </TableCell>
+                ) : null}
                 <TableCell className="align-top">
                   {log.actor}
                 </TableCell>
@@ -249,7 +303,9 @@ export function AuditLogTable({
           {logs.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={5}
+                colSpan={
+                  isPlatformView ? 6 : 5
+                }
                 className="p-0"
               >
                 <EmptyState

@@ -5,6 +5,7 @@ type PageProps = {
     actor?: string;
     entity?: string;
     date?: string;
+    clinicId?: string;
   }>;
 };
 
@@ -22,6 +23,8 @@ export default async function Page({
         entity:
           resolvedSearchParams.entity,
         date: resolvedSearchParams.date,
+        clinicId:
+          resolvedSearchParams.clinicId,
       }}
     />
   );

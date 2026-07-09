@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 
-import { ClinicStatus } from "@prisma/client";
+import {
+  ClinicStatus,
+  ClinicSubscriptionStatus,
+} from "@prisma/client";
 
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -21,6 +24,7 @@ type ClinicTableItem = {
   id: string;
   name: string;
   brandName: string | null;
+  logoUrl: string | null;
   slug: string;
   document: string;
   email: string;
@@ -35,16 +39,25 @@ type ClinicTableItem = {
     patients: number;
     membershipPlans: number;
   };
+  clinicSubscriptions: Array<{
+    id: string;
+    status: ClinicSubscriptionStatus;
+    clinicBillingPlan: {
+      name: string;
+    };
+  }>;
 };
 
 type Props = {
   clinics: ClinicTableItem[];
   canManageClinic?: boolean;
+  isPlatformView?: boolean;
 };
 
 export function ClinicTable({
   clinics,
   canManageClinic = true,
+  isPlatformView = false,
 }: Props) {
   const [statusFilter, setStatusFilter] =
     useState("active");
@@ -93,75 +106,81 @@ export function ClinicTable({
 
   return (
     <DataTableContainer
-      title="Clinic Administration"
-      description={`${activeClinicsCount} active clinics currently managed in the platform.`}
+      title={
+        isPlatformView
+          ? "Gestão de contas clientes"
+          : "Administração da empresa"
+      }
+      description={`${activeClinicsCount} conta(s) ativa(s) disponível(is) neste contexto.`}
+      toolbar={
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Filtro de status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value
+                )
+              }
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            >
+              <option value="active">
+                Ativas
+              </option>
+              <option value="inactive">
+                Inativas
+              </option>
+              <option value="all">
+                Todas
+              </option>
+            </select>
+          </div>
+
+          <div className="grid gap-2 sm:min-w-80">
+            <label className="text-sm font-medium text-muted-foreground">
+              Buscar empresa
+            </label>
+            <input
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value
+                )
+              }
+              placeholder="Buscar por nome, exibição ou slug"
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            />
+          </div>
+        </div>
+      }
     >
-      <div className="flex flex-col gap-4 border-b p-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="grid gap-2">
-          <label className="text-sm text-muted-foreground">
-            Status filter
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value
-              )
-            }
-            className="h-10 rounded-md border px-3"
-          >
-            <option value="active">
-              Active
-            </option>
-            <option value="inactive">
-              Inactive
-            </option>
-            <option value="all">
-              All
-            </option>
-          </select>
-        </div>
-
-        <div className="grid gap-2 sm:min-w-80">
-          <label className="text-sm text-muted-foreground">
-            Search by clinic
-          </label>
-          <input
-            value={search}
-            onChange={(event) =>
-              setSearch(
-                event.target.value
-              )
-            }
-            placeholder="Search clinic, brand, or slug"
-            className="h-10 rounded-md border px-3"
-          />
-        </div>
-      </div>
-
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Clinic</TableHead>
+            <TableHead>Empresa</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Patients</TableHead>
-            <TableHead>Plans</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>Localização</TableHead>
+            <TableHead>Plano</TableHead>
+            <TableHead>Clientes</TableHead>
+            <TableHead>Planos</TableHead>
+            <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           {visibleClinics.map((clinic) => (
             <TableRow key={clinic.id}>
-              <TableCell className="align-top">
+              <TableCell className="min-w-[18rem] align-top">
                 <div className="space-y-1">
                   <div className="font-medium">
-                    {clinic.name}
+                    {clinic.brandName ||
+                      clinic.name}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {clinic.brandName ||
-                      "No brand name."}
+                    {clinic.name}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {clinic.slug}
@@ -170,15 +189,15 @@ export function ClinicTable({
               </TableCell>
 
               <TableCell className="align-top">
-                <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
                   {clinic.status ===
                   ClinicStatus.ACTIVE
-                    ? "Active"
-                    : "Inactive"}
+                    ? "Ativa"
+                    : "Inativa"}
                 </span>
               </TableCell>
 
-              <TableCell className="align-top">
+              <TableCell className="min-w-[14rem] align-top">
                 <div className="space-y-1">
                   <div className="font-medium">
                     {clinic.city}, {clinic.state}
@@ -187,6 +206,32 @@ export function ClinicTable({
                     {clinic.address}
                   </div>
                 </div>
+              </TableCell>
+
+              <TableCell className="align-top">
+                {clinic.clinicSubscriptions[0] ? (
+                  <div className="space-y-1 text-sm">
+                    <div className="font-medium">
+                      {
+                        clinic
+                          .clinicSubscriptions[0]
+                          .clinicBillingPlan
+                          .name
+                      }
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {
+                        clinic
+                          .clinicSubscriptions[0]
+                          .status
+                      }
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Sem plano ativo
+                  </span>
+                )}
               </TableCell>
 
               <TableCell className="align-top">
@@ -203,6 +248,9 @@ export function ClinicTable({
                   canManageClinic={
                     canManageClinic
                   }
+                  isPlatformView={
+                    isPlatformView
+                  }
                 />
               </TableCell>
             </TableRow>
@@ -211,12 +259,12 @@ export function ClinicTable({
           {visibleClinics.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="p-0"
               >
                 <EmptyState
-                  title="No clinics found"
-                  description="Adjust the filters or create a new clinic to continue."
+                  title="Nenhuma empresa encontrada"
+                  description="Ajuste os filtros ou cadastre uma nova conta cliente para continuar."
                 />
               </TableCell>
             </TableRow>

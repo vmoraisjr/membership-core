@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import {
   AppUserRole,
+  AppUserStatus,
   BenefitType,
   BillingCycle,
   ClinicContractStatus,
@@ -22,6 +23,7 @@ import { hashPassword } from "../lib/auth/password";
 const prisma = new PrismaClient();
 
 async function main() {
+  await upsertPlatformOwner();
   const clinic = await upsertClinic();
   const plan = await upsertMembershipPlan(
     clinic.id
@@ -59,6 +61,53 @@ async function main() {
   console.log(
     "Seed completed for Nortex Medical demo environment."
   );
+}
+
+async function upsertPlatformOwner() {
+  const email =
+    "owner+workspace@membership-core.local";
+  const passwordHash =
+    hashPassword("ChangeMe123!");
+  const existing =
+    await prisma.appUser.findUnique({
+      where: {
+        email,
+      },
+      select: {
+        id: true,
+        passwordHash: true,
+      },
+    });
+
+  if (existing) {
+    await prisma.appUser.update({
+      where: {
+        id: existing.id,
+      },
+      data: {
+        clinicId: null,
+        name: "Owner Operator",
+        role: AppUserRole.OWNER,
+        status: AppUserStatus.ACTIVE,
+        passwordHash:
+          existing.passwordHash ??
+          passwordHash,
+      },
+    });
+
+    return;
+  }
+
+  await prisma.appUser.create({
+    data: {
+      clinicId: null,
+      name: "Owner Operator",
+      email,
+      role: AppUserRole.OWNER,
+      status: AppUserStatus.ACTIVE,
+      passwordHash,
+    },
+  });
 }
 
 async function upsertClinic() {

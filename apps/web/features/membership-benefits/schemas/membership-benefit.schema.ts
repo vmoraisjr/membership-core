@@ -4,6 +4,13 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 
+export const benefitUsagePolicySchema =
+  z.enum([
+    "UNLIMITED",
+    "MONTHLY",
+    "TOTAL",
+  ]);
+
 function optionalNumber() {
   return z.preprocess((value) => {
     if (value === "" || value == null) {
@@ -29,6 +36,8 @@ export const membershipBenefitSchema =
         optionalNumber(),
       discountAmount:
         optionalNumber(),
+      usagePolicy:
+        benefitUsagePolicySchema.optional(),
       usageLimit: z.preprocess(
         (value) => {
           if (
@@ -76,15 +85,53 @@ export const membershipBenefitSchema =
         });
       }
 
+      const usagePolicy =
+        data.usagePolicy ??
+        (data.resetPeriod ===
+        ResetPeriod.MONTHLY
+          ? "MONTHLY"
+          : data.usageLimit != null
+            ? "TOTAL"
+            : "UNLIMITED");
+
       if (
-        data.type !== BenefitType.LIMITED &&
+        usagePolicy ===
+          "UNLIMITED" &&
         data.usageLimit != null
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["usageLimit"],
           message:
-            "Usage limits only apply to limited benefits.",
+            "Benefícios sem limite não devem informar quantidade de uso.",
+        });
+      }
+
+      if (
+        usagePolicy !==
+          "UNLIMITED" &&
+        (data.usageLimit == null ||
+          data.usageLimit < 1)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["usageLimit"],
+          message:
+            "Informe uma quantidade de uso maior que zero.",
+        });
+      }
+
+      if (
+        usagePolicy ===
+          "MONTHLY" &&
+        data.resetPeriod !==
+          ResetPeriod.MONTHLY
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["usagePolicy"],
+          message:
+            "A política mensal precisa renovar mensalmente.",
         });
       }
     });

@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { PencilLine } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import {
   useForm,
@@ -38,6 +43,23 @@ import {
 
 import { Input } from "@/components/ui/input";
 
+function getBenefitTypeLabel(
+  type: BenefitType
+) {
+  switch (type) {
+    case BenefitType.FREE:
+      return "Livre";
+    case BenefitType.PERCENTAGE_DISCOUNT:
+      return "Desconto percentual";
+    case BenefitType.FIXED_DISCOUNT:
+      return "Desconto fixo";
+    case BenefitType.LIMITED:
+      return "Uso controlado";
+    default:
+      return type;
+  }
+}
+
 type MembershipBenefitDialogInitialData = {
   id: string;
   membershipPlanId: string;
@@ -73,6 +95,8 @@ export function MembershipBenefitDialog({
   trigger,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [editingEnabled, setEditingEnabled] =
+    useState(mode === "create");
 
   const form =
     useForm<MembershipBenefitSchema>({
@@ -94,64 +118,82 @@ export function MembershipBenefitDialog({
 
         discountAmount: 0,
 
+        usagePolicy: "UNLIMITED",
+
         usageLimit: undefined,
 
         resetPeriod: "",
       },
     });
 
-  useEffect(() => {
-    if (
-      mode === "edit" &&
-      initialData
-    ) {
-      form.reset({
+  const getDefaultValues =
+    useCallback(
+      (): MembershipBenefitSchema => ({
         membershipPlanId:
-          initialData.membershipPlanId,
+          defaultMembershipPlanId ?? "",
+        type:
+          BenefitType.PERCENTAGE_DISCOUNT,
+        title: "",
+        description: "",
+        discountPercentage: 0,
+        discountAmount: 0,
+        usagePolicy: "UNLIMITED",
+        usageLimit: undefined,
+        resetPeriod: "",
+      }),
+      [defaultMembershipPlanId]
+    );
 
-        type: initialData.type,
+  const getInitialFormValues =
+    useCallback(
+      (): MembershipBenefitSchema => {
+        if (
+          mode === "edit" &&
+          initialData
+        ) {
+          return {
+            membershipPlanId:
+              initialData.membershipPlanId,
+            type: initialData.type,
+            title: initialData.title,
+            description:
+              initialData.description ?? "",
+            discountPercentage:
+              initialData.discountPercentage ??
+              0,
+            discountAmount:
+              initialData.discountAmount ??
+              0,
+            usagePolicy:
+              initialData.resetPeriod ===
+              ResetPeriod.MONTHLY
+                ? "MONTHLY"
+                : initialData.usageLimit != null
+                  ? "TOTAL"
+                  : "UNLIMITED",
+            usageLimit:
+              initialData.usageLimit ??
+              undefined,
+            resetPeriod:
+              initialData.resetPeriod ?? "",
+          };
+        }
 
-        title: initialData.title,
+        return getDefaultValues();
+      },
+      [
+        getDefaultValues,
+        initialData,
+        mode,
+      ]
+    );
 
-        description:
-          initialData.description ??
-          "",
-
-        discountPercentage:
-          initialData.discountPercentage ??
-          0,
-
-        discountAmount:
-          initialData.discountAmount ??
-          0,
-
-        usageLimit:
-          initialData.usageLimit ??
-          undefined,
-
-        resetPeriod:
-          initialData.resetPeriod ??
-          "",
-      });
-
-      return;
-    }
-
-    form.reset({
-      membershipPlanId:
-        defaultMembershipPlanId ?? "",
-      type:
-        BenefitType.PERCENTAGE_DISCOUNT,
-      title: "",
-      description: "",
-      discountPercentage: 0,
-      discountAmount: 0,
-      usageLimit: undefined,
-      resetPeriod: "",
-    });
+  useEffect(() => {
+    form.reset(getInitialFormValues());
   }, [
     defaultMembershipPlanId,
     form,
+    getInitialFormValues,
     initialData,
     mode,
   ]);
@@ -160,18 +202,10 @@ export function MembershipBenefitDialog({
     control: form.control,
     name: "type",
   });
-  const usageLimit = useWatch({
+  const usagePolicy = useWatch({
     control: form.control,
-    name: "usageLimit",
+    name: "usagePolicy",
   });
-  const hasMonthlyUsageLimit =
-    usageLimit != null;
-  const monthlyUsageMode =
-    type === BenefitType.LIMITED
-      ? hasMonthlyUsageLimit
-        ? "limited"
-        : "unlimited"
-      : "not-applicable";
 
   async function saveBenefit(
     values: MembershipBenefitSchema
@@ -187,7 +221,7 @@ export function MembershipBenefitDialog({
         );
 
         toast.success(
-          "Benefit updated."
+          "Benefício atualizado."
         );
       } else {
         await createMembershipBenefit(
@@ -195,7 +229,7 @@ export function MembershipBenefitDialog({
         );
 
         toast.success(
-          "Benefit created."
+          "Benefício criado."
         );
       }
 
@@ -204,7 +238,7 @@ export function MembershipBenefitDialog({
       setOpen(false);
     } catch {
       toast.error(
-        "Failed to save benefit."
+        "Não foi possível salvar o benefício."
       );
     }
   }
@@ -212,12 +246,23 @@ export function MembershipBenefitDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+
+        if (nextOpen) {
+          setEditingEnabled(
+            mode === "create"
+          );
+          form.reset(
+            getInitialFormValues()
+          );
+        }
+      }}
     >
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
-            New Benefit
+            Novo benefício
           </Button>
         )}
       </DialogTrigger>
@@ -226,26 +271,34 @@ export function MembershipBenefitDialog({
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"
-              ? "Edit Benefit"
-              : "Create Benefit"}
+              ? "Editar benefício"
+              : "Criar benefício"}
           </DialogTitle>
         </DialogHeader>
 
         <form
           className="flex flex-col gap-4"
         >
+          <input
+            type="hidden"
+            {...form.register(
+              "resetPeriod"
+            )}
+          />
+
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Membership plan
+              Plano
             </label>
             <select
+              disabled={!editingEnabled}
               {...form.register(
                 "membershipPlanId"
               )}
               className="h-10 rounded-md border px-3"
             >
               <option value="">
-                Select plan
+                Selecione um plano
               </option>
 
               {plans.map((plan) => (
@@ -261,9 +314,10 @@ export function MembershipBenefitDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Benefit type
+              Tipo do benefício
             </label>
             <select
+              disabled={!editingEnabled}
               {...form.register("type")}
               className="h-10 rounded-md border px-3"
             >
@@ -274,7 +328,9 @@ export function MembershipBenefitDialog({
                   key={type}
                   value={type}
                 >
-                  {type}
+                  {getBenefitTypeLabel(
+                    type
+                  )}
                 </option>
               ))}
             </select>
@@ -282,20 +338,22 @@ export function MembershipBenefitDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Benefit title
+              Título do benefício
             </label>
             <Input
-              placeholder="Benefit title"
+              placeholder="Título do benefício"
+              disabled={!editingEnabled}
               {...form.register("title")}
             />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Description
+              Descrição
             </label>
             <Input
-              placeholder="Description"
+              placeholder="Descrição"
+              disabled={!editingEnabled}
               {...form.register(
                 "description"
               )}
@@ -306,11 +364,12 @@ export function MembershipBenefitDialog({
             BenefitType.PERCENTAGE_DISCOUNT && (
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
-                Discount percentage
+                Percentual de desconto
               </label>
               <Input
                 type="number"
-                placeholder="Discount percentage"
+                placeholder="Percentual de desconto"
+                disabled={!editingEnabled}
                 {...form.register(
                   "discountPercentage",
                   {
@@ -325,11 +384,12 @@ export function MembershipBenefitDialog({
             BenefitType.FIXED_DISCOUNT && (
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
-                Discount amount
+                Valor do desconto
               </label>
               <Input
                 type="number"
-                placeholder="Discount amount"
+                placeholder="Valor do desconto"
+                disabled={!editingEnabled}
                 {...form.register(
                   "discountAmount",
                   {
@@ -342,25 +402,42 @@ export function MembershipBenefitDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Monthly usage mode
+              Política de uso
             </label>
             <select
-              value={monthlyUsageMode}
+              {...form.register(
+                "usagePolicy"
+              )}
+              value={usagePolicy}
               onChange={(event) => {
-                if (
-                  type !==
-                  BenefitType.LIMITED
-                ) {
-                  return;
-                }
+                const value = event.target
+                  .value as MembershipBenefitSchema["usagePolicy"];
 
-                if (
-                  event.target.value ===
-                  "limited"
-                ) {
+                form.setValue(
+                  "usagePolicy",
+                  value
+                );
+
+                if (value === "MONTHLY") {
                   form.setValue(
                     "usageLimit",
                     1
+                  );
+                  form.setValue(
+                    "resetPeriod",
+                    ResetPeriod.MONTHLY
+                  );
+                  return;
+                }
+
+                if (value === "TOTAL") {
+                  form.setValue(
+                    "usageLimit",
+                    1
+                  );
+                  form.setValue(
+                    "resetPeriod",
+                    ""
                   );
                   return;
                 }
@@ -369,38 +446,44 @@ export function MembershipBenefitDialog({
                   "usageLimit",
                   undefined
                 );
+                form.setValue(
+                  "resetPeriod",
+                  ""
+                );
               }}
               className="h-10 rounded-md border px-3"
-              disabled={
-                type !== BenefitType.LIMITED
-              }
+              disabled={!editingEnabled}
             >
-              {type === BenefitType.LIMITED ? (
-                <>
-                  <option value="unlimited">
-                    Unlimited monthly usage
-                  </option>
-                  <option value="limited">
-                    Limited monthly usage
-                  </option>
-                </>
-              ) : (
-                <option value="not-applicable">
-                  Not usage-based for this benefit type
-                </option>
-              )}
+              <option value="UNLIMITED">
+                Sem limite
+              </option>
+              <option value="MONTHLY">
+                Mensal
+              </option>
+              <option value="TOTAL">
+                Por uso total
+              </option>
             </select>
           </div>
 
-          {type === BenefitType.LIMITED &&
-          hasMonthlyUsageLimit ? (
+          {usagePolicy !==
+          "UNLIMITED" ? (
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
-                Monthly usage limit
+                {usagePolicy ===
+                "MONTHLY"
+                  ? "Quantidade de usos por mês"
+                  : "Quantidade total de usos"}
               </label>
               <Input
                 type="number"
-                placeholder="Monthly usage limit"
+                min={1}
+                placeholder={
+                  usagePolicy === "MONTHLY"
+                    ? "Informe quantos usos por mês"
+                    : "Informe quantos usos no total"
+                }
+                disabled={!editingEnabled}
                 {...form.register(
                   "usageLimit",
                   {
@@ -413,47 +496,89 @@ export function MembershipBenefitDialog({
 
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">
-              Reset period
+              Renovação do controle
             </label>
             <Input
               value={
-                type === BenefitType.LIMITED
-                  ? "MONTHLY"
-                  : "Not applicable"
+                usagePolicy === "MONTHLY"
+                  ? "Mensal"
+                  : usagePolicy ===
+                      "TOTAL"
+                    ? "Sem renovação automática"
+                    : "Não se aplica"
               }
               readOnly
             />
           </div>
 
-          <ConfirmDialog
-            title={
-              mode === "edit"
-                ? "Save benefit changes?"
-                : "Create benefit?"
-            }
-            description={
-              mode === "edit"
-                ? "This will update the benefit configuration for the selected plan."
-                : "This will create a new benefit for the selected plan."
-            }
-            actionLabel={
-              mode === "edit"
-                ? "Save changes"
-                : "Create benefit"
-            }
-            trigger={
-              <Button type="button">
-                {mode === "edit"
-                  ? "Save Changes"
-                  : "Create Benefit"}
-              </Button>
-            }
-            onConfirm={() =>
-              void form.handleSubmit(
-                saveBenefit
-              )()
-            }
-          />
+          {mode === "edit" ? (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {!editingEnabled ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() =>
+                    setEditingEnabled(true)
+                  }
+                >
+                  <PencilLine className="mr-2 size-4" />
+                  Habilitar edição
+                </Button>
+              ) : (
+                <>
+                  <ConfirmDialog
+                    title="Salvar alterações do benefício?"
+                    description="Isso atualiza a configuração do benefício para o plano selecionado."
+                    actionLabel="Salvar alterações"
+                    trigger={
+                      <Button
+                        type="button"
+                        className="w-full"
+                      >
+                        Salvar alterações
+                      </Button>
+                    }
+                    onConfirm={() =>
+                      void form.handleSubmit(
+                        saveBenefit
+                      )()
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setEditingEnabled(
+                        false
+                      );
+                      form.reset(
+                        getInitialFormValues()
+                      );
+                    }}
+                  >
+                    Cancelar edição
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : (
+            <ConfirmDialog
+              title="Criar benefício?"
+              description="Isso cria um novo benefício para o plano selecionado."
+              actionLabel="Criar benefício"
+              trigger={
+                <Button type="button">
+                  Criar benefício
+                </Button>
+              }
+              onConfirm={() =>
+                void form.handleSubmit(
+                  saveBenefit
+                )()
+              }
+            />
+          )}
         </form>
       </DialogContent>
     </Dialog>

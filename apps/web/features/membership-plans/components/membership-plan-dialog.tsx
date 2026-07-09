@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { PencilLine } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import { useForm } from "react-hook-form";
 
@@ -64,6 +69,8 @@ export function MembershipPlanDialog({
   const t = useTranslations();
   const [open, setOpen] =
     useState(false);
+  const [editingEnabled, setEditingEnabled] =
+    useState(mode === "create");
 
   const form =
     useForm<MembershipPlanSchema>({
@@ -80,32 +87,43 @@ export function MembershipPlanDialog({
       },
     });
 
+  const getDefaultValues =
+    useCallback(() => {
+      return {
+        name: "",
+        description: "",
+        monthlyPrice: 0,
+      };
+    }, []);
+
+  const getInitialFormValues =
+    useCallback(() => {
+      if (
+        mode === "edit" &&
+        initialData
+      ) {
+        return {
+          name: initialData.name,
+          description:
+            initialData.description ?? "",
+          monthlyPrice: Number(
+            initialData.monthlyPrice
+          ),
+        };
+      }
+
+      return getDefaultValues();
+    }, [
+      getDefaultValues,
+      initialData,
+      mode,
+    ]);
+
   useEffect(() => {
-    if (
-      mode === "edit" &&
-      initialData
-    ) {
-      form.reset({
-        name: initialData.name,
-
-        description:
-          initialData.description ??
-          "",
-
-        monthlyPrice: Number(
-  initialData.monthlyPrice),
-      });
-
-      return;
-    }
-
-    form.reset({
-      name: "",
-      description: "",
-      monthlyPrice: 0,
-    });
+    form.reset(getInitialFormValues());
   }, [
     form,
+    getInitialFormValues,
     initialData,
     mode,
   ]);
@@ -149,7 +167,18 @@ export function MembershipPlanDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+
+        if (nextOpen) {
+          setEditingEnabled(
+            mode === "create"
+          );
+          form.reset(
+            getInitialFormValues()
+          );
+        }
+      }}
     >
       <DialogTrigger asChild>
         {trigger ?? (
@@ -175,6 +204,7 @@ export function MembershipPlanDialog({
             </label>
             <Input
               placeholder={t("plans.dialog.name")}
+              disabled={!editingEnabled}
               {...form.register("name")}
             />
           </div>
@@ -187,6 +217,7 @@ export function MembershipPlanDialog({
               placeholder={t(
                 "shared.labels.description"
               )}
+              disabled={!editingEnabled}
               {...form.register(
                 "description"
               )}
@@ -203,6 +234,7 @@ export function MembershipPlanDialog({
               placeholder={t(
                 "plans.dialog.monthlyPrice"
               )}
+              disabled={!editingEnabled}
               {...form.register(
                 "monthlyPrice",
                 {
@@ -212,41 +244,80 @@ export function MembershipPlanDialog({
             />
           </div>
 
-          <ConfirmDialog
-            title={
-              mode === "edit"
-                ? t("plans.dialog.confirmEditTitle")
-                : t(
-                    "plans.dialog.confirmCreateTitle"
-                  )
-            }
-            description={
-              mode === "edit"
-                ? t(
-                    "plans.dialog.confirmEditDescription"
-                  )
-                : t(
-                    "plans.dialog.confirmCreateDescription"
-                  )
-            }
-            actionLabel={
-              mode === "edit"
-                ? t("shared.actions.saveChanges")
-                : t("plans.dialog.createAction")
-            }
-            trigger={
-              <Button type="button">
-                {mode === "edit"
-                  ? t("shared.actions.saveChanges")
-                  : t("plans.dialog.createAction")}
-              </Button>
-            }
-            onConfirm={() =>
-              void form.handleSubmit(
-                onSubmit
-              )()
-            }
-          />
+          {mode === "edit" ? (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {!editingEnabled ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() =>
+                    setEditingEnabled(true)
+                  }
+                >
+                  <PencilLine className="mr-2 size-4" />
+                  Habilitar edição
+                </Button>
+              ) : (
+                <>
+                  <ConfirmDialog
+                    title={t("plans.dialog.confirmEditTitle")}
+                    description={t(
+                      "plans.dialog.confirmEditDescription"
+                    )}
+                    actionLabel={t("shared.actions.saveChanges")}
+                    trigger={
+                      <Button
+                        type="button"
+                        className="w-full"
+                      >
+                        {t("shared.actions.saveChanges")}
+                      </Button>
+                    }
+                    onConfirm={() =>
+                      void form.handleSubmit(
+                        onSubmit
+                      )()
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setEditingEnabled(
+                        false
+                      );
+                      form.reset(
+                        getInitialFormValues()
+                      );
+                    }}
+                  >
+                    Cancelar edição
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : (
+            <ConfirmDialog
+              title={t(
+                "plans.dialog.confirmCreateTitle"
+              )}
+              description={t(
+                "plans.dialog.confirmCreateDescription"
+              )}
+              actionLabel={t("plans.dialog.createAction")}
+              trigger={
+                <Button type="button">
+                  {t("plans.dialog.createAction")}
+                </Button>
+              }
+              onConfirm={() =>
+                void form.handleSubmit(
+                  onSubmit
+                )()
+              }
+            />
+          )}
         </form>
       </DialogContent>
     </Dialog>

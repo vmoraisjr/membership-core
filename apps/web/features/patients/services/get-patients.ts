@@ -10,6 +10,13 @@ export async function getPatients() {
   const patients = await prisma.patient.findMany({
     where: filterByClinic(clinicId),
     include: {
+      responsiblePatient: {
+        select: {
+          id: true,
+          fullName: true,
+          document: true,
+        },
+      },
       subscriptions: {
         include: {
           membershipPlan: true,
@@ -25,7 +32,7 @@ export async function getPatients() {
   });
 
   return patients.map((patient) => {
-    const currentSubscription =
+    const ownCurrentSubscription =
       patient.subscriptions.find(
         (subscription) =>
           MANAGEABLE_SUBSCRIPTION_STATUSES.some(
@@ -37,9 +44,45 @@ export async function getPatients() {
       patient.subscriptions[0] ??
       null;
 
+    const inheritedCurrentSubscription =
+      patient.responsiblePatient?.id
+        ? patients
+            .find(
+              (candidate) =>
+                candidate.id ===
+                patient.responsiblePatientId
+            )
+            ?.subscriptions.find(
+              (subscription) =>
+                MANAGEABLE_SUBSCRIPTION_STATUSES.some(
+                  (status) =>
+                    status ===
+                    subscription.status
+                )
+            ) ??
+          patients
+            .find(
+              (candidate) =>
+                candidate.id ===
+                patient.responsiblePatientId
+            )
+            ?.subscriptions[0] ??
+          null
+        : null;
+
     return {
       ...patient,
-      currentSubscription,
+      currentSubscription:
+        patient.kind ===
+        "DEPENDENT"
+          ? inheritedCurrentSubscription
+          : ownCurrentSubscription,
+      subscriptionSourcePatientId:
+        patient.kind ===
+          "DEPENDENT" &&
+        patient.responsiblePatientId
+          ? patient.responsiblePatientId
+          : patient.id,
     };
   });
 }

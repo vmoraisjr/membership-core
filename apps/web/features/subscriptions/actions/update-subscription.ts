@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import {
   AuditAction,
   AuditEntity,
+  PatientKind,
   PatientStatus,
   SubscriptionStatus,
 } from "@prisma/client";
@@ -64,6 +65,7 @@ export async function updateSubscription(
           id: parsed.data.patientId,
           clinicId: clinic.id,
           status: PatientStatus.ACTIVE,
+          kind: PatientKind.TITULAR,
         },
         select: {
           id: true,
@@ -89,7 +91,7 @@ export async function updateSubscription(
 
   if (!patient) {
     throw new Error(
-      "Only active patients can receive subscriptions."
+      "Apenas titulares ativos podem receber assinaturas diretamente."
     );
   }
 

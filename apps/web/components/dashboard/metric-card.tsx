@@ -16,24 +16,24 @@ export function MetricCard({
   icon,
 }: MetricCardProps) {
   return (
-    <Card className="border-border/60 shadow-sm">
-      <CardContent className="flex items-start justify-between gap-4 p-5">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
+    <Card className="metric-tile">
+      <CardContent className="metric-tile-inner">
+        <div className="min-w-0 space-y-3">
+          <p className="text-sm font-medium text-muted-foreground">
             {label}
           </p>
 
-          <p className="text-3xl font-semibold tracking-tight">
+          <p className="break-words text-3xl font-semibold tracking-tight text-foreground md:text-[2rem]">
             {value}
           </p>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="max-w-[26ch] text-xs leading-5 text-muted-foreground">
             {hint}
           </p>
         </div>
 
         {icon ? (
-          <div className="rounded-full border border-border/60 bg-muted/60 p-3 text-muted-foreground">
+          <div className="rounded-2xl border border-border/70 bg-[color:var(--color-surface-subtle)] p-3.5 text-muted-foreground shadow-[var(--shadow-xs)]">
             {icon}
           </div>
         ) : null}

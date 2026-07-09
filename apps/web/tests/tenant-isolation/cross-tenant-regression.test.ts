@@ -36,6 +36,7 @@ import {
 } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { createUserInviteAction } from "@/features/auth/actions/create-user-invite";
 import { getPatients } from "@/features/patients/services/get-patients";
 import { getPatientProfile } from "@/features/patients/services/get-patient-profile";
 import { getMembershipPlans } from "@/features/membership-plans/services/get-membership-plans";
@@ -543,7 +544,7 @@ async function seedFixtures(): Promise<FixtureState> {
         birthDate: new Date(
           "1991-01-01T00:00:00.000Z"
         ),
-        document: "111.111.111-11",
+        document: "529.982.247-25",
         zipCode: "01000-000",
         city: "Sao Paulo",
         state: "SP",
@@ -560,7 +561,7 @@ async function seedFixtures(): Promise<FixtureState> {
         birthDate: new Date(
           "1992-02-02T00:00:00.000Z"
         ),
-        document: "222.222.222-22",
+        document: "111.444.777-35",
         zipCode: "02000-000",
         city: "Rio de Janeiro",
         state: "RJ",
@@ -579,7 +580,7 @@ async function seedFixtures(): Promise<FixtureState> {
         birthDate: new Date(
           "1988-03-03T00:00:00.000Z"
         ),
-        document: "333.333.333-33",
+        document: "123.456.789-09",
         zipCode: "02000-001",
         city: "Rio de Janeiro",
         state: "RJ",
@@ -1119,6 +1120,63 @@ async function main() {
     );
 
     await runCase(
+      "Alpha owner invite stays scoped to Alpha clinic",
+      async () => {
+        asUser(fixtures.alphaOwnerUser);
+
+        const formData = new FormData();
+        formData.set(
+          "email",
+          "scoped.alpha.invite@test.local"
+        );
+        formData.set("role", "STAFF");
+
+        await createUserInviteAction(
+          formData
+        );
+
+        const createdInvite =
+          await prisma.userInvite.findFirstOrThrow(
+            {
+              where: {
+                email:
+                  "scoped.alpha.invite@test.local",
+              },
+            }
+          );
+
+        assert.equal(
+          createdInvite.clinicId,
+          fixtures.alphaClinic.id
+        );
+
+        const alphaOverview =
+          await getClinicUsersOverview();
+
+        assert.ok(
+          alphaOverview.invites.some(
+            (invite) =>
+              invite.id ===
+              createdInvite.id
+          )
+        );
+
+        asUser(fixtures.betaUser);
+
+        const betaOverview =
+          await getClinicUsersOverview();
+
+        assert.ok(
+          betaOverview.invites.every(
+            (invite) =>
+              invite.id !==
+              createdInvite.id
+          )
+        );
+      }
+    );
+
+    await runCase(
       "Alpha cannot access Beta patient detail",
       async () => {
         asUser(fixtures.alphaUser);
@@ -1272,7 +1330,7 @@ async function main() {
           fixtures
             .baselinePlatformMetrics
             .membershipEnabledClinicCount +
-            3
+            2
         );
         assert.equal(
           crmModuleMetric?.enabledClinicCount,
@@ -1348,7 +1406,7 @@ async function main() {
                 birthDate:
                   "1992-02-02",
                 document:
-                  "999.999.999-99",
+                  "390.533.447-05",
                 zipCode:
                   "01000-999",
                 city: "Sao Paulo",

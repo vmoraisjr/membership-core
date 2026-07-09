@@ -1,5 +1,6 @@
 import {
   BenefitUsageStatus,
+  PatientStatus,
   ResetPeriod,
   SubscriptionStatus,
 } from "@prisma/client";
@@ -77,6 +78,16 @@ export async function getPatientBenefitBalance() {
           select: {
             id: true,
             fullName: true,
+            dependents: {
+              where: {
+                status:
+                  PatientStatus.ACTIVE,
+              },
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
           },
         },
         membershipPlan: {
@@ -138,8 +149,16 @@ export async function getPatientBenefitBalance() {
 
   return subscriptions.flatMap(
     (subscription) =>
-      subscription.membershipPlan.benefits.map(
-        (benefit) => {
+      [
+        {
+          id: subscription.patient.id,
+          fullName:
+            subscription.patient.fullName,
+        },
+        ...subscription.patient.dependents,
+      ].flatMap((beneficiary) =>
+        subscription.membershipPlan.benefits.map(
+          (benefit) => {
           const relevantUsages =
             usages.filter(
               (usage) =>
@@ -174,9 +193,9 @@ export async function getPatientBenefitBalance() {
             subscriptionId:
               subscription.id,
             patientId:
-              subscription.patient.id,
+              beneficiary.id,
             patientName:
-              subscription.patient.fullName,
+              beneficiary.fullName,
             membershipPlanId:
               subscription.membershipPlan.id,
             membershipPlanName:
@@ -192,7 +211,8 @@ export async function getPatientBenefitBalance() {
             usedQuantity,
             remainingQuantity,
           };
-        }
+          }
+        )
       )
   );
 }

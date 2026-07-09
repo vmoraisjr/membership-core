@@ -4,12 +4,43 @@ import { redirect } from "next/navigation";
 
 import { createUserInviteAction } from "@/features/auth/actions/create-user-invite";
 
+function isRedirectErrorLike(
+  error: unknown
+) {
+  return Boolean(
+    typeof error === "object" &&
+      error !== null &&
+      "digest" in error &&
+      typeof (
+        error as { digest?: unknown }
+      ).digest === "string" &&
+      (
+        error as { digest: string }
+      ).digest.startsWith(
+        "NEXT_REDIRECT"
+      )
+  );
+}
+
 function getErrorMessage(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
+  if (!(error instanceof Error)) {
+    return "Nao foi possivel criar o convite.";
   }
 
-  return "Unable to create the invite.";
+  switch (error.message) {
+    case "Invalid role.":
+      return "Perfil de convite invalido.";
+    case "Current user is not assigned to a clinic.":
+      return "O usuario atual precisa estar vinculado a uma clinica para enviar convites.";
+    case "You do not have permission to assign this role.":
+      return "Voce nao tem permissao para atribuir esse perfil.";
+    case "This email is already assigned to another clinic user.":
+      return "Este e-mail ja esta vinculado a outra clinica.";
+    case "An active clinic user already exists with this email.":
+      return "Ja existe um usuario ativo com este e-mail.";
+    default:
+      return error.message;
+  }
 }
 
 export async function submitUserInviteAction(
@@ -43,6 +74,10 @@ export async function submitUserInviteAction(
       `/dashboard/users?${params.toString()}`
     );
   } catch (error) {
+    if (isRedirectErrorLike(error)) {
+      throw error;
+    }
+
     const params =
       new URLSearchParams({
         inviteError:

@@ -27,17 +27,24 @@ export function SectionCard({
   contentClassName,
 }: SectionCardProps) {
   return (
-    <Card className={cn("border-border/60 shadow-sm", className)}>
+    <Card
+      className={cn(
+        "workspace-section",
+        className
+      )}
+    >
       {title || description || action ? (
-        <CardHeader className="border-b border-border/60">
+        <CardHeader className="workspace-section-header">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1.5">
               {title ? (
-                <CardTitle>{title}</CardTitle>
+                <CardTitle className="workspace-section-title">
+                  {title}
+                </CardTitle>
               ) : null}
 
               {description ? (
-                <CardDescription>
+                <CardDescription className="workspace-section-description">
                   {description}
                 </CardDescription>
               ) : null}
@@ -52,7 +59,9 @@ export function SectionCard({
         </CardHeader>
       ) : null}
 
-      <CardContent className={cn("p-0", contentClassName)}>
+      <CardContent
+        className={cn("min-w-0 p-0", contentClassName)}
+      >
         {children}
       </CardContent>
     </Card>

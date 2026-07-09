@@ -2,7 +2,9 @@ import { getSubscriptions } from "../services/get-subscriptions";
 import { getSubscriptionFormOptions } from "../services/get-subscription-form-options";
 
 import { DashboardPage } from "@/components/layout/dashboard-page";
+import { ClinicAssignmentRequired } from "@/components/dashboard/clinic-assignment-required";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { getCurrentAppUser } from "@/features/auth/services/get-current-app-user";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
@@ -21,8 +23,11 @@ export async function SubscriptionsPage({
   contextPatientId,
 }: Props) {
   const t = getTranslations();
-  const role =
-    await getCurrentUserRole();
+  const [role, currentUser] =
+    await Promise.all([
+      getCurrentUserRole(),
+      getCurrentAppUser(),
+    ]);
 
   if (
     !hasPermission(
@@ -41,6 +46,14 @@ export async function SubscriptionsPage({
             "subscriptions.accessDeniedDescription"
           )}
         />
+      </DashboardPage>
+    );
+  }
+
+  if (!currentUser?.clinicId) {
+    return (
+      <DashboardPage>
+        <ClinicAssignmentRequired />
       </DashboardPage>
     );
   }

@@ -18,7 +18,7 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 import { updateUserStatusSchema } from "../schemas/user-management.schema";
 import {
   assertNotLastActiveOwner,
-  getManagedClinicUser,
+  assertUserIsNotClinicMaster,
 } from "../services/manage-clinic-user";
 
 export async function updateClinicUserStatusAction(
@@ -64,14 +64,10 @@ export async function updateClinicUserStatusAction(
   }
 
   const targetUser =
-    await getManagedClinicUser(
+    await assertUserIsNotClinicMaster(
       currentUser.clinicId,
       parsed.data.userId
     );
-
-  if (!targetUser) {
-    throw new Error("User not found.");
-  }
 
   if (
     targetUser.status ===
@@ -99,7 +95,7 @@ export async function updateClinicUserStatusAction(
     !targetUser.passwordHash
   ) {
     throw new Error(
-      "Pending invited users must accept their invite before becoming active."
+      "Este usuário ainda não possui credenciais válidas para ativação."
     );
   }
 

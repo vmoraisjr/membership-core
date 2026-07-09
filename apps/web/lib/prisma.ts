@@ -19,6 +19,11 @@ const globalForPrisma = globalThis as typeof globalThis & {
 let prisma: PrismaClient;
 
 try {
+  process.env.PRISMA_CLIENT_ENGINE_TYPE =
+    process.env
+      .PRISMA_CLIENT_ENGINE_TYPE ??
+    "library";
+
   if (!globalForPrisma.prisma) {
     globalForPrisma.prisma =
       new PrismaClient();

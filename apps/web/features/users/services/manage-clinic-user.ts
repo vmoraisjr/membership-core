@@ -25,10 +25,36 @@ export async function getManagedClinicUser(
       name: true,
       email: true,
       passwordHash: true,
+      isClinicMaster: true,
       role: true,
       status: true,
     },
   });
+}
+
+export async function assertUserIsNotClinicMaster(
+  clinicId: string,
+  userId: string,
+  client: UserManagementClient = prisma
+) {
+  const targetUser =
+    await getManagedClinicUser(
+      clinicId,
+      userId,
+      client
+    );
+
+  if (!targetUser) {
+    throw new Error("User not found.");
+  }
+
+  if (targetUser.isClinicMaster) {
+    throw new Error(
+      "O usuario master da clinica nao pode ser alterado por esta tela."
+    );
+  }
+
+  return targetUser;
 }
 
 export async function assertNotLastActiveOwner(

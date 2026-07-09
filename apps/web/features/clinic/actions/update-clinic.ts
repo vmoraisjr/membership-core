@@ -2,21 +2,26 @@
 
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
-import { revalidatePath } from "next/cache";
-
 import { AuditAction, AuditEntity } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { assertClinicAccess } from "@/lib/auth/assert-clinic-access";
+import { safeRevalidatePath } from "@/lib/revalidation";
 import {
   createAuditLog,
   getCurrentAuditActor,
 } from "@/features/audit-log/services/create-audit-log";
+import { getClinicMasterUser } from "@/features/auth/services/clinic-master";
 
 import {
   clinicSchema,
   type ClinicSchema,
 } from "../schemas/clinic.schema";
+import {
+  normalizeClinicState,
+  normalizeDigits,
+} from "../services/clinic-formats";
+import { buildUniqueClinicSlug } from "../services/build-clinic-slug";
 
 export async function updateClinic(
   id: string,
@@ -31,7 +36,9 @@ export async function updateClinic(
     clinicSchema.safeParse(data);
 
   if (!parsed.success) {
-    throw new Error("Invalid data.");
+    throw new Error(
+      "Revise os dados da clínica antes de continuar."
+    );
   }
 
   const clinic =
@@ -45,39 +52,63 @@ export async function updateClinic(
     });
 
   if (!clinic) {
-    throw new Error("Clinic not found.");
+    throw new Error(
+      "Clinica nao encontrada."
+    );
   }
 
   await assertClinicAccess({
     clinicId: clinic.id,
   });
 
-  const slug =
-    parsed.data.slug.toLowerCase();
   const actor =
     await getCurrentAuditActor();
-
-  const conflictingClinic =
-    await prisma.clinic.findUnique({
-      where: {
-        slug,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-  if (
-    conflictingClinic &&
-    conflictingClinic.id !== clinic.id
-  ) {
-    throw new Error(
-      "A clinic with this slug already exists."
+  const normalizedEmail =
+    parsed.data.email.toLowerCase();
+  const slug =
+    await buildUniqueClinicSlug(
+      parsed.data.slug?.trim()
+        ? parsed.data.slug
+        : parsed.data.name,
+      {
+        excludeClinicId: clinic.id,
+      }
     );
-  }
 
   await prisma.$transaction(
     async (tx) => {
+      const clinicMaster =
+        await getClinicMasterUser(
+          clinic.id,
+          tx
+        );
+
+      if (
+        clinicMaster &&
+        clinicMaster.email !==
+          normalizedEmail
+      ) {
+        const conflictingUser =
+          await tx.appUser.findUnique({
+            where: {
+              email: normalizedEmail,
+            },
+            select: {
+              id: true,
+            },
+          });
+
+        if (
+          conflictingUser &&
+          conflictingUser.id !==
+            clinicMaster.id
+        ) {
+          throw new Error(
+            "Ja existe um usuario com o e-mail informado para a clinica."
+          );
+        }
+      }
+
       const updatedClinic =
         await tx.clinic.update({
           where: {
@@ -88,15 +119,24 @@ export async function updateClinic(
             brandName:
               parsed.data.brandName ||
               null,
+            logoUrl:
+              parsed.data.logoUrl || null,
             slug,
             document:
               parsed.data.document,
-            email: parsed.data.email,
-            phone: parsed.data.phone,
+            email: normalizedEmail,
+            phone: normalizeDigits(
+              parsed.data.phone
+            ),
             zipCode:
-              parsed.data.zipCode,
+              normalizeDigits(
+                parsed.data.zipCode
+              ),
             city: parsed.data.city,
-            state: parsed.data.state,
+            state:
+              normalizeClinicState(
+                parsed.data.state
+              ),
             address:
               parsed.data.address,
           },
@@ -106,6 +146,20 @@ export async function updateClinic(
             slug: true,
           },
         });
+
+      if (clinicMaster) {
+        await tx.appUser.update({
+          where: {
+            id: clinicMaster.id,
+          },
+          data: {
+            email: normalizedEmail,
+            name:
+              parsed.data.brandName ||
+              parsed.data.name,
+          },
+        });
+      }
 
       await createAuditLog(tx, {
         clinicId: updatedClinic.id,
@@ -123,6 +177,6 @@ export async function updateClinic(
     }
   );
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/clinics");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/dashboard/clinics");
 }

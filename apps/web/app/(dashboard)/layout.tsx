@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 
 import { redirect } from "next/navigation";
-import { ModuleKey } from "@prisma/client";
 
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
 import {
   getCurrentAppUser,
 } from "@/features/auth/services/get-current-app-user";
-import { assertModuleEnabled } from "@/features/modules/services/module-access";
+import { getWorkspaceBrand } from "@/features/auth/services/get-workspace-brand";
+import { getBillingOverview } from "@/features/billing/services/billing-foundation";
+import { canClinicOperate } from "@/features/billing/services/billing-foundation";
 
 export const dynamic = "force-dynamic";
 
@@ -24,25 +25,43 @@ export default async function DashboardLayout({
     redirect("/login?next=/dashboard");
   }
 
-  if (currentUser.clinicId) {
-    await assertModuleEnabled(
-      ModuleKey.MEMBERSHIP
-    );
+  if (currentUser.mustChangePassword) {
+    redirect("/first-access");
   }
 
+  const workspaceBrand =
+    await getWorkspaceBrand();
+
+  const hasOperationalAccess =
+    currentUser.clinicId
+      ? canClinicOperate(
+          (
+            await getBillingOverview()
+          ).clinicSubscription?.status
+        )
+      : false;
+
   return (
-    <div className="min-h-screen lg:flex">
+    <div className="app-shell">
       <DashboardSidebar
         role={currentUser.role}
+        hasClinicAssignment={Boolean(
+          currentUser.clinicId
+        )}
+        hasOperationalAccess={
+          hasOperationalAccess
+        }
+        workspaceBrand={workspaceBrand}
       />
 
-      <div className="flex flex-1 flex-col">
+      <div className="app-shell-main">
         <DashboardHeader
           role={currentUser.role}
           currentUser={currentUser}
+          workspaceBrand={workspaceBrand}
         />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="app-shell-content">
           {children}
         </main>
       </div>

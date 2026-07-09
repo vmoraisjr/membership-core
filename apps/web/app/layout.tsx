@@ -2,7 +2,9 @@ import "./globals.css";
 
 import type { Metadata } from "next";
 
+import { AppFooter } from "@/components/branding/app-footer";
 import { Toaster } from "@/components/ui/sonner";
+import { SHEEP_BRAND_SIGNATURE } from "@/lib/branding";
 import messages from "@/messages/pt-BR.json";
 import { TranslationProvider } from "@/i18n/provider";
 import {
@@ -11,7 +13,7 @@ import {
 } from "@/i18n/messages";
 
 export const metadata: Metadata = {
-  title: "Membership Core",
+  title: SHEEP_BRAND_SIGNATURE,
   description: getMessage(
     "app.metadata.description"
   ),
@@ -27,12 +29,18 @@ export default function RootLayout({
       lang={defaultLocale}
       className="font-sans"
     >
-      <body>
+      <body className="min-h-screen">
         <TranslationProvider
           locale={defaultLocale}
           messages={messages}
         >
-          {children} <Toaster />
+          <div className="flex min-h-screen flex-col bg-background">
+            <div className="flex-1">
+              {children}
+            </div>
+            <AppFooter />
+          </div>
+          <Toaster />
         </TranslationProvider>
       </body>
     </html>

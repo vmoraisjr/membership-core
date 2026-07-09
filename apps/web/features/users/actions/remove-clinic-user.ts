@@ -15,7 +15,10 @@ import {
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { userLifecycleSchema } from "../schemas/user-management.schema";
-import { assertNotLastActiveOwner } from "../services/manage-clinic-user";
+import {
+  assertNotLastActiveOwner,
+  assertUserIsNotClinicMaster,
+} from "../services/manage-clinic-user";
 
 export async function removeClinicUserAction(
   formData: FormData
@@ -55,6 +58,11 @@ export async function removeClinicUserAction(
       "You cannot remove your own user from this screen."
     );
   }
+
+  await assertUserIsNotClinicMaster(
+    currentUser.clinicId,
+    parsed.data.userId
+  );
 
   const targetUser =
     await assertNotLastActiveOwner(

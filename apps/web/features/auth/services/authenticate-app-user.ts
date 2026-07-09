@@ -12,6 +12,29 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function isUserWithinAccessWindow(user: {
+  accessStartsAt: Date | null;
+  accessEndsAt: Date | null;
+}) {
+  const now = Date.now();
+
+  if (
+    user.accessStartsAt &&
+    user.accessStartsAt.getTime() > now
+  ) {
+    return false;
+  }
+
+  if (
+    user.accessEndsAt &&
+    user.accessEndsAt.getTime() < now
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export async function authenticateAppUser({
   email,
   password,
@@ -30,6 +53,10 @@ export async function authenticateAppUser({
     user.status !==
     AppUserStatus.ACTIVE
   ) {
+    return null;
+  }
+
+  if (!isUserWithinAccessWindow(user)) {
     return null;
   }
 

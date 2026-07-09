@@ -29,6 +29,7 @@ type AuditContext = {
 };
 
 const CLINIC_SUBSCRIPTION_REUSABLE_STATUSES = [
+  ClinicSubscriptionStatus.PENDING,
   ClinicSubscriptionStatus.TRIAL,
   ClinicSubscriptionStatus.ACTIVE,
   ClinicSubscriptionStatus.PAST_DUE,
@@ -40,6 +41,11 @@ const CLINIC_SUBSCRIPTION_TRANSITIONS: Record<
   ClinicSubscriptionStatus,
   readonly ClinicSubscriptionStatus[]
 > = {
+  PENDING: [
+    ClinicSubscriptionStatus.TRIAL,
+    ClinicSubscriptionStatus.ACTIVE,
+    ClinicSubscriptionStatus.CANCELED,
+  ],
   TRIAL: [
     ClinicSubscriptionStatus.ACTIVE,
     ClinicSubscriptionStatus.PAST_DUE,
@@ -96,6 +102,133 @@ function getClinicStatusFromInvoiceStatus(
   }
 }
 
+function deriveAutomatedClinicSubscriptionStatus(
+  subscription: {
+    status: ClinicSubscriptionStatus;
+    trialEndsAt?: Date | null;
+    expiresAt?: Date | null;
+    invoices?: Array<{
+      dueDate: Date;
+      status: PaymentStatus;
+      paidAt?: Date | null;
+    }>;
+  },
+  now = new Date()
+) {
+  if (
+    subscription.status ===
+    ClinicSubscriptionStatus.CANCELED
+  ) {
+    return subscription.status;
+  }
+
+  const latestInvoice =
+    subscription.invoices?.[0];
+
+  if (
+    latestInvoice?.status ===
+      PaymentStatus.OVERDUE &&
+    latestInvoice.dueDate.getTime() <
+      now.getTime() - 1000 * 60 * 60 * 24 * 30
+  ) {
+    return ClinicSubscriptionStatus.SUSPENDED;
+  }
+
+  if (
+    latestInvoice?.status ===
+      PaymentStatus.OVERDUE &&
+    latestInvoice.dueDate.getTime() <=
+      now.getTime()
+  ) {
+    return ClinicSubscriptionStatus.PAST_DUE;
+  }
+
+  if (
+    subscription.status ===
+      ClinicSubscriptionStatus.TRIAL &&
+    subscription.trialEndsAt &&
+    subscription.trialEndsAt.getTime() <=
+      now.getTime()
+  ) {
+    return ClinicSubscriptionStatus.ACTIVE;
+  }
+
+  if (
+    subscription.status ===
+      ClinicSubscriptionStatus.ACTIVE &&
+    subscription.expiresAt &&
+    subscription.expiresAt.getTime() <
+      now.getTime() &&
+    latestInvoice?.status !==
+      PaymentStatus.PAID
+  ) {
+    return ClinicSubscriptionStatus.PAST_DUE;
+  }
+
+  return subscription.status;
+}
+
+async function reconcileClinicSubscriptionAutomation(
+  client: BillingClient = prisma
+) {
+  const subscriptions =
+    await client.clinicSubscription.findMany({
+      where: {
+        status: {
+          not:
+            ClinicSubscriptionStatus.CANCELED,
+        },
+      },
+      include: {
+        invoices: {
+          orderBy: {
+            dueDate: "desc",
+          },
+          take: 1,
+        },
+      },
+    });
+
+  for (const subscription of subscriptions) {
+    const automatedStatus =
+      deriveAutomatedClinicSubscriptionStatus(
+        subscription
+      );
+
+    if (
+      automatedStatus !==
+      subscription.status
+    ) {
+      await client.clinicSubscription.update({
+        where: {
+          id: subscription.id,
+        },
+        data: {
+          status: automatedStatus,
+        },
+      });
+      await syncClinicModulesForSubscription(
+        subscription.id,
+        client
+      );
+    }
+  }
+}
+
+export function canClinicOperate(
+  status:
+    | ClinicSubscriptionStatus
+    | null
+    | undefined
+) {
+  return (
+    status ===
+      ClinicSubscriptionStatus.ACTIVE ||
+    status ===
+      ClinicSubscriptionStatus.TRIAL
+  );
+}
+
 export function resolveMembershipInvoiceTerms(
   plan: {
     monthlyPrice: number | null;
@@ -146,7 +279,7 @@ export async function ensureDefaultClinicBillingPlan(
       {
         where: {
           name:
-            "Nortex Membership Platform",
+            "Sheep Growth",
         },
         select: {
           id: true,
@@ -161,7 +294,7 @@ export async function ensureDefaultClinicBillingPlan(
       },
       data: {
         description:
-          "Default commercial platform plan for V1 membership clinics.",
+          "Plano comercial padrão da plataforma Sheep para contas clientes.",
         monthlyPrice: 249,
         annualPrice: 2490,
         trialDays: 14,
@@ -173,9 +306,9 @@ export async function ensureDefaultClinicBillingPlan(
   return client.clinicBillingPlan.create({
     data: {
       name:
-        "Nortex Membership Platform",
+        "Sheep Growth",
       description:
-        "Default commercial platform plan for V1 membership clinics.",
+        "Plano comercial padrão da plataforma Sheep para contas clientes.",
       monthlyPrice: 249,
       annualPrice: 2490,
       trialDays: 14,
@@ -283,7 +416,7 @@ export async function ensureClinicBillingFoundation(
         clinicBillingPlanId:
           defaultPlan.id,
         status:
-          ClinicSubscriptionStatus.TRIAL,
+          ClinicSubscriptionStatus.PENDING,
         startedAt,
         trialEndsAt,
         expiresAt: trialEndsAt,
@@ -306,7 +439,7 @@ export async function ensureClinicBillingFoundation(
         clinicSubscription.id,
       amount: invoiceAmount,
       description:
-        "Initial Nortex platform invoice",
+        "Primeira fatura da plataforma Sheep",
       dueDate: trialEndsAt,
     },
     client
@@ -401,6 +534,8 @@ export async function getBillingOverview() {
     await getCurrentClinicContext();
   const currentUser =
     await requireCurrentAppUser();
+
+  await reconcileClinicSubscriptionAutomation();
 
   const clinicSubscription =
     await ensureClinicBillingFoundation(
@@ -561,6 +696,120 @@ export async function getBillingOverview() {
   };
 }
 
+export async function getPlatformClinicBillingOverview() {
+  await ensureDefaultClinicBillingPlan();
+  await reconcileClinicSubscriptionAutomation();
+
+  const [
+    availablePlans,
+    allPlans,
+    clinicSubscriptions,
+    platformMetrics,
+  ] = await Promise.all([
+    prisma.clinicBillingPlan.findMany({
+      where: {
+        active: true,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    }),
+    prisma.clinicBillingPlan.findMany({
+      orderBy: {
+        createdAt: "asc",
+      },
+    }),
+    prisma.clinicSubscription.findMany({
+      include: {
+        clinic: {
+          select: {
+            id: true,
+            name: true,
+            brandName: true,
+            email: true,
+            status: true,
+          },
+        },
+        clinicBillingPlan: true,
+        invoices: {
+          orderBy: {
+            dueDate: "desc",
+          },
+          take: 3,
+          include: {
+            payments: {
+              orderBy: {
+                paidAt: "desc",
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: [
+        {
+          createdAt: "desc",
+        },
+      ],
+    }),
+    Promise.all([
+      prisma.clinic.count({
+        where: {
+          status: ClinicStatus.ACTIVE,
+        },
+      }),
+      prisma.clinicSubscription.count({
+        where: {
+          status:
+            ClinicSubscriptionStatus.TRIAL,
+        },
+      }),
+      prisma.clinicSubscription.count({
+        where: {
+          status:
+            ClinicSubscriptionStatus.PAST_DUE,
+        },
+      }),
+      prisma.clinicInvoice.aggregate({
+        where: {
+          status: PaymentStatus.PAID,
+          paidAt: {
+            gte: new Date(
+              new Date().getFullYear(),
+              new Date().getMonth(),
+              1
+            ),
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]).then(
+      ([
+        activeClinics,
+        trialClinics,
+        pastDueClinics,
+        monthlySaasRevenue,
+      ]) => ({
+        activeClinics,
+        trialClinics,
+        pastDueClinics,
+        monthlySaasRevenue:
+          monthlySaasRevenue._sum
+            .amount ?? 0,
+      })
+    ),
+  ]);
+
+  return {
+    availablePlans,
+    allPlans,
+    clinicSubscriptions,
+    platformMetrics,
+  };
+}
+
 export async function syncClinicSubscriptionStatusFromInvoice(
   clinicInvoiceId: string,
   status: PaymentStatus,
@@ -591,7 +840,8 @@ export async function syncClinicSubscriptionStatusFromInvoice(
     return;
   }
 
-  await client.clinicSubscription.update({
+  const updatedSubscription =
+    await client.clinicSubscription.update({
     where: {
       id: invoice.clinicSubscriptionId,
     },
@@ -604,6 +854,11 @@ export async function syncClinicSubscriptionStatusFromInvoice(
         ),
     },
   });
+
+  await syncClinicModulesForSubscription(
+    updatedSubscription.id,
+    client
+  );
 }
 
 export function canTransitionClinicSubscriptionStatus(
@@ -707,7 +962,94 @@ export async function updateClinicSubscriptionStatus(
     },
   });
 
+  await syncClinicModulesForSubscription(
+    updated.id,
+    client
+  );
+
   return updated;
+}
+
+export async function syncClinicModulesForSubscription(
+  subscriptionId: string,
+  client: BillingClient = prisma
+) {
+  const subscription =
+    await client.clinicSubscription.findUnique({
+      where: {
+        id: subscriptionId,
+      },
+      select: {
+        id: true,
+        clinicId: true,
+        status: true,
+      },
+    });
+
+  if (!subscription) {
+    return null;
+  }
+
+  const membershipModule =
+    await client.module.findFirst({
+      where: {
+        key: "MEMBERSHIP",
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  if (!membershipModule) {
+    return subscription;
+  }
+
+  await client.clinicModule.upsert({
+    where: {
+      clinicId_moduleId: {
+        clinicId: subscription.clinicId,
+        moduleId: membershipModule.id,
+      },
+    },
+    update: {
+      status: canClinicOperate(
+        subscription.status
+      )
+        ? "ENABLED"
+        : "DISABLED",
+      enabledAt: canClinicOperate(
+        subscription.status
+      )
+        ? new Date()
+        : null,
+      disabledAt: canClinicOperate(
+        subscription.status
+      )
+        ? null
+        : new Date(),
+    },
+    create: {
+      clinicId: subscription.clinicId,
+      moduleId: membershipModule.id,
+      status: canClinicOperate(
+        subscription.status
+      )
+        ? "ENABLED"
+        : "DISABLED",
+      enabledAt: canClinicOperate(
+        subscription.status
+      )
+        ? new Date()
+        : null,
+      disabledAt: canClinicOperate(
+        subscription.status
+      )
+        ? null
+        : new Date(),
+    },
+  });
+
+  return subscription;
 }
 
 export async function getPatientInvoicesByFilters(

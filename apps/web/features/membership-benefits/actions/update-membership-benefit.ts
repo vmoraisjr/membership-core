@@ -7,7 +7,6 @@ import { revalidatePath } from "next/cache";
 import {
   AuditAction,
   AuditEntity,
-  BenefitType,
   ResetPeriod,
 } from "@prisma/client";
 
@@ -44,6 +43,14 @@ export async function updateMembershipBenefit(
   const clinic = await getCurrentClinic();
   const actor =
     await getCurrentAuditActor();
+  const usagePolicy =
+    parsed.data.usagePolicy ??
+    (parsed.data.resetPeriod ===
+    ResetPeriod.MONTHLY
+      ? "MONTHLY"
+      : parsed.data.usageLimit != null
+        ? "TOTAL"
+        : "UNLIMITED");
 
   const benefit =
     await prisma.membershipBenefit.findFirst({
@@ -109,15 +116,15 @@ export async function updateMembershipBenefit(
               parsed.data.discountAmount,
 
             usageLimit:
-              parsed.data.type ===
-              BenefitType.LIMITED
-                ? parsed.data.usageLimit ??
-                  null
-                : null,
+              usagePolicy ===
+              "UNLIMITED"
+                ? null
+                : parsed.data.usageLimit ??
+                  null,
 
             resetPeriod:
-              parsed.data.type ===
-              BenefitType.LIMITED
+              usagePolicy ===
+              "MONTHLY"
                 ? ResetPeriod.MONTHLY
                 : null,
           },
@@ -140,6 +147,7 @@ export async function updateMembershipBenefit(
           updatedBenefit.title,
         metadata: {
           type: updatedBenefit.type,
+          usagePolicy,
         },
       });
     }

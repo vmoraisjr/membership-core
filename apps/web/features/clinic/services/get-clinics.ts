@@ -7,7 +7,39 @@ export async function getClinics() {
     await requireCurrentAppUser();
 
   if (!currentUser.clinicId) {
-    return [];
+    if (
+      currentUser.role !== "OWNER" &&
+      currentUser.role !== "ADMIN"
+    ) {
+      return [];
+    }
+
+    return prisma.clinic.findMany({
+      include: {
+        _count: {
+          select: {
+            patients: true,
+            membershipPlans: true,
+          },
+        },
+        clinicSubscriptions: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+          include: {
+            clinicBillingPlan: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
   }
 
   return prisma.clinic.findMany({
@@ -19,9 +51,22 @@ export async function getClinics() {
         select: {
           patients: true,
           membershipPlans: true,
+          },
+        },
+        clinicSubscriptions: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+          include: {
+            clinicBillingPlan: {
+              select: {
+                name: true,
+              },
+            },
+          },
         },
       },
-    },
     orderBy: {
       createdAt: "desc",
     },

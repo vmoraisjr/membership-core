@@ -1,5 +1,7 @@
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DashboardPage } from "@/components/layout/dashboard-page";
+import { ClinicAssignmentRequired } from "@/components/dashboard/clinic-assignment-required";
+import { getCurrentAppUser } from "@/features/auth/services/get-current-app-user";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
@@ -13,8 +15,11 @@ import { ConsumeBenefitDialog } from "./consume-benefit-dialog";
 
 export async function BenefitUsageHistoryPage() {
   const t = getTranslations();
-  const role =
-    await getCurrentUserRole();
+  const [role, currentUser] =
+    await Promise.all([
+      getCurrentUserRole(),
+      getCurrentAppUser(),
+    ]);
 
   if (
     !hasPermission(
@@ -33,6 +38,14 @@ export async function BenefitUsageHistoryPage() {
             "benefitUsage.accessDeniedDescription"
           )}
         />
+      </DashboardPage>
+    );
+  }
+
+  if (!currentUser?.clinicId) {
+    return (
+      <DashboardPage>
+        <ClinicAssignmentRequired />
       </DashboardPage>
     );
   }

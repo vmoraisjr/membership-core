@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "binary"
 }
 
 datasource db {
@@ -37,6 +38,8 @@ model Clinic {
   clinicSubscriptions ClinicSubscription[]
   clinicInvoices   ClinicInvoice[]
   clinicPayments   ClinicPayment[]
+  supportThreads   SupportThread[]
+  supportMessages  SupportMessage[]
 }
 
 model AppUser {
@@ -45,9 +48,13 @@ model AppUser {
   name       String
   email      String      @unique
   passwordHash String?
+  mustChangePassword Boolean @default(false)
+  isClinicMaster Boolean @default(false)
   role       AppUserRole
   status     AppUserStatus @default(ACTIVE)
   createdAt  DateTime    @default(now())
+  accessStartsAt DateTime?
+  accessEndsAt DateTime?
   lastLoginAt DateTime?
   updatedAt  DateTime    @updatedAt
 
@@ -58,6 +65,8 @@ model AppUser {
   patientPaymentConfirmations PatientPayment[] @relation("PatientPaymentConfirmedBy")
   patientContractAcceptances PatientContractAcceptance[]
   clinicPaymentConfirmations ClinicPayment[] @relation("ClinicPaymentConfirmedBy")
+  supportThreadsCreated SupportThread[] @relation("SupportThreadCreatedBy")
+  supportMessagesAuthored SupportMessage[] @relation("SupportMessageAuthoredBy")
 
   @@index([clinicId, role])
 }
@@ -118,17 +127,24 @@ model Patient {
   state      String
   address    String
 
+  kind       PatientKind @default(TITULAR)
+  responsiblePatientId String?
   status     PatientStatus @default(ACTIVE)
   inactiveReason String?
 
   createdAt  DateTime @default(now())
 
   clinic         Clinic @relation(fields: [clinicId], references: [id])
+  responsiblePatient Patient? @relation("PatientResponsibility", fields: [responsiblePatientId], references: [id], onDelete: SetNull)
+  dependents    Patient[] @relation("PatientResponsibility")
 
   subscriptions  Subscription[]
   convertedFromLead Lead? @relation("LeadConvertedPatient")
   invoices       PatientInvoice[]
   patientContracts PatientContract[]
+
+  @@index([clinicId, kind])
+  @@index([responsiblePatientId])
 }
 
 model Lead {
@@ -504,6 +520,43 @@ model AuditLog {
   @@index([actorUserId])
 }
 
+model SupportThread {
+  id              String                @id @default(cuid())
+  clinicId        String
+  subject         String
+  category        SupportThreadCategory
+  status          SupportThreadStatus   @default(OPEN)
+  createdByUserId String?
+  createdByScope  SupportActorScope
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  clinic          Clinic                @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  createdByUser   AppUser?              @relation("SupportThreadCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  messages        SupportMessage[]
+
+  @@index([clinicId, status, updatedAt])
+  @@index([createdByUserId])
+}
+
+model SupportMessage {
+  id           String            @id @default(cuid())
+  threadId     String
+  clinicId     String
+  authorUserId String?
+  authorScope  SupportActorScope
+  authorName   String
+  body         String
+  createdAt    DateTime          @default(now())
+
+  thread       SupportThread     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  clinic       Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  authorUser   AppUser?          @relation("SupportMessageAuthoredBy", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([threadId, createdAt])
+  @@index([clinicId, createdAt])
+}
+
 enum ClinicStatus {
   ACTIVE
   INACTIVE
@@ -526,6 +579,11 @@ enum AppUserStatus {
 enum PatientStatus {
   ACTIVE
   INACTIVE
+}
+
+enum PatientKind {
+  TITULAR
+  DEPENDENT
 }
 
 enum SubscriptionStatus {
@@ -566,6 +624,7 @@ enum PaymentMethod {
 }
 
 enum ClinicSubscriptionStatus {
+  PENDING
   TRIAL
   ACTIVE
   PAST_DUE
@@ -626,6 +685,30 @@ enum AuditEntity {
   CONTRACT_TEMPLATE
   PATIENT_CONTRACT
   CLINIC_CONTRACT
+  SUPPORT_THREAD
+  SUPPORT_MESSAGE
+}
+
+enum SupportThreadStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CLINIC
+  WAITING_PLATFORM
+  RESOLVED
+  CLOSED
+}
+
+enum SupportThreadCategory {
+  INCIDENT
+  REQUEST
+  PAYMENT
+  REGISTRATION
+  OTHER
+}
+
+enum SupportActorScope {
+  PLATFORM
+  CLINIC
 }
 
 enum LeadPipelineStatus {

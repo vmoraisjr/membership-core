@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { PencilLine } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { useForm, useWatch } from "react-hook-form";
 
@@ -75,6 +81,8 @@ export function SubscriptionDialog({
 }: Props) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
+  const [editingEnabled, setEditingEnabled] =
+    useState(mode === "create");
 
   const today = useMemo(() => new Date(), []);
   const defaultStartedAt = useMemo(
@@ -120,36 +128,57 @@ export function SubscriptionDialog({
     (p) => p.id === patientId
   );
 
-  useEffect(() => {
-    if (mode === "edit" && initialData) {
-      form.reset({
-        patientId: initialData.patientId,
+  const getInitialFormValues =
+    useCallback(() => {
+      if (
+        mode === "edit" &&
+        initialData
+      ) {
+        return {
+          patientId:
+            initialData.patientId,
+          membershipPlanId:
+            initialData.membershipPlanId,
+          startedAt:
+            formatDateForInput(
+              initialData.startedAt
+            ),
+          expiresAt:
+            formatDateForInput(
+              initialData.expiresAt
+            ),
+        };
+      }
+
+      return {
+        patientId:
+          defaultPatientId ?? "",
         membershipPlanId:
-          initialData.membershipPlanId,
-        startedAt: formatDateForInput(
-          initialData.startedAt
-        ),
-        expiresAt: formatDateForInput(
-          initialData.expiresAt
-        ),
-      });
+          defaultMembershipPlanId ??
+          "",
+        startedAt:
+          defaultStartedAt,
+        expiresAt:
+          defaultExpiresAt,
+      };
+    }, [
+      defaultExpiresAt,
+      defaultMembershipPlanId,
+      defaultPatientId,
+      defaultStartedAt,
+      initialData,
+      mode,
+    ]);
 
-      return;
-    }
-
-    form.reset({
-      patientId: defaultPatientId ?? "",
-      membershipPlanId:
-        defaultMembershipPlanId ?? "",
-      startedAt: defaultStartedAt,
-      expiresAt: defaultExpiresAt,
-    });
+  useEffect(() => {
+    form.reset(getInitialFormValues());
   }, [
     defaultMembershipPlanId,
     defaultPatientId,
     defaultStartedAt,
     defaultExpiresAt,
     form,
+    getInitialFormValues,
     initialData,
     mode,
   ]);
@@ -211,7 +240,18 @@ export function SubscriptionDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+
+        if (nextOpen) {
+          setEditingEnabled(
+            mode === "create"
+          );
+          form.reset(
+            getInitialFormValues()
+          );
+        }
+      }}
     >
       <DialogTrigger asChild>
         {trigger ?? (
@@ -241,6 +281,7 @@ export function SubscriptionDialog({
               </div>
             ) : (
               <select
+                disabled={!editingEnabled}
                 {...form.register(
                   "patientId"
                 )}
@@ -269,6 +310,7 @@ export function SubscriptionDialog({
               {t("subscriptions.dialog.membershipPlan")}
             </label>
             <select
+              disabled={!editingEnabled}
               {...form.register(
                 "membershipPlanId"
               )}
@@ -295,6 +337,7 @@ export function SubscriptionDialog({
             </label>
             <Input
               type="date"
+              disabled={!editingEnabled}
               {...form.register(
                 "startedAt"
               )}
@@ -315,43 +358,82 @@ export function SubscriptionDialog({
             />
           </div>
 
-          <ConfirmDialog
-            title={
-              mode === "edit"
-                ? t(
-                    "subscriptions.dialog.confirmEditTitle"
-                  )
-                : t(
-                    "subscriptions.dialog.confirmCreateTitle"
-                  )
-            }
-            description={
-              mode === "edit"
-                ? t(
-                    "subscriptions.dialog.confirmEditDescription"
-                  )
-                : t(
-                    "subscriptions.dialog.confirmCreateDescription"
-                  )
-            }
-            actionLabel={
-              mode === "edit"
-                ? t("shared.actions.saveChanges")
-                : t("subscriptions.dialog.createAction")
-            }
-            trigger={
-              <Button type="button">
-                {mode === "edit"
-                  ? t("shared.actions.saveChanges")
-                  : t("subscriptions.dialog.createAction")}
-              </Button>
-            }
-            onConfirm={() =>
-              void form.handleSubmit(
-                onSubmit
-              )()
-            }
-          />
+          {mode === "edit" ? (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {!editingEnabled ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() =>
+                    setEditingEnabled(true)
+                  }
+                >
+                  <PencilLine className="mr-2 size-4" />
+                  Habilitar edição
+                </Button>
+              ) : (
+                <>
+                  <ConfirmDialog
+                    title={t(
+                      "subscriptions.dialog.confirmEditTitle"
+                    )}
+                    description={t(
+                      "subscriptions.dialog.confirmEditDescription"
+                    )}
+                    actionLabel={t("shared.actions.saveChanges")}
+                    trigger={
+                      <Button
+                        type="button"
+                        className="w-full"
+                      >
+                        {t("shared.actions.saveChanges")}
+                      </Button>
+                    }
+                    onConfirm={() =>
+                      void form.handleSubmit(
+                        onSubmit
+                      )()
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setEditingEnabled(
+                        false
+                      );
+                      form.reset(
+                        getInitialFormValues()
+                      );
+                    }}
+                  >
+                    Cancelar edição
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : (
+            <ConfirmDialog
+              title={t(
+                "subscriptions.dialog.confirmCreateTitle"
+              )}
+              description={t(
+                "subscriptions.dialog.confirmCreateDescription"
+              )}
+              actionLabel={t("subscriptions.dialog.createAction")}
+              trigger={
+                <Button type="button">
+                  {t("subscriptions.dialog.createAction")}
+                </Button>
+              }
+              onConfirm={() =>
+                void form.handleSubmit(
+                  onSubmit
+                )()
+              }
+            />
+          )}
         </form>
       </DialogContent>
     </Dialog>

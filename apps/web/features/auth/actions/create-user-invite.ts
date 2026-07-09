@@ -29,6 +29,13 @@ export async function createUserInviteAction(
     await requireCurrentAppUser();
   const actor =
     await getCurrentAuditActor();
+
+  if (!currentUser.clinicId) {
+    throw new Error(
+      "Current user is not assigned to a clinic."
+    );
+  }
+
   const email = normalizeEmail(
     String(
       formData.get("email") ?? ""

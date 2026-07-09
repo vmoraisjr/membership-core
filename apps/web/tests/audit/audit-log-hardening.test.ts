@@ -228,7 +228,7 @@ async function seedFixtures(): Promise<FixtureState> {
         birthDate: new Date(
           "1990-01-01T00:00:00.000Z"
         ),
-        document: "777.777.777-77",
+        document: "746.971.314-01",
         zipCode: "07000-000",
         city: "Sao Paulo",
         state: "SP",
@@ -386,18 +386,23 @@ async function main() {
       "patient subscription invoices generate audit records",
       async () => {
         asUser(fixtures.ownerUser);
+        const startedAt = new Date();
+        const expiresAt = new Date(
+          startedAt
+        );
+        expiresAt.setDate(
+          expiresAt.getDate() + 30
+        );
 
         await createSubscription({
           patientId:
             fixtures.patientId,
           membershipPlanId:
             fixtures.planId,
-          startedAt: new Date(
-            "2026-06-01T00:00:00.000Z"
-          ).toISOString(),
-          expiresAt: new Date(
-            "2026-07-01T00:00:00.000Z"
-          ).toISOString(),
+          startedAt:
+            startedAt.toISOString(),
+          expiresAt:
+            expiresAt.toISOString(),
         });
 
         const invoiceLog =

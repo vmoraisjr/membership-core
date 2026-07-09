@@ -7,9 +7,11 @@ import {
   Trash2,
   Plus,
   Activity,
+  Users,
 } from "lucide-react";
 
 import { toast } from "sonner";
+import { PatientKind } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 
@@ -59,11 +61,22 @@ type Props = {
     state: string;
 
     address: string;
+    kind: PatientKind;
+    responsiblePatientId?: string | null;
+    responsiblePatientDocument?: string | null;
+    responsiblePatientName?: string | null;
 
     status?: "ACTIVE" | "INACTIVE";
   };
   plans?: Array<{ id: string; name: string }>;
   benefitBalances?: PatientBenefitBalance[];
+  responsibleOptions?: Array<{
+    id: string;
+    fullName: string;
+    document: string;
+    kind: PatientKind;
+    status: "ACTIVE" | "INACTIVE";
+  }>;
   canManagePatients?: boolean;
   canDeletePatientsPermanently?: boolean;
   canManageSubscriptions?: boolean;
@@ -74,6 +87,7 @@ export function PatientRowActions({
   patient,
   plans = [],
   benefitBalances = [],
+  responsibleOptions = [],
   canManagePatients = true,
   canDeletePatientsPermanently = true,
   canManageSubscriptions = true,
@@ -169,6 +183,7 @@ export function PatientRowActions({
             <PatientDialog
               mode="edit"
               initialData={patient}
+              responsibleOptions={responsibleOptions}
               trigger={
                 <Button
                   size="icon"
@@ -180,7 +195,33 @@ export function PatientRowActions({
             />
           ) : null}
 
-          {canManageSubscriptions ? (
+          {canManagePatients &&
+          patient.kind ===
+            PatientKind.TITULAR ? (
+            <PatientDialog
+              defaultKind={
+                PatientKind.DEPENDENT
+              }
+              defaultResponsiblePatientId={
+                patient.id
+              }
+              responsibleOptions={
+                responsibleOptions
+              }
+              trigger={
+                <Button
+                  variant="outline"
+                >
+                  <Users className="size-4" />
+                  Adicionar dependente
+                </Button>
+              }
+            />
+          ) : null}
+
+          {canManageSubscriptions &&
+          patient.kind ===
+            PatientKind.TITULAR ? (
             <SubscriptionDialog
               patients={[{ id: patient.id, fullName: patient.fullName }]}
               plans={plans}

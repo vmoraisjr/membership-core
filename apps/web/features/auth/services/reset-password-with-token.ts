@@ -37,6 +37,7 @@ export async function resetPasswordWithToken(
           hashPassword(
             nextPassword
           ),
+        mustChangePassword: false,
       },
     }),
     prisma.passwordResetToken.update({

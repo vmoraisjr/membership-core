@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import {
   AuditAction,
   AuditEntity,
+  PatientKind,
   PatientStatus,
 } from "@prisma/client";
 
@@ -16,6 +17,8 @@ import {
   createAuditLog,
   getCurrentAuditActor,
 } from "@/features/audit-log/services/create-audit-log";
+
+import { isMinorPatient } from "../services/patient-family";
 
 export async function reactivatePatient(
   id: string
@@ -38,6 +41,8 @@ export async function reactivatePatient(
       select: {
         id: true,
         fullName: true,
+        birthDate: true,
+        kind: true,
         status: true,
       },
     });
@@ -54,6 +59,18 @@ export async function reactivatePatient(
   ) {
     throw new Error(
       "Patient is already active."
+    );
+  }
+
+  if (
+    patient.kind ===
+      PatientKind.TITULAR &&
+    isMinorPatient(
+      patient.birthDate
+    )
+  ) {
+    throw new Error(
+      "Paciente menor de idade precisa ser vinculado novamente a um titular responsável antes da reativação."
     );
   }
 

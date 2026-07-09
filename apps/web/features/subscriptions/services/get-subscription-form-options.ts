@@ -1,4 +1,7 @@
-import { PatientStatus } from "@prisma/client";
+import {
+  PatientKind,
+  PatientStatus,
+} from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
@@ -12,6 +15,7 @@ export async function getSubscriptionFormOptions() {
         where: {
           clinicId: clinic.id,
           status: PatientStatus.ACTIVE,
+          kind: PatientKind.TITULAR,
         },
         orderBy: {
           fullName: "asc",

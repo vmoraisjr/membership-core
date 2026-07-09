@@ -122,52 +122,53 @@ export function MembershipPlansTable({
         "plans.table.description",
         { count: activePlansCount }
       )}
+      toolbar={
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {t("shared.filters.statusFilter")}
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value
+                )
+              }
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            >
+              <option value="active">
+                {t("shared.states.active")}
+              </option>
+              <option value="inactive">
+                {t("shared.states.inactive")}
+              </option>
+              <option value="all">
+                {t("shared.filters.all")}
+              </option>
+            </select>
+          </div>
+
+          <div className="grid gap-2 sm:min-w-80">
+            <label className="text-sm font-medium text-muted-foreground">
+              {t("shared.filters.searchPlanOrBenefit")}
+            </label>
+            <input
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value
+                )
+              }
+              placeholder={t(
+                "shared.filters.searchPlanOrBenefit"
+              )}
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            />
+          </div>
+        </div>
+      }
     >
-      <div className="flex flex-col gap-4 border-b p-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="grid gap-2">
-          <label className="text-sm text-muted-foreground">
-            {t("shared.filters.statusFilter")}
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value
-              )
-            }
-            className="h-10 rounded-md border px-3"
-          >
-            <option value="active">
-              {t("shared.states.active")}
-            </option>
-            <option value="inactive">
-              {t("shared.states.inactive")}
-            </option>
-            <option value="all">
-              {t("shared.filters.all")}
-            </option>
-          </select>
-        </div>
-
-        <div className="grid gap-2 sm:min-w-80">
-          <label className="text-sm text-muted-foreground">
-            {t("shared.filters.searchPlanOrBenefit")}
-          </label>
-          <input
-            value={search}
-            onChange={(event) =>
-              setSearch(
-                event.target.value
-              )
-            }
-            placeholder={t(
-              "shared.filters.searchPlanOrBenefit"
-            )}
-            className="h-10 rounded-md border px-3"
-          />
-        </div>
-      </div>
-
       <Table>
         <TableHeader>
           <TableRow>
@@ -206,8 +207,8 @@ export function MembershipPlansTable({
               </TableCell>
 
               <TableCell className="align-top">
-                <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
-                    {plan.active
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                  {plan.active
                     ? t("shared.states.active")
                     : t("shared.states.inactive")}
                 </span>

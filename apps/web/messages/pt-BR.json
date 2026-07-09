@@ -1,9 +1,9 @@
 {
   "app": {
     "metadata": {
-      "description": "Plataforma multitenant de assinaturas"
+      "description": "Sheep, sistema multitenant de assinatura e fidelidade"
     },
-    "name": "Membership Core"
+    "name": "Sheep"
   },
   "shared": {
     "actions": {
@@ -128,30 +128,36 @@
   },
   "navigation": {
     "overview": "Visão geral",
-    "clinics": "Clínicas",
+    "clinics": "Empresas",
     "membershipPlans": "Planos",
-    "patients": "Pacientes",
+    "patients": "Clientes",
     "subscriptions": "Assinaturas",
     "benefits": "Benefícios",
     "benefitUsage": "Uso de benefício",
     "payments": "Pagamentos",
     "modules": "Módulos",
+    "myCompany": "Minha empresa",
     "auditLog": "Registro de auditoria",
     "users": "Usuários",
-    "workspace": "Workspace operacional da clínica"
+    "workspace": "Workspace operacional da empresa"
   },
   "dashboardLayout": {
     "operations": "Operações",
     "workspaceSuffix": "workspace",
-    "saasLabel": "Membership Core SaaS"
+    "saasLabel": "Sheep SaaS"
   },
   "accessDenied": {
     "message": "O acesso está restrito para o perfil atual."
   },
+  "clinicAssignment": {
+    "title": "Nenhuma clínica vinculada",
+    "description": "Esta área exige uma clínica vinculada ao usuário atual. Crie ou acesse uma clínica primeiro para continuar os testes operacionais.",
+    "action": "Ir para Clínicas"
+  },
   "auth": {
     "login": {
       "title": "Entrar",
-      "description": "Acesse o painel do Membership Core com uma sessão real no servidor.",
+      "description": "Acesse o Sheep com uma sessão real no servidor.",
       "invalidCredentials": "E-mail ou senha inválidos.",
       "passwordUpdated": "Senha atualizada. Você já pode entrar.",
       "forgotPassword": "Esqueceu sua senha?",
@@ -199,12 +205,12 @@
     "title": "Painel",
     "accessDeniedTitle": "Acesso ao painel negado",
     "accessDeniedDescription": "O perfil atual não pode visualizar as métricas do painel.",
-    "clinicDescription": "Uma visão de alto nível da operação de assinaturas de {clinicName} entre pacientes, planos e assinaturas.",
-    "platformDescription": "Um panorama da plataforma cobrindo a saúde das clínicas, o faturamento SaaS e os módulos comerciais ativos da V1.",
+    "clinicDescription": "Uma visão de alto nível da operação de assinaturas de {clinicName} entre clientes, planos e assinaturas.",
+    "platformDescription": "Um panorama da plataforma cobrindo a saúde das contas clientes, o faturamento SaaS e a governança comercial ativa.",
     "metrics": {
       "activePatients": {
-        "label": "Pacientes ativos",
-        "hint": "Pacientes disponíveis atualmente para operações de assinatura"
+        "label": "Clientes ativos",
+        "hint": "Clientes disponíveis atualmente para operações de assinatura"
       },
       "activeSubscriptions": {
         "label": "Assinaturas ativas",
@@ -212,10 +218,10 @@
       },
       "overdueInvoices": {
         "label": "Cobranças em atraso",
-        "hint": "Cobranças de pacientes que exigem acompanhamento manual"
+        "hint": "Cobranças de clientes que exigem acompanhamento manual"
       },
       "monthlyPatientRevenue": {
-        "label": "Receita mensal de pacientes",
+        "label": "Receita mensal de clientes",
         "hint": "Receita de cobranças pagas reconhecida neste mês"
       },
       "benefitsConsumed": {
@@ -229,20 +235,20 @@
     },
     "snapshot": {
       "title": "Resumo operacional",
-      "description": "Contagens reais com escopo da clínica ajudam a liderança a identificar matrículas, pressão de cobrança e uso de benefícios rapidamente.",
-      "revenueBaselineTitle": "Base de receita de pacientes",
-      "revenueBaselineDescription": "As cobranças pagas de pacientes geraram {amount} neste mês para a clínica atual.",
+      "description": "Contagens reais com escopo da empresa ajudam a liderança a identificar adesões, pressão de cobrança e uso de benefícios rapidamente.",
+      "revenueBaselineTitle": "Base de receita de clientes",
+      "revenueBaselineDescription": "As cobranças pagas de clientes geraram {amount} neste mês para a empresa atual.",
       "billingAttentionTitle": "Atenção de cobrança necessária",
-      "billingAttentionDescription": "{count} cobranças de pacientes estão em atraso e exigem acompanhamento manual no fluxo de cobrança da V1.",
+      "billingAttentionDescription": "{count} cobranças de clientes estão em atraso e exigem acompanhamento manual no fluxo de cobrança da V1.",
       "benefitActivityTitle": "Atividade de uso de benefício",
       "benefitActivityDescription": "{count} eventos totais de uso de benefício já foram registrados para esta clínica."
     },
     "platform": {
       "title": "Resumo da plataforma",
-      "description": "Métricas de faturamento da plataforma visíveis apenas para admin, derivadas dos dados reais de assinatura das clínicas.",
-      "activeClinics": "Clínicas ativas",
-      "trialClinics": "Clínicas em teste",
-      "pastDueClinics": "Clínicas em atraso",
+      "description": "Métricas de faturamento da plataforma visíveis apenas para admin, derivadas dos dados reais de assinatura das empresas clientes.",
+      "activeClinics": "Contas ativas",
+      "trialClinics": "Contas em teste",
+      "pastDueClinics": "Contas em atraso",
       "monthlySaasRevenue": "Receita SaaS mensal",
       "activeModuleCounts": "Contagem de módulos ativos",
       "activeModuleAssignments": "Atribuições de módulo V1 ativas nas clínicas.",
@@ -250,11 +256,11 @@
     }
   },
   "patients": {
-    "accessDeniedTitle": "Acesso a pacientes negado",
-    "accessDeniedDescription": "O perfil atual não pode visualizar os cadastros de pacientes.",
-    "title": "Pacientes",
-    "description": "Gerencie pacientes ativos e inativos, revise o plano atual, crie assinaturas e registre uso de benefícios diretamente na lista de pacientes.",
-    "new": "Novo paciente",
+    "accessDeniedTitle": "Acesso a clientes negado",
+    "accessDeniedDescription": "O perfil atual não pode visualizar os cadastros de clientes.",
+    "title": "Clientes",
+    "description": "Gerencie clientes ativos e inativos, revise o plano atual, crie assinaturas e registre uso de benefícios diretamente na lista de clientes.",
+    "new": "Novo cliente",
     "dialog": {
       "editTitle": "Editar paciente",
       "createTitle": "Criar paciente",
@@ -268,14 +274,14 @@
       "confirmCreateDescription": "Isso cria um novo cadastro de paciente."
     },
     "table": {
-      "title": "Diretório de pacientes",
-      "description": "{count} pacientes ativos disponíveis para assinaturas.",
-      "searchLabel": "Buscar por paciente ou documento",
-      "patient": "Paciente",
+      "title": "Diretório de clientes",
+      "description": "{count} clientes ativos disponíveis para assinaturas.",
+      "searchLabel": "Buscar por cliente ou documento",
+      "patient": "Cliente",
       "currentPlan": "Plano atual",
       "noSubscription": "Sem assinatura",
-      "emptyTitle": "Nenhum paciente encontrado",
-      "emptyDescription": "Ajuste os filtros ou crie um novo cadastro de paciente para continuar."
+      "emptyTitle": "Nenhum cliente encontrado",
+      "emptyDescription": "Ajuste os filtros ou crie um novo cadastro de cliente para continuar."
     },
     "rowActions": {
       "useBenefit": "Usar benefício",
@@ -440,13 +446,13 @@
     "accessDeniedTitle": "Acesso a assinaturas negado",
     "accessDeniedDescription": "O perfil atual não pode visualizar assinaturas.",
     "title": "Assinaturas",
-    "description": "Tela de suporte para assinaturas e estados do ciclo de vida do paciente.",
-    "filteredDescription": "Tela de suporte filtrada pelo contexto de plano ou paciente selecionado.",
+    "description": "Gerencie assinaturas e estados do ciclo de vida dos clientes da empresa.",
+    "filteredDescription": "Mostrando assinaturas filtradas pelo contexto de plano ou cliente selecionado.",
     "new": "Nova assinatura",
     "dialog": {
       "editTitle": "Editar assinatura",
       "createTitle": "Criar assinatura",
-      "patient": "Paciente",
+      "patient": "Cliente",
       "membershipPlan": "Plano",
       "selectPatient": "Selecionar paciente",
       "selectPlan": "Selecionar plano",
@@ -537,7 +543,7 @@
     "accessDeniedTitle": "Acesso a pagamentos negado",
     "accessDeniedDescription": "O perfil atual não pode visualizar as operações de cobrança.",
     "title": "Pagamentos",
-    "description": "Acompanhe pagamentos de pacientes, tratamento manual de cobranças e o status de cobrança SaaS da clínica.",
+      "description": "Acompanhe pagamentos de clientes, tratamento manual de cobranças e o status SaaS da empresa.",
     "status": {
       "PAID": "Pago",
       "OVERDUE": "Em atraso",
@@ -568,31 +574,31 @@
     },
     "sections": {
       "overduePatientInvoices": {
-        "title": "Cobranças de pacientes em atraso",
+        "title": "Cobranças de clientes em atraso",
         "description": "Cobranças em aberto que exigem acompanhamento manual."
       },
       "monthlyPatientRevenue": {
-        "title": "Receita mensal de pacientes",
+        "title": "Receita mensal de clientes",
         "description": "Receita de cobranças pagas reconhecida neste mês."
       },
       "platformSubscription": {
         "title": "Assinatura da plataforma",
-        "description": "Status comercial atual da Nortex para esta clínica.",
+        "description": "Status comercial atual do Sheep para esta empresa.",
         "plan": "Plano",
         "trialEnds": "Fim do teste",
         "expires": "Expira em",
         "canceledAt": "Cancelada em"
       },
       "patientInvoices": {
-        "title": "Cobranças de pacientes",
+        "title": "Cobranças de clientes",
         "description": "Registros manuais de cobrança V1 criados a partir de assinaturas. Cancelar uma assinatura mantém as cobranças históricas visíveis para acompanhamento.",
-        "empty": "Nenhuma cobrança de paciente encontrada."
+        "empty": "Nenhuma cobrança de cliente encontrada."
       },
       "clinicInvoices": {
-        "title": "Cobranças SaaS da clínica",
-        "description": "Cobranças comerciais entre a Nortex e a clínica.",
-        "empty": "Nenhuma cobrança da clínica encontrada.",
-        "defaultDescription": "Cobrança SaaS da clínica",
+        "title": "Cobranças SaaS da empresa",
+        "description": "Cobranças comerciais entre o Sheep e a empresa.",
+        "empty": "Nenhuma cobrança da empresa encontrada.",
+        "defaultDescription": "Cobrança SaaS da empresa",
         "lastPaid": "Último pagamento",
         "noPaymentRecord": "Nenhum registro de pagamento"
       },
@@ -648,7 +654,7 @@
     "accessDeniedTitle": "Acesso a usuários negado",
     "accessDeniedDescription": "O perfil atual não pode visualizar usuários ou convites da clínica.",
     "title": "Usuários",
-    "description": "Revise membros da clínica, acompanhe convites pendentes e mantenha a atribuição de perfis sob controle do proprietário.",
+    "description": "Revise membros da empresa e mantenha a atribuição de perfis sob controle do proprietário.",
     "inviteCreatedTitle": "Convite criado",
     "inviteCreatedDescription": "Compartilhe este link único de onboarding com o usuário convidado da clínica.",
     "inviteReady": "Convite pronto para {email} como {role}.",

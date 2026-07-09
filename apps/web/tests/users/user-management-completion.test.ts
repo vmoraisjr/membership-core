@@ -198,6 +198,23 @@ async function main() {
             pendingForm
           );
 
+        const pendingInviteRecord =
+          await prisma.userInvite.findFirstOrThrow(
+            {
+              where: {
+                clinicId:
+                  fixtures.clinicId,
+                email:
+                  "pending@users.test",
+              },
+            }
+          );
+
+        assert.equal(
+          pendingInviteRecord.clinicId,
+          fixtures.clinicId
+        );
+
         const acceptedForm =
           new FormData();
         acceptedForm.set(
@@ -288,6 +305,11 @@ async function main() {
 
         const overview =
           await getClinicUsersOverview();
+
+        assert.equal(
+          overview.clinic.id,
+          fixtures.clinicId
+        );
 
         const statuses = new Map(
           overview.invites.map((invite) => [

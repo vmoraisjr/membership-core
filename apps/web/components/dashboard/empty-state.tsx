@@ -1,21 +1,25 @@
 type Props = {
   title: string;
   description: string;
+  action?: React.ReactNode;
 };
 
 export function EmptyState({
   title,
   description,
+  action,
 }: Props) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <h3 className="text-lg font-semibold">
+    <div className="empty-state-block">
+      <h3 className="text-lg font-semibold tracking-tight text-foreground">
         {title}
       </h3>
 
-      <p className="text-muted-foreground">
+      <p className="max-w-xl text-sm leading-6 text-muted-foreground">
         {description}
       </p>
+
+      {action ? action : null}
     </div>
   );
 }

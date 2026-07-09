@@ -7,13 +7,20 @@ import { getCurrentClinicId } from "@/lib/auth/get-current-clinic";
 import prisma from "@/lib/prisma";
 
 export type ClinicUsersOverview = {
+  clinic: {
+    id: string;
+    name: string;
+  };
   users: Array<{
     id: string;
     name: string;
     email: string;
     role: AppUserRole;
     status: AppUserStatus;
+    isClinicMaster: boolean;
     createdAt: Date;
+    accessStartsAt: Date | null;
+    accessEndsAt: Date | null;
     lastLoginAt: Date | null;
   }>;
   invites: Array<{
@@ -55,8 +62,17 @@ function getInviteStatus(invite: {
 
 export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
   const clinicId = await getCurrentClinicId();
-  const [users, invites, inviters] =
+  const [clinic, users, invites, inviters] =
     await Promise.all([
+      prisma.clinic.findUniqueOrThrow({
+        where: {
+          id: clinicId,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
       prisma.appUser.findMany({
         where: {
           clinicId,
@@ -75,7 +91,10 @@ export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
           email: true,
           role: true,
           status: true,
+          isClinicMaster: true,
           createdAt: true,
+          accessStartsAt: true,
+          accessEndsAt: true,
           lastLoginAt: true,
         },
       }),
@@ -118,6 +137,7 @@ export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
   );
 
   return {
+    clinic,
     users,
     invites: invites.map((invite) => ({
       id: invite.id,

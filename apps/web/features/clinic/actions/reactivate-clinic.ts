@@ -2,13 +2,12 @@
 
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
-import { revalidatePath } from "next/cache";
-
 import { ClinicStatus } from "@prisma/client";
 import { AuditAction, AuditEntity } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { assertClinicAccess } from "@/lib/auth/assert-clinic-access";
+import { safeRevalidatePath } from "@/lib/revalidation";
 import {
   createAuditLog,
   getCurrentAuditActor,
@@ -78,6 +77,6 @@ export async function reactivateClinic(
     }
   );
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/clinics");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/dashboard/clinics");
 }

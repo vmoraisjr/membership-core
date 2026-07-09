@@ -3,7 +3,11 @@
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
 import { PatientStatus } from "@prisma/client";
-import { AuditAction, AuditEntity } from "@prisma/client";
+import {
+  AuditAction,
+  AuditEntity,
+  PatientKind,
+} from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/revalidation";
@@ -18,6 +22,11 @@ import {
   patientSchema,
   type PatientSchema,
 } from "../schemas/patient.schema";
+import {
+  findResponsiblePatientByDocument,
+  isMinorPatient,
+  normalizeDigits,
+} from "../services/patient-family";
 
 export async function createPatient(
   data: PatientSchema
@@ -38,6 +47,52 @@ export async function createPatient(
     await getCurrentClinic();
   const actor =
     await getCurrentAuditActor();
+  const birthDate = new Date(
+    parsed.data.birthDate
+  );
+  const responsiblePatient =
+    parsed.data.kind ===
+    PatientKind.DEPENDENT
+      ? await findResponsiblePatientByDocument(
+          clinic.id,
+          parsed.data
+            .responsibleDocument ?? ""
+        )
+      : null;
+
+  if (
+    parsed.data.kind ===
+      PatientKind.DEPENDENT &&
+    !responsiblePatient
+  ) {
+    throw new Error(
+      "O responsável informado precisa estar cadastrado como titular ativo da clínica."
+    );
+  }
+
+  if (
+    responsiblePatient &&
+    normalizeDigits(
+      responsiblePatient.document
+    ) ===
+      normalizeDigits(
+        parsed.data.document
+      )
+  ) {
+    throw new Error(
+      "O paciente dependente não pode usar o mesmo documento do responsável."
+    );
+  }
+
+  if (
+    isMinorPatient(birthDate) &&
+    parsed.data.kind !==
+      PatientKind.DEPENDENT
+  ) {
+    throw new Error(
+      "Paciente menor de idade deve ser cadastrado com um responsável titular."
+    );
+  }
 
   await prisma.$transaction(
     async (tx) => {
@@ -49,9 +104,7 @@ export async function createPatient(
               parsed.data.fullName,
             email: parsed.data.email,
             phone: parsed.data.phone,
-            birthDate: new Date(
-              parsed.data.birthDate
-            ),
+            birthDate,
             document:
               parsed.data.document,
             zipCode:
@@ -60,6 +113,10 @@ export async function createPatient(
             state: parsed.data.state,
             address:
               parsed.data.address,
+            kind: parsed.data.kind,
+            responsiblePatientId:
+              responsiblePatient?.id ??
+              null,
             status:
               PatientStatus.ACTIVE,
           },
@@ -78,6 +135,12 @@ export async function createPatient(
         entityId: patient.id,
         entityLabel:
           patient.fullName,
+        metadata: {
+          kind: parsed.data.kind,
+          responsiblePatientId:
+            responsiblePatient?.id ??
+            null,
+        },
       });
     }
   );

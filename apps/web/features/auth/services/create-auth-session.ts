@@ -4,7 +4,7 @@ import {
   getSessionExpiryDate,
   hashOpaqueToken,
 } from "@/lib/auth/session";
-import { createAuditLog } from "@/features/audit-log/services/create-audit-log";
+import { createAuditLogSafely } from "@/features/audit-log/services/create-audit-log";
 
 export async function createAuthSession(
   appUserId: string
@@ -49,22 +49,22 @@ export async function createAuthSession(
           lastLoginAt: new Date(),
         },
       });
-
-      await createAuditLog(tx, {
-        clinicId:
-          actor.clinicId ?? null,
-        actor: `${actor.name} <${actor.email}>`,
-        actorUserId: actor.id,
-        action: "LOGIN",
-        entity: "APP_USER",
-        entityId: actor.id,
-        entityLabel: actor.email,
-        metadata: {
-          loginSource: "auth_session",
-        },
-      });
     }
   );
+
+  await createAuditLogSafely(prisma, {
+    clinicId:
+      actor.clinicId ?? null,
+    actor: `${actor.name} <${actor.email}>`,
+    actorUserId: actor.id,
+    action: "LOGIN",
+    entity: "APP_USER",
+    entityId: actor.id,
+    entityLabel: actor.email,
+    metadata: {
+      loginSource: "auth_session",
+    },
+  });
 
   return {
     token,

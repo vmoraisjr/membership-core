@@ -5,6 +5,7 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 import {
   AuditAction,
   AuditEntity,
+  PatientKind,
   PatientStatus,
   SubscriptionStatus,
 } from "@prisma/client";
@@ -51,6 +52,7 @@ export async function createSubscription(
           id: parsed.data.patientId,
           clinicId: clinic.id,
           status: PatientStatus.ACTIVE,
+          kind: PatientKind.TITULAR,
         },
         select: {
           id: true,
@@ -74,7 +76,7 @@ export async function createSubscription(
 
   if (!patient) {
     throw new Error(
-      "Only active patients can receive subscriptions."
+      "Apenas titulares ativos podem receber assinaturas diretamente."
     );
   }
 

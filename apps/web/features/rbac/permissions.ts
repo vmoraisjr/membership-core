@@ -14,6 +14,7 @@ export const APP_RESOURCES = [
   "contracts",
   "users",
   "modules",
+  "messages",
 ] as const;
 
 export type AppResource =
@@ -76,6 +77,7 @@ const ROLE_PERMISSIONS: Record<
     contracts: ["view", "manage"],
     users: ["view", "manage"],
     modules: ["view", "manage"],
+    messages: ["view", "manage"],
   },
   ADMIN: {
     dashboard: ["view", "manage"],
@@ -99,10 +101,11 @@ const ROLE_PERMISSIONS: Record<
     clinic: ["view", "manage"],
     benefitUsage: ["view", "manage"],
     auditLogs: ["view"],
-    billing: [],
+    billing: ["view", "manage"],
     contracts: ["view", "manage"],
     users: [],
-    modules: [],
+    modules: ["view", "manage"],
+    messages: ["view", "manage"],
   },
   STAFF: {
     dashboard: ["view"],
@@ -118,6 +121,7 @@ const ROLE_PERMISSIONS: Record<
     contracts: [],
     users: [],
     modules: [],
+    messages: ["view"],
   },
   FINANCE: {
     dashboard: ["view"],
@@ -133,6 +137,7 @@ const ROLE_PERMISSIONS: Record<
     contracts: ["view", "manage"],
     users: [],
     modules: [],
+    messages: ["view", "manage"],
   },
   READ_ONLY: {
     dashboard: ["view"],
@@ -148,6 +153,7 @@ const ROLE_PERMISSIONS: Record<
     contracts: ["view"],
     users: [],
     modules: [],
+    messages: ["view"],
   },
 };
 
@@ -168,6 +174,7 @@ export const RESOURCE_LABELS: Record<
   contracts: "Contracts",
   users: "Users",
   modules: "Modules",
+  messages: "Messages",
 };
 
 const ASSIGNABLE_ROLES: Record<

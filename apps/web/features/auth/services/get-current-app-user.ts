@@ -28,11 +28,11 @@ const DEFAULT_APP_USERS: Record<
   }
 > = {
   OWNER: {
-    name: "Owner Operator",
+    name: "Sheep Owner",
     emailPrefix: "owner",
   },
   ADMIN: {
-    name: "Admin Operator",
+    name: "Sheep Admin",
     emailPrefix: "admin",
   },
   STAFF: {
@@ -56,6 +56,10 @@ export type CurrentAppUser = {
   email: string;
   role: AppRole;
   status?: AppUserStatus;
+  mustChangePassword?: boolean;
+  isClinicMaster?: boolean;
+  accessStartsAt?: Date | null;
+  accessEndsAt?: Date | null;
 };
 
 let currentAppUserOverride:
@@ -63,14 +67,57 @@ let currentAppUserOverride:
   | null
   | undefined;
 
-function getWorkspaceSuffix(
-  clinicId?: string | null
-) {
-  return clinicId?.trim().toLowerCase() || "workspace";
-}
-
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+async function ensurePlatformOwner(
+  defaultPasswordHash: string
+) {
+  const email = normalizeEmail(
+    "owner+workspace@sheep.local"
+  );
+  const existingUser =
+    await prisma.appUser.findUnique({
+      where: {
+        email,
+      },
+      select: {
+        id: true,
+        passwordHash: true,
+      },
+    });
+
+  if (existingUser) {
+    await prisma.appUser.update({
+      where: {
+        id: existingUser.id,
+      },
+      data: {
+        clinicId: null,
+        role: AppUserRole.OWNER,
+        status: AppUserStatus.ACTIVE,
+        passwordHash:
+          existingUser.passwordHash ??
+          defaultPasswordHash,
+      },
+    });
+
+    return;
+  }
+
+  await prisma.appUser.create({
+    data: {
+      clinicId: null,
+      name: DEFAULT_APP_USERS.OWNER.name,
+      email,
+      mustChangePassword: false,
+      isClinicMaster: false,
+      role: AppUserRole.OWNER,
+      status: AppUserStatus.ACTIVE,
+      passwordHash: defaultPasswordHash,
+    },
+  });
 }
 
 export async function ensureDefaultAppUsers() {
@@ -103,70 +150,10 @@ export async function ensureDefaultAppUsers() {
     return [];
   }
 
-  const clinic = await prisma.clinic.findFirst({
-    select: {
-      id: true,
-    },
-  });
-
-  const workspaceSuffix =
-    getWorkspaceSuffix(clinic?.id);
   const defaultPasswordHash =
     hashPassword(DEFAULT_AUTH_PASSWORD);
-
-  await Promise.all(
-    Object.entries(DEFAULT_APP_USERS).map(
-      async ([role, defaults]) => {
-        const email = normalizeEmail(
-          `${defaults.emailPrefix}+${workspaceSuffix}@membership-core.local`
-        );
-        const existingUser =
-          await prisma.appUser.findUnique({
-            where: {
-              email,
-            },
-            select: {
-              id: true,
-              passwordHash: true,
-            },
-          });
-
-        if (existingUser) {
-          await prisma.appUser.update({
-            where: {
-              id: existingUser.id,
-            },
-            data: {
-              clinicId:
-                clinic?.id ?? null,
-              role:
-                role as AppUserRole,
-              status:
-                AppUserStatus.ACTIVE,
-              passwordHash:
-                existingUser.passwordHash ??
-                defaultPasswordHash,
-            },
-          });
-
-          return;
-        }
-
-        await prisma.appUser.create({
-          data: {
-            clinicId: clinic?.id ?? null,
-            name: defaults.name,
-            email,
-            role:
-              role as AppUserRole,
-            status:
-              AppUserStatus.ACTIVE,
-            passwordHash:
-              defaultPasswordHash,
-          },
-        });
-      }
-    )
+  await ensurePlatformOwner(
+    defaultPasswordHash
   );
 
   return prisma.appUser.findMany({
@@ -211,6 +198,10 @@ function toCurrentAppUser(
     clinicId: string | null;
     name: string;
     email: string;
+    mustChangePassword?: boolean;
+    isClinicMaster?: boolean;
+    accessStartsAt?: Date | null;
+    accessEndsAt?: Date | null;
     role: AppUserRole;
     status: AppUserStatus;
   }
@@ -222,6 +213,22 @@ function toCurrentAppUser(
     email: user.email,
     role: user.role as AppRole,
     status: user.status,
+    mustChangePassword:
+      "mustChangePassword" in user
+        ? user.mustChangePassword
+        : false,
+    isClinicMaster:
+      "isClinicMaster" in user
+        ? user.isClinicMaster
+        : false,
+    accessStartsAt:
+      "accessStartsAt" in user
+        ? user.accessStartsAt
+        : null,
+    accessEndsAt:
+      "accessEndsAt" in user
+        ? user.accessEndsAt
+        : null,
   };
 }
 
@@ -262,6 +269,22 @@ export async function getCurrentAppUser() {
   if (
     session.appUser.status !==
     AppUserStatus.ACTIVE
+  ) {
+    return null;
+  }
+
+  if (
+    session.appUser.accessStartsAt &&
+    session.appUser.accessStartsAt.getTime() >
+      Date.now()
+  ) {
+    return null;
+  }
+
+  if (
+    session.appUser.accessEndsAt &&
+    session.appUser.accessEndsAt.getTime() <
+      Date.now()
   ) {
     return null;
   }

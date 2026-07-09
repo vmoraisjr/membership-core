@@ -9,14 +9,24 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:seed": "tsx prisma/seed.ts",
+    "e2e:seed": "node scripts/seed-browser-journeys.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "qa:functional": "tsx scripts/run-functional-qa.ts",
+    "qa:functional:fast": "tsx scripts/run-functional-qa.ts --skip-build",
     "test:tenant": "tsx tests/tenant-isolation/cross-tenant-regression.test.ts",
+    "test:auth": "tsx tests/auth/authentication-hardening.test.ts",
+    "test:auth-recovery": "tsx tests/auth/password-recovery-and-first-access.test.ts",
+    "test:validation": "tsx tests/validation/form-validation-hardening.test.ts",
     "test:rbac": "tsx tests/rbac/rbac-hardening.test.ts",
     "test:membership": "tsx tests/membership/membership-regression.test.ts",
     "test:contracts": "tsx tests/contracts/contracts-hardening.test.ts",
     "test:billing": "tsx tests/billing/billing-hardening.test.ts",
     "test:modules": "tsx tests/modules/module-management-hardening.test.ts",
     "test:audit": "tsx tests/audit/audit-log-hardening.test.ts",
-    "test:users": "tsx tests/users/user-management-completion.test.ts"
+    "test:users": "tsx tests/users/user-management-completion.test.ts",
+    "test:clinic-bootstrap": "tsx tests/users/clinic-bootstrap-boundaries.test.ts",
+    "test:messages": "tsx tests/messages/support-workspace-regression.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -40,6 +50,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@prisma/client": "6",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

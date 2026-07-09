@@ -1,10 +1,17 @@
 import {
   BadgeDollarSign,
+  Building2,
+  ClipboardList,
   CreditCard,
   HeartPulse,
+  MessageSquareMore,
   ReceiptText,
+  ArrowRight,
+  ShieldCheck,
   Users,
 } from "lucide-react";
+
+import Link from "next/link";
 
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -50,6 +57,11 @@ export async function DashboardHomePage() {
   return (
     <DashboardPage>
       <PageHeader
+        eyebrow={
+          metrics.scope === "clinic"
+            ? "Workspace da empresa"
+            : "Controle global Sheep"
+        }
         title={t("dashboard.title")}
         description={
           metrics.scope === "clinic"
@@ -64,11 +76,96 @@ export async function DashboardHomePage() {
                 "dashboard.platformDescription"
               )
         }
+        meta={
+          metrics.scope === "clinic" ? (
+            <>
+              <span className="workspace-kicker">
+                Operação
+              </span>
+              <span className="workspace-kicker">
+                Cobrança
+              </span>
+              <span className="workspace-kicker">
+                Relacionamento
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="workspace-kicker">
+                SaaS
+              </span>
+              <span className="workspace-kicker">
+                Contas clientes
+              </span>
+              <span className="workspace-kicker">
+                Governança
+              </span>
+            </>
+          )
+        }
       />
 
       {metrics.scope === "clinic" ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <SectionCard
+            title="O que merece atenção agora"
+            description="Ações rápidas e leituras operacionais para reduzir esforço no dia a dia."
+          >
+            <div className="grid gap-4 p-5 md:grid-cols-3">
+              {[
+                {
+                  href: "/dashboard/patients",
+                  title: "Cadastrar cliente",
+                  description:
+                    "Abra novos cadastros sem sair do fluxo operacional.",
+                  icon: Users,
+                },
+                {
+                  href: "/dashboard/subscriptions",
+                  title: "Criar assinatura",
+                  description:
+                    "Ative novas receitas recorrentes a partir dos planos vigentes.",
+                  icon: CreditCard,
+                },
+                {
+                  href: "/dashboard/payments",
+                  title: "Cobranças pendentes",
+                  description:
+                    "Priorize pagamentos, atrasos e regularizações da empresa.",
+                  icon: ReceiptText,
+                },
+              ].map((shortcut) => {
+                const Icon = shortcut.icon;
+
+                return (
+                  <Link
+                    key={shortcut.href}
+                    href={shortcut.href}
+                    className="group surface-subtle p-4 transition-colors hover:bg-background/95"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-3">
+                        <div className="rounded-2xl border border-border/70 bg-background p-3 text-muted-foreground shadow-[var(--shadow-xs)]">
+                          <Icon className="size-5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {shortcut.title}
+                          </p>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {shortcut.description}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="mt-1 size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </SectionCard>
+
+          <div className="page-section-grid md:grid-cols-2 xl:grid-cols-3">
             <MetricCard
               label={t(
                 "dashboard.metrics.activePatients.label"
@@ -152,8 +249,8 @@ export async function DashboardHomePage() {
               "dashboard.snapshot.description"
             )}
           >
-            <div className="grid gap-4 p-4 md:grid-cols-3">
-              <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+            <div className="grid gap-4 p-5 md:grid-cols-3">
+              <div className="surface-subtle p-4">
                 <p className="text-sm font-medium">
                   {t(
                     "dashboard.snapshot.revenueBaselineTitle"
@@ -171,7 +268,7 @@ export async function DashboardHomePage() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+              <div className="surface-subtle p-4">
                 <p className="text-sm font-medium">
                   {t(
                     "dashboard.snapshot.billingAttentionTitle"
@@ -188,7 +285,7 @@ export async function DashboardHomePage() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+              <div className="surface-subtle p-4">
                 <p className="text-sm font-medium">
                   {t(
                     "dashboard.snapshot.benefitActivityTitle"
@@ -210,110 +307,149 @@ export async function DashboardHomePage() {
       ) : null}
 
       {metrics.platformMetrics ? (
-        <SectionCard
-          title={t("dashboard.platform.title")}
-          description={t(
-            "dashboard.platform.description"
-          )}
-        >
-          <div className="grid gap-4 p-4 md:grid-cols-4">
-            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
-              <p className="text-sm font-medium">
-                {t(
-                  "dashboard.platform.activeClinics"
-                )}
-              </p>
-              <p className="mt-2 text-2xl font-semibold">
+        <>
+          <SectionCard
+            title={t("dashboard.platform.title")}
+            description={t(
+              "dashboard.platform.description"
+            )}
+          >
+            <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
+              <div className="surface-subtle p-4">
+                <p className="text-sm font-medium">
+                  {t(
+                    "dashboard.platform.activeClinics"
+                  )}
+                </p>
+                <p className="mt-2 text-2xl font-semibold">
+                  {
+                    metrics
+                      .platformMetrics
+                      .activeClinics
+                  }
+                </p>
+              </div>
+
+              <div className="surface-subtle p-4">
+                <p className="text-sm font-medium">
+                  {t(
+                    "dashboard.platform.trialClinics"
+                  )}
+                </p>
+                <p className="mt-2 text-2xl font-semibold">
+                  {
+                    metrics
+                      .platformMetrics
+                      .trialClinics
+                  }
+                </p>
+              </div>
+
+              <div className="surface-subtle p-4">
+                <p className="text-sm font-medium">
+                  {t(
+                    "dashboard.platform.pastDueClinics"
+                  )}
+                </p>
+                <p className="mt-2 text-2xl font-semibold">
+                  {
+                    metrics
+                      .platformMetrics
+                      .pastDueClinics
+                  }
+                </p>
+              </div>
+
+              <div className="surface-subtle p-4">
+                <p className="text-sm font-medium">
+                  {t(
+                    "dashboard.platform.monthlySaasRevenue"
+                  )}
+                </p>
+                <p className="mt-2 text-2xl font-semibold">
+                  {formatCurrency(
+                    metrics
+                      .platformMetrics
+                      .monthlySaasRevenue
+                  )}
+                </p>
+              </div>
+            </div>
+
+          </SectionCard>
+
+          <SectionCard
+            title="Atalhos da plataforma"
+            description="Acesse rapidamente a operação global das contas clientes e a governança da plataforma."
+          >
+            <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+              {[
                 {
-                  metrics
-                    .platformMetrics
-                    .activeClinics
-                }
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
-              <p className="text-sm font-medium">
-                {t(
-                  "dashboard.platform.trialClinics"
-                )}
-              </p>
-              <p className="mt-2 text-2xl font-semibold">
+                  href: "/dashboard/clinics",
+                  title: "Empresas clientes",
+                  description:
+                    "Gerencie status, plano, identidade e detalhes operacionais.",
+                  icon: Building2,
+                },
                 {
-                  metrics
-                    .platformMetrics
-                    .trialClinics
-                }
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
-              <p className="text-sm font-medium">
-                {t(
-                  "dashboard.platform.pastDueClinics"
-                )}
-              </p>
-              <p className="mt-2 text-2xl font-semibold">
+                  href: "/dashboard/billing",
+                  title: "Assinaturas e pagamentos",
+                  description:
+                    "Acompanhe assinaturas SaaS, faturas e vencimentos das clínicas.",
+                  icon: ReceiptText,
+                },
                 {
-                  metrics
-                    .platformMetrics
-                    .pastDueClinics
-                }
-              </p>
-            </div>
+                  href: "/dashboard/messages",
+                  title: "Chamados",
+                  description:
+                    "Centralize solicitações, incidentes e conversas com as empresas clientes.",
+                  icon: MessageSquareMore,
+                },
+                {
+                  href: "/dashboard/users",
+                  title: "Usuários da plataforma",
+                  description:
+                    "Gerencie apenas a equipe interna da plataforma, sem misturar usuários de clínica.",
+                  icon: ShieldCheck,
+                },
+                {
+                  href: "/dashboard/audit-logs",
+                  title: "Auditoria",
+                  description:
+                    "Acompanhe eventos administrativos globais e ações críticas nas clínicas.",
+                  icon: ClipboardList,
+                },
+              ].map((shortcut) => {
+                const Icon = shortcut.icon;
 
-            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
-              <p className="text-sm font-medium">
-                {t(
-                  "dashboard.platform.monthlySaasRevenue"
-                )}
-              </p>
-              <p className="mt-2 text-2xl font-semibold">
-                {formatCurrency(
-                  metrics
-                    .platformMetrics
-                    .monthlySaasRevenue
-                )}
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t p-4">
-            <p className="text-sm font-medium">
-              {t(
-                "dashboard.platform.activeModuleCounts"
-              )}
-            </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {metrics.platformMetrics.activeModuleCounts.map(
-                (moduleMetric) => (
-                  <div
-                    key={moduleMetric.key}
-                    className="rounded-xl border border-border/60 bg-muted/40 p-4"
+                return (
+                  <Link
+                    key={shortcut.href}
+                    href={shortcut.href}
+                    className="group surface-subtle p-4 transition-colors hover:bg-background/90"
                   >
-                    <p className="text-sm font-medium">
-                      {moduleMetric.name}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold">
-                      {
-                        moduleMetric.enabledClinicCount
-                      }
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {moduleMetric.isV1Active
-                        ? t(
-                            "dashboard.platform.activeModuleAssignments"
-                          )
-                        : t(
-                            "dashboard.platform.futureModuleDormant"
-                          )}
-                    </p>
-                  </div>
-                )
-              )}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-2">
+                        <div className="rounded-full border border-border/60 bg-background p-3 text-muted-foreground">
+                          <Icon className="size-5" />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {shortcut.title}
+                          </p>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {shortcut.description}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="mt-1 size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
+        </>
       ) : null}
     </DashboardPage>
   );

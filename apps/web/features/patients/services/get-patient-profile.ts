@@ -64,6 +64,54 @@ export async function getPatientProfile(
         clinicId,
       },
       include: {
+        responsiblePatient: {
+          include: {
+            subscriptions: {
+              include: {
+                membershipPlan: true,
+                benefitUsages: {
+                  include: {
+                    membershipBenefit: {
+                      select: {
+                        id: true,
+                        title: true,
+                      },
+                    },
+                  },
+                  orderBy: {
+                    usedAt: "desc",
+                  },
+                },
+              },
+              orderBy: {
+                startedAt: "desc",
+              },
+            },
+            invoices: {
+              include: {
+                subscription: {
+                  select: {
+                    id: true,
+                    status: true,
+                    membershipPlan: {
+                      select: {
+                        name: true,
+                      },
+                    },
+                  },
+                },
+                payments: {
+                  orderBy: {
+                    paidAt: "desc",
+                  },
+                },
+              },
+              orderBy: {
+                dueDate: "desc",
+              },
+            },
+          },
+        },
         subscriptions: {
           include: {
             membershipPlan: true,
@@ -133,16 +181,27 @@ export async function getPatientProfile(
     throw new Error("Patient not found.");
   }
 
+  const subscriptionSourcePatient =
+    patient.kind === "DEPENDENT" &&
+    patient.responsiblePatient
+      ? patient.responsiblePatient
+      : patient;
+
+  const visibleSubscriptions =
+    subscriptionSourcePatient.subscriptions;
+  const visibleInvoices =
+    subscriptionSourcePatient.invoices;
+
   const subscriptionIds =
-    patient.subscriptions.map(
+    visibleSubscriptions.map(
       (subscription) => subscription.id
     );
   const invoiceIds =
-    patient.invoices.map(
+    visibleInvoices.map(
       (invoice) => invoice.id
     );
   const usageIds =
-    patient.subscriptions.flatMap(
+    visibleSubscriptions.flatMap(
       (subscription) =>
         subscription.benefitUsages.map(
           (usage) => usage.id
@@ -215,7 +274,10 @@ export async function getPatientProfile(
         matchesMetadataId(
           log.metadata,
           "patientId",
-          [patient.id]
+          [
+            patient.id,
+            subscriptionSourcePatient.id,
+          ]
         ) ||
         matchesMetadataId(
           log.metadata,
@@ -237,6 +299,13 @@ export async function getPatientProfile(
 
   return {
     patient,
+    subscriptionSourcePatient: {
+      id: subscriptionSourcePatient.id,
+      fullName:
+        subscriptionSourcePatient.fullName,
+    },
+    visibleSubscriptions,
+    visibleInvoices,
     auditLogs,
     timeline: auditLogs
       .map(buildTimelineEntry)

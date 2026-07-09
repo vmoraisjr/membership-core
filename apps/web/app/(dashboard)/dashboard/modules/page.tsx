@@ -1,5 +1,5 @@
-import { ModulesPage } from "@/features/modules/components/modules-page";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return <ModulesPage />;
+export default async function Page() {
+  redirect("/dashboard/billing");
 }

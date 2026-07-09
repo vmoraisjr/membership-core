@@ -1,5 +1,8 @@
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ClinicAssignmentRequired } from "@/components/dashboard/clinic-assignment-required";
 import { DashboardPage } from "@/components/layout/dashboard-page";
+import { getCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import { resolveCurrentWorkspace } from "@/features/auth/services/get-current-workspace";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
@@ -20,8 +23,17 @@ export async function AuditLogPage({
   filters,
 }: Props) {
   const t = getTranslations();
-  const role =
-    await getCurrentUserRole();
+  const [role, currentUser] =
+    await Promise.all([
+      getCurrentUserRole(),
+      getCurrentAppUser(),
+    ]);
+  const workspace =
+    currentUser
+      ? resolveCurrentWorkspace(
+          currentUser
+        )
+      : null;
 
   if (
     !hasPermission(
@@ -42,17 +54,49 @@ export async function AuditLogPage({
     );
   }
 
+  if (!workspace) {
+    return (
+      <DashboardPage>
+        <ClinicAssignmentRequired />
+      </DashboardPage>
+    );
+  }
+
+  if (
+    currentUser?.role !== "OWNER" &&
+    currentUser?.role !== "ADMIN"
+  ) {
+    return (
+      <DashboardPage>
+        <AccessDenied
+          title={t("audit.accessDeniedTitle")}
+          description="O registro de auditoria da clínica está disponível apenas para owner e administrador."
+        />
+      </DashboardPage>
+    );
+  }
+
   const {
     logs,
     actorOptions,
     entityOptions,
+    clinicOptions,
+    isPlatformView,
   } = await getAuditLogs(filters);
 
   return (
     <DashboardPage>
       <PageHeader
-        title={t("audit.title")}
-        description={t("audit.description")}
+        title={
+          isPlatformView
+            ? "Auditoria da plataforma"
+            : t("audit.title")
+        }
+        description={
+          isPlatformView
+            ? "Acompanhe eventos administrativos globais e ações críticas relacionadas às clínicas."
+            : t("audit.description")
+        }
       />
 
       <AuditLogTable
@@ -60,6 +104,8 @@ export async function AuditLogPage({
         filters={filters}
         actorOptions={actorOptions}
         entityOptions={entityOptions}
+        clinicOptions={clinicOptions}
+        isPlatformView={isPlatformView}
       />
     </DashboardPage>
   );

@@ -6,6 +6,7 @@ import {
 
 import prisma from "@/lib/prisma";
 import { getCurrentClinicId } from "@/lib/auth/get-current-clinic";
+import { canClinicOperate } from "@/features/billing/services/billing-foundation";
 
 import { isModuleV1Active } from "./module-policy";
 
@@ -97,6 +98,22 @@ export async function ensureClinicModules(
 ) {
   const modules =
     await ensureDefaultModules(client);
+  const clinicSubscription =
+    await client.clinicSubscription.findFirst({
+      where: {
+        clinicId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        status: true,
+      },
+    });
+  const enableOperationalModules =
+    canClinicOperate(
+      clinicSubscription?.status
+    );
 
   await Promise.all(
     modules.map((moduleRecord) =>
@@ -113,10 +130,17 @@ export async function ensureClinicModules(
           )
             ? {
                 status:
-                  ModuleStatus.ENABLED,
+                  enableOperationalModules
+                    ? ModuleStatus.ENABLED
+                    : ModuleStatus.DISABLED,
                 enabledAt:
-                  new Date(),
-                disabledAt: null,
+                  enableOperationalModules
+                    ? new Date()
+                    : null,
+                disabledAt:
+                  enableOperationalModules
+                    ? null
+                    : new Date(),
               }
             : {}),
         },
@@ -126,18 +150,24 @@ export async function ensureClinicModules(
           status: isModuleV1Active(
             moduleRecord.key
           )
-            ? ModuleStatus.ENABLED
+            ? enableOperationalModules
+              ? ModuleStatus.ENABLED
+              : ModuleStatus.DISABLED
             : ModuleStatus.DISABLED,
           enabledAt: isModuleV1Active(
             moduleRecord.key
           )
-            ? new Date()
+            ? enableOperationalModules
+              ? new Date()
+              : null
             : null,
-          disabledAt: isModuleV1Active(
-            moduleRecord.key
-          )
-            ? null
-            : new Date(),
+          disabledAt:
+            !isModuleV1Active(
+              moduleRecord.key
+            ) ||
+            !enableOperationalModules
+              ? new Date()
+              : null,
         },
       })
     )
@@ -179,6 +209,18 @@ export async function isModuleEnabled(
     await ensureClinicModules(
       resolvedClinicId
     );
+  const clinicSubscription =
+    await prisma.clinicSubscription.findFirst({
+      where: {
+        clinicId: resolvedClinicId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        status: true,
+      },
+    });
   const matchedModule =
     clinicModules.find(
       (entry) =>
@@ -186,6 +228,9 @@ export async function isModuleEnabled(
     );
 
   return (
+    canClinicOperate(
+      clinicSubscription?.status
+    ) &&
     matchedModule?.status ===
     ModuleStatus.ENABLED
   );

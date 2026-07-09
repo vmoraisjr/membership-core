@@ -401,7 +401,7 @@ async function main() {
           phone: "11911111111",
           birthDate: "1991-01-01",
           document:
-            "111.111.111-11",
+            "529.982.247-25",
           zipCode: "06000-000",
           city: "Sao Paulo",
           state: "SP",
@@ -692,7 +692,7 @@ async function main() {
             birthDate:
               new Date("1992-02-02T00:00:00.000Z"),
             document:
-              "222.222.222-22",
+              "111.444.777-35",
             zipCode:
               "06000-001",
             city: "Sao Paulo",

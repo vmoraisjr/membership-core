@@ -239,7 +239,7 @@ async function main() {
           phone: "11911111111",
           birthDate: "1991-01-01",
           document:
-            "111.111.111-11",
+            "529.982.247-25",
           zipCode: "05000-000",
           city: "Sao Paulo",
           state: "SP",
@@ -301,13 +301,12 @@ async function main() {
           membershipPlanId:
             plan!.id,
           type: BenefitType.LIMITED,
+          usagePolicy:
+            "UNLIMITED",
           title:
             "Open Wellness Session",
           description:
             "Unlimited monthly access",
-          usageLimit: undefined,
-          resetPeriod:
-            ResetPeriod.MONTHLY,
         });
 
         const benefit =
@@ -865,7 +864,7 @@ async function main() {
           phone: "11922222222",
           birthDate: "1992-02-02",
           document:
-            "222.222.222-22",
+            "111.444.777-35",
           zipCode: "05000-001",
           city: "Sao Paulo",
           state: "SP",
@@ -1001,7 +1000,7 @@ async function main() {
           phone: "11933333333",
           birthDate: "1993-03-03",
           document:
-            "333.333.333-33",
+            "123.456.789-09",
           zipCode: "05000-002",
           city: "Sao Paulo",
           state: "SP",

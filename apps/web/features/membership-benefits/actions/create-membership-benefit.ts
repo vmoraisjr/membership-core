@@ -5,7 +5,6 @@ import { assertPermission } from "@/features/rbac/services/assert-permission";
 import {
   AuditAction,
   AuditEntity,
-  BenefitType,
   ResetPeriod,
 } from "@prisma/client";
 
@@ -42,6 +41,14 @@ export async function createMembershipBenefit(
   const clinic = await getCurrentClinic();
   const actor =
     await getCurrentAuditActor();
+  const usagePolicy =
+    parsed.data.usagePolicy ??
+    (parsed.data.resetPeriod ===
+    ResetPeriod.MONTHLY
+      ? "MONTHLY"
+      : parsed.data.usageLimit != null
+        ? "TOTAL"
+        : "UNLIMITED");
 
   const plan =
     await prisma.membershipPlan.findFirst({
@@ -86,15 +93,15 @@ export async function createMembershipBenefit(
               parsed.data.discountAmount,
 
             usageLimit:
-              parsed.data.type ===
-              BenefitType.LIMITED
-                ? parsed.data.usageLimit ??
-                  null
-                : null,
+              usagePolicy ===
+              "UNLIMITED"
+                ? null
+                : parsed.data.usageLimit ??
+                  null,
 
             resetPeriod:
-              parsed.data.type ===
-              BenefitType.LIMITED
+              usagePolicy ===
+              "MONTHLY"
                 ? ResetPeriod.MONTHLY
                 : null,
           },
@@ -116,6 +123,7 @@ export async function createMembershipBenefit(
         entityLabel: benefit.title,
         metadata: {
           type: benefit.type,
+          usagePolicy,
         },
       });
     }

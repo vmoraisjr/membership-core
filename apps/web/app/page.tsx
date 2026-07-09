@@ -8,7 +8,9 @@ export default async function Page() {
 
   redirect(
     currentUser
-      ? "/dashboard"
+      ? currentUser.mustChangePassword
+        ? "/first-access"
+        : "/dashboard"
       : "/login"
   );
 }

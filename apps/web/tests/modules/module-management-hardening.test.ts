@@ -13,6 +13,7 @@ process.env.APP_LOG_LEVEL = "error";
 import {
   AppUserRole,
   ClinicStatus,
+  ClinicSubscriptionStatus,
   ModuleKey,
   ModuleStatus,
 } from "@prisma/client";
@@ -79,6 +80,18 @@ async function cleanupFixtures() {
         },
       },
     }),
+    prisma.clinicSubscription.deleteMany({
+      where: {
+        clinicId: {
+          in: clinicIds,
+        },
+      },
+    }),
+    prisma.clinicBillingPlan.deleteMany({
+      where: {
+        name: "Module Hardening SaaS",
+      },
+    }),
     prisma.appUser.deleteMany({
       where: {
         clinicId: {
@@ -141,6 +154,7 @@ async function seedFixtures(): Promise<FixtureState> {
     alphaOwner,
     alphaStaff,
     betaOwner,
+    billingPlan,
   ] = await Promise.all([
     prisma.appUser.create({
       data: {
@@ -167,6 +181,46 @@ async function seedFixtures(): Promise<FixtureState> {
         email:
           "owner@modules-beta.test",
         role: AppUserRole.OWNER,
+      },
+    }),
+    prisma.clinicBillingPlan.create({
+      data: {
+        name: "Module Hardening SaaS",
+        monthlyPrice: 249,
+        annualPrice: 2490,
+        trialDays: 14,
+        active: true,
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.clinicSubscription.create({
+      data: {
+        clinicId: alphaClinic.id,
+        clinicBillingPlanId:
+          billingPlan.id,
+        status:
+          ClinicSubscriptionStatus.ACTIVE,
+        startedAt: new Date(),
+        expiresAt: new Date(
+          Date.now() +
+            1000 * 60 * 60 * 24 * 30
+        ),
+      },
+    }),
+    prisma.clinicSubscription.create({
+      data: {
+        clinicId: betaClinic.id,
+        clinicBillingPlanId:
+          billingPlan.id,
+        status:
+          ClinicSubscriptionStatus.ACTIVE,
+        startedAt: new Date(),
+        expiresAt: new Date(
+          Date.now() +
+            1000 * 60 * 60 * 24 * 30
+        ),
       },
     }),
   ]);

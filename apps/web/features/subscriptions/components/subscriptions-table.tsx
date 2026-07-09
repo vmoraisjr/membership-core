@@ -126,64 +126,65 @@ export function SubscriptionsTable({
             )
           : t("subscriptions.table.description")
       }
+      toolbar={
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {t("shared.filters.statusFilter")}
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value
+                )
+              }
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            >
+              <option value="all">
+                {t("shared.filters.all")}
+              </option>
+              <option value="ACTIVE">
+                {t("subscriptions.statuses.ACTIVE")}
+              </option>
+              <option value="PENDING">
+                {t("subscriptions.statuses.PENDING")}
+              </option>
+              <option value="PAUSED">
+                {t("subscriptions.statuses.PAUSED")}
+              </option>
+              <option value="OVERDUE">
+                {t("subscriptions.statuses.OVERDUE")}
+              </option>
+              <option value="CANCELED">
+                {t("subscriptions.statuses.CANCELED")}
+              </option>
+              <option value="EXPIRED">
+                {t("subscriptions.statuses.EXPIRED")}
+              </option>
+            </select>
+          </div>
+
+          <div className="grid gap-2 sm:min-w-80">
+            <label className="text-sm font-medium text-muted-foreground">
+              {t("shared.filters.filterByPatientName")}
+            </label>
+            <input
+              value={patientSearch}
+              onChange={(event) =>
+                setPatientSearch(
+                  event.target.value
+                )
+              }
+              placeholder={t(
+                "shared.filters.filterByPatientName"
+              )}
+              className="h-10 rounded-xl border border-input bg-background px-3"
+            />
+          </div>
+        </div>
+      }
     >
-      <div className="flex flex-col gap-4 border-b p-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="grid gap-2">
-          <label className="text-sm text-muted-foreground">
-            {t("shared.filters.statusFilter")}
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value
-              )
-            }
-            className="h-10 rounded-md border px-3"
-          >
-            <option value="all">
-              {t("shared.filters.all")}
-            </option>
-            <option value="ACTIVE">
-              {t("subscriptions.statuses.ACTIVE")}
-            </option>
-          <option value="PENDING">
-              {t("subscriptions.statuses.PENDING")}
-            </option>
-            <option value="PAUSED">
-              {t("subscriptions.statuses.PAUSED")}
-            </option>
-            <option value="OVERDUE">
-              {t("subscriptions.statuses.OVERDUE")}
-            </option>
-            <option value="CANCELED">
-              {t("subscriptions.statuses.CANCELED")}
-            </option>
-            <option value="EXPIRED">
-              {t("subscriptions.statuses.EXPIRED")}
-            </option>
-          </select>
-        </div>
-
-        <div className="grid gap-2 sm:min-w-80">
-          <label className="text-sm text-muted-foreground">
-            {t("shared.filters.filterByPatientName")}
-          </label>
-          <input
-            value={patientSearch}
-            onChange={(event) =>
-              setPatientSearch(
-                event.target.value
-              )
-            }
-            placeholder={t(
-              "shared.filters.filterByPatientName"
-            )}
-            className="h-10 rounded-md border px-3"
-          />
-        </div>
-      </div>
-
       <Table>
         <TableHeader>
           <TableRow>
@@ -215,7 +216,7 @@ export function SubscriptionsTable({
               <TableRow
                 key={subscription.id}
               >
-                <TableCell>
+                <TableCell className="min-w-[16rem]">
                   {
                     subscription.patient
                       .fullName
@@ -276,9 +277,11 @@ export function SubscriptionsTable({
             <TableRow>
               <TableCell
                 colSpan={5}
-                className="py-10 text-center text-muted-foreground"
+                className="p-0"
               >
-                {t("subscriptions.table.empty")}
+                <div className="py-10 text-center text-muted-foreground">
+                  {t("subscriptions.table.empty")}
+                </div>
               </TableCell>
             </TableRow>
           )}

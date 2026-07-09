@@ -6,7 +6,7 @@ export function DashboardPage({
   children,
 }: Props) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="page-frame">
       {children}
     </div>
   );

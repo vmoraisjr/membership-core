@@ -1,5 +1,6 @@
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
@@ -10,8 +11,11 @@ import { ClinicDialog } from "./clinic-dialog";
 import { ClinicTable } from "./clinic-table";
 
 export async function ClinicPage() {
-  const role =
-    await getCurrentUserRole();
+  const [role, currentUser] =
+    await Promise.all([
+      getCurrentUserRole(),
+      requireCurrentAppUser(),
+    ]);
 
   if (
     !hasPermission(role, "clinic", "view")
@@ -19,8 +23,8 @@ export async function ClinicPage() {
     return (
       <DashboardPage>
         <AccessDenied
-          title="Clinic access denied"
-          description="The current role cannot view clinic administration."
+          title="Acesso às clínicas negado"
+          description="O perfil atual não pode visualizar a administração de clínicas."
         />
       </DashboardPage>
     );
@@ -37,11 +41,23 @@ export async function ClinicPage() {
   return (
     <DashboardPage>
       <PageHeader
-        title="Clinics"
-        description="Manage the current clinic tenant without exposing other clinic records."
+        title={
+          currentUser.clinicId
+            ? "Empresa"
+            : "Empresas clientes"
+        }
+        description={
+          currentUser.clinicId
+            ? "Gerencie a identidade, credenciais e dados operacionais da empresa atual."
+            : "Gerencie contas clientes, identidade, plano SaaS e bootstrap operacional de cada tenant."
+        }
         action={
           canManageClinic &&
-          clinics.length === 0 ? (
+          (currentUser.role ===
+            "OWNER" ||
+            currentUser.role ===
+              "ADMIN") &&
+          !currentUser.clinicId ? (
             <ClinicDialog />
           ) : undefined
         }
@@ -51,6 +67,9 @@ export async function ClinicPage() {
         clinics={clinics}
         canManageClinic={
           canManageClinic
+        }
+        isPlatformView={
+          !currentUser.clinicId
         }
       />
     </DashboardPage>

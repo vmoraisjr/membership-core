@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   CircleOff,
+  ExternalLink,
   Pencil,
   RotateCcw,
 } from "lucide-react";
@@ -23,6 +26,7 @@ type Props = {
     id: string;
     name: string;
     brandName: string | null;
+    logoUrl: string | null;
     slug: string;
     document: string;
     email: string;
@@ -31,19 +35,28 @@ type Props = {
     city: string;
     state: string;
     address: string;
-    status: ClinicStatus;
+  status: ClinicStatus;
+  clinicSubscriptions?: Array<{
+    id: string;
+    status: string;
+    clinicBillingPlan: {
+      name: string;
+    };
+  }>;
   };
   canManageClinic?: boolean;
+  isPlatformView?: boolean;
 };
 
 export function ClinicRowActions({
   clinic,
   canManageClinic = true,
+  isPlatformView = false,
 }: Props) {
   if (!canManageClinic) {
     return (
       <span className="text-xs text-muted-foreground">
-        Read only
+        Somente leitura
       </span>
     );
   }
@@ -55,13 +68,13 @@ export function ClinicRowActions({
       );
 
       toast.success(
-        "Clinic deactivated."
+        "Clínica desativada."
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to deactivate clinic."
+          : "Não foi possível desativar a clínica."
       );
     }
   }
@@ -73,22 +86,37 @@ export function ClinicRowActions({
       );
 
       toast.success(
-        "Clinic reactivated."
+        "Clínica reativada."
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to reactivate clinic."
+          : "Não foi possível reativar a clínica."
       );
     }
   }
 
   return (
     <div className="flex items-center gap-2">
+      {isPlatformView ? (
+        <Button
+          asChild
+          size="icon"
+          variant="outline"
+        >
+          <Link
+            href={`/dashboard/clinics/${clinic.id}`}
+          >
+            <ExternalLink className="size-4" />
+          </Link>
+        </Button>
+      ) : null}
+
       <ClinicDialog
         mode="edit"
         initialData={clinic}
+        isPlatformView={isPlatformView}
         trigger={
           <Button
             size="icon"
@@ -102,12 +130,12 @@ export function ClinicRowActions({
       {clinic.status ===
       ClinicStatus.ACTIVE ? (
         <ConfirmDialog
-          title="Deactivate clinic?"
-          description="The clinic will become inactive and remain available for historical review."
+          title="Desativar clínica?"
+          description="A clínica ficará inativa, mas continuará disponível para histórico."
           onConfirm={() =>
             handleDeactivate()
           }
-          actionLabel="Deactivate clinic"
+          actionLabel="Desativar clínica"
           trigger={
             <Button
               size="icon"
@@ -119,12 +147,12 @@ export function ClinicRowActions({
         />
       ) : (
         <ConfirmDialog
-          title="Reactivate clinic?"
-          description="The clinic will become active again and available for operational use."
+          title="Reativar clínica?"
+          description="A clínica voltará a ficar ativa para uso operacional."
           onConfirm={() =>
             handleReactivate()
           }
-          actionLabel="Reactivate clinic"
+          actionLabel="Reativar clínica"
           trigger={
             <Button
               size="icon"

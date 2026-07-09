@@ -4,15 +4,16 @@ import {
 } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
 import {
   filterByClinic,
-  getCurrentClinicContext,
 } from "@/lib/auth/tenant";
 
 export type AuditLogFilters = {
   actor?: string;
   entity?: string;
   date?: string;
+  clinicId?: string;
 };
 
 function isAuditEntity(
@@ -109,15 +110,107 @@ export const AUDIT_ENTITY_LABELS: Record<
     "Contrato do paciente",
   CLINIC_CONTRACT:
     "Contrato da clínica",
+  SUPPORT_THREAD:
+    "Chamado",
+  SUPPORT_MESSAGE:
+    "Mensagem do chamado",
 };
 
 export async function getAuditLogs(
   filters: AuditLogFilters = {}
 ) {
-  const { clinicId } =
-    await getCurrentClinicContext();
+  const currentUser =
+    await requireCurrentAppUser();
+  const isPlatformView =
+    !currentUser.clinicId &&
+    (currentUser.role === "OWNER" ||
+      currentUser.role === "ADMIN");
+
+  const clinicId =
+    currentUser.clinicId ??
+    filters.clinicId ??
+    null;
+  const clinicVisibleEntities: AuditEntity[] =
+    [
+      AuditEntity.CLINIC,
+      AuditEntity.APP_USER,
+      AuditEntity.USER_INVITE,
+      AuditEntity.PATIENT,
+      AuditEntity.MEMBERSHIP_PLAN,
+      AuditEntity.MEMBERSHIP_BENEFIT,
+      AuditEntity.SUBSCRIPTION,
+      AuditEntity.BENEFIT_USAGE,
+      AuditEntity.PATIENT_INVOICE,
+      AuditEntity.PATIENT_PAYMENT,
+      AuditEntity.CLINIC_MODULE,
+      AuditEntity.CONTRACT_TEMPLATE,
+      AuditEntity.PATIENT_CONTRACT,
+      AuditEntity.CLINIC_CONTRACT,
+      AuditEntity.SUPPORT_THREAD,
+      AuditEntity.SUPPORT_MESSAGE,
+    ];
+  const platformVisibleEntities: AuditEntity[] =
+    [
+      AuditEntity.CLINIC,
+      AuditEntity.APP_USER,
+      AuditEntity.PATIENT,
+      AuditEntity.MEMBERSHIP_PLAN,
+      AuditEntity.MEMBERSHIP_BENEFIT,
+      AuditEntity.SUBSCRIPTION,
+      AuditEntity.BENEFIT_USAGE,
+      AuditEntity.PATIENT_INVOICE,
+      AuditEntity.PATIENT_PAYMENT,
+      AuditEntity.CLINIC_BILLING_PLAN,
+      AuditEntity.CLINIC_SUBSCRIPTION,
+      AuditEntity.CLINIC_INVOICE,
+      AuditEntity.CLINIC_PAYMENT,
+      AuditEntity.MODULE,
+      AuditEntity.CLINIC_MODULE,
+      AuditEntity.CONTRACT_TEMPLATE,
+      AuditEntity.PATIENT_CONTRACT,
+      AuditEntity.CLINIC_CONTRACT,
+      AuditEntity.SUPPORT_THREAD,
+      AuditEntity.SUPPORT_MESSAGE,
+    ];
+  if (!isPlatformView && !clinicId) {
+    throw new Error(
+      "Clinic context is required for clinic audit logs."
+    );
+  }
   const where: Prisma.AuditLogWhereInput =
-    filterByClinic(clinicId);
+    isPlatformView
+      ? {
+          entity: {
+            in: platformVisibleEntities,
+          },
+          ...(filters.clinicId
+            ? {
+                clinicId:
+                  filters.clinicId,
+              }
+            : {}),
+        }
+      : filterByClinic(
+          clinicId as string,
+          {
+            OR: [
+              {
+                actorUserId: null,
+              },
+              {
+                actorUser: {
+                  is: {
+                    clinicId:
+                      clinicId as string,
+                  },
+                },
+              },
+            ],
+            entity: {
+              in: clinicVisibleEntities,
+            },
+          }
+        );
 
   const actor = filters.actor?.trim();
   if (actor) {
@@ -142,7 +235,7 @@ export async function getAuditLogs(
     }
   }
 
-  const [logs, actors, entities] =
+  const [logs, actors, entities, clinics] =
     await Promise.all([
       prisma.auditLog.findMany({
         where,
@@ -150,11 +243,18 @@ export async function getAuditLogs(
           createdAt: "desc",
         },
         take: 200,
+        include: {
+          clinic: {
+            select: {
+              id: true,
+              name: true,
+              brandName: true,
+            },
+          },
+        },
       }),
       prisma.auditLog.findMany({
-        where: {
-          clinicId,
-        },
+        where,
         distinct: ["actor"],
         orderBy: {
           actor: "asc",
@@ -164,9 +264,7 @@ export async function getAuditLogs(
         },
       }),
       prisma.auditLog.findMany({
-        where: {
-          clinicId,
-        },
+        where,
         distinct: ["entity"],
         orderBy: {
           entity: "asc",
@@ -175,6 +273,18 @@ export async function getAuditLogs(
           entity: true,
         },
       }),
+      isPlatformView
+        ? prisma.clinic.findMany({
+            orderBy: {
+              name: "asc",
+            },
+            select: {
+              id: true,
+              name: true,
+              brandName: true,
+            },
+          })
+        : Promise.resolve([]),
     ]);
 
   return {
@@ -187,5 +297,14 @@ export async function getAuditLogs(
       ({ entity: currentEntity }) =>
         currentEntity
     ),
+    clinicOptions: clinics.map(
+      (clinic) => ({
+        id: clinic.id,
+        name:
+          clinic.brandName ??
+          clinic.name,
+      })
+    ),
+    isPlatformView,
   };
 }

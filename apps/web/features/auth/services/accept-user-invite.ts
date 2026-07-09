@@ -67,6 +67,7 @@ export async function acceptUserInvite(
                 AppUserStatus.ACTIVE,
               passwordHash:
                 hashPassword(password),
+              mustChangePassword: false,
             },
             create: {
               clinicId:
@@ -78,6 +79,7 @@ export async function acceptUserInvite(
                 AppUserStatus.ACTIVE,
               passwordHash:
                 hashPassword(password),
+              mustChangePassword: false,
             },
           });
 

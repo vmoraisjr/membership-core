@@ -71,10 +71,23 @@ export async function PatientProfilePage({
   return (
     <DashboardPage>
       <PageHeader
+        eyebrow="Cliente"
         title={profile.patient.fullName}
         description={t(
           "patients.profile.description"
         )}
+        meta={
+          <>
+            <span>
+              {profile.patient.kind ===
+              "DEPENDENT"
+                ? "Dependente"
+                : "Titular"}
+            </span>
+            <span>•</span>
+            <span>{profile.patient.status}</span>
+          </>
+        }
       />
 
       <SectionCard
@@ -83,55 +96,89 @@ export async function PatientProfilePage({
           "patients.profile.overviewDescription"
         )}
       >
-        <div className="grid gap-4 p-4 md:grid-cols-3">
-          <div>
-            <p className="text-sm text-muted-foreground">
+        <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="detail-field">
+            <p className="detail-field-label">
               {t("shared.labels.email")}
             </p>
-            <p>{profile.patient.email}</p>
+            <p className="detail-field-value break-all">
+              {profile.patient.email}
+            </p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
+          <div className="detail-field">
+            <p className="detail-field-label">
               {t("shared.labels.phone")}
             </p>
-            <p>{profile.patient.phone}</p>
+            <p className="detail-field-value">
+              {profile.patient.phone}
+            </p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
+          <div className="detail-field">
+            <p className="detail-field-label">
+              Tipo
+            </p>
+            <p className="detail-field-value">
+              {profile.patient.kind ===
+              "DEPENDENT"
+                ? "Dependente"
+                : "Titular"}
+            </p>
+          </div>
+          <div className="detail-field">
+            <p className="detail-field-label">
               {t("shared.labels.status")}
             </p>
-            <p>{profile.patient.status}</p>
+            <p className="detail-field-value">
+              {profile.patient.status}
+            </p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
+          <div className="detail-field">
+            <p className="detail-field-label">
               {t(
                 "shared.labels.registrationDate"
               )}
             </p>
-            <p>
+            <p className="detail-field-value">
               {formatDateOnly(
                 profile.patient.createdAt
               )}
             </p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
+          <div className="detail-field">
+            <p className="detail-field-label">
               {t("shared.labels.birthDate")}
             </p>
-            <p>
+            <p className="detail-field-value">
               {formatDateOnly(
                 profile.patient.birthDate
               )}
             </p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
+          <div className="detail-field">
+            <p className="detail-field-label">
               {t("shared.labels.document")}
             </p>
-            <p>
+            <p className="detail-field-value">
               {profile.patient.document}
             </p>
           </div>
+          {profile.patient.kind ===
+            "DEPENDENT" &&
+          profile.patient
+            .responsiblePatient ? (
+            <div className="detail-field">
+              <p className="detail-field-label">
+                Responsável atual
+              </p>
+              <p className="detail-field-value">
+                {
+                  profile.patient
+                    .responsiblePatient
+                    .fullName
+                }
+              </p>
+            </div>
+          ) : null}
         </div>
       </SectionCard>
 
@@ -139,9 +186,14 @@ export async function PatientProfilePage({
         title={t(
           "patients.profile.subscriptionsTitle"
         )}
-        description={t(
-          "patients.profile.subscriptionsDescription"
-        )}
+        description={
+          profile.patient.kind ===
+          "DEPENDENT"
+            ? `Assinaturas herdadas de ${profile.subscriptionSourcePatient.fullName}.`
+            : t(
+                "patients.profile.subscriptionsDescription"
+              )
+        }
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
@@ -165,7 +217,7 @@ export async function PatientProfilePage({
               </tr>
             </thead>
             <tbody>
-              {profile.patient.subscriptions.map(
+              {profile.visibleSubscriptions.map(
                 (subscription) => (
                   <tr
                     key={subscription.id}
@@ -193,7 +245,7 @@ export async function PatientProfilePage({
                     </td>
                     <td className="py-3">
                       <Link
-                        href={`/dashboard/subscriptions?patientId=${profile.patient.id}`}
+                        href={`/dashboard/subscriptions?patientId=${profile.subscriptionSourcePatient.id}`}
                         className="text-primary underline-offset-4 hover:underline"
                       >
                         {t("shared.actions.open")}
@@ -292,9 +344,14 @@ export async function PatientProfilePage({
         title={t(
           "patients.profile.paymentHistoryTitle"
         )}
-        description={t(
-          "patients.profile.paymentHistoryDescription"
-        )}
+        description={
+          profile.patient.kind ===
+          "DEPENDENT"
+            ? `Cobranças e vigência refletidas a partir de ${profile.subscriptionSourcePatient.fullName}.`
+            : t(
+                "patients.profile.paymentHistoryDescription"
+              )
+        }
       >
         <div className="overflow-x-auto p-4">
           <table className="w-full text-sm">
@@ -321,7 +378,7 @@ export async function PatientProfilePage({
               </tr>
             </thead>
             <tbody>
-              {profile.patient.invoices.map(
+              {profile.visibleInvoices.map(
                 (invoice) => (
                   <tr
                     key={invoice.id}

@@ -2,16 +2,16 @@
 
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 
-import { revalidatePath } from "next/cache";
-
 import { AuditAction, AuditEntity } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { safeRevalidatePath } from "@/lib/revalidation";
 import {
   createAuditLog,
   getCurrentAuditActor,
 } from "@/features/audit-log/services/create-audit-log";
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import { createClinicMasterUser } from "@/features/auth/services/clinic-master";
 import { ensureClinicBillingFoundation } from "@/features/billing/services/billing-foundation";
 import { ensureClinicContractRecord } from "@/features/contracts/services/contracts-foundation";
 import { ensureClinicModules } from "@/features/modules/services/module-access";
@@ -20,6 +20,11 @@ import {
   clinicSchema,
   type ClinicSchema,
 } from "../schemas/clinic.schema";
+import {
+  normalizeClinicState,
+  normalizeDigits,
+} from "../services/clinic-formats";
+import { buildUniqueClinicSlug } from "../services/build-clinic-slug";
 
 export async function createClinic(
   data: ClinicSchema
@@ -33,39 +38,40 @@ export async function createClinic(
     clinicSchema.safeParse(data);
 
   if (!parsed.success) {
-    throw new Error("Invalid data.");
+    throw new Error(
+      "Revise os dados da clínica antes de continuar."
+    );
   }
 
-  const slug =
-    parsed.data.slug.toLowerCase();
   const actor =
     await getCurrentAuditActor();
   const currentUser =
     await requireCurrentAppUser();
 
+  if (
+    currentUser.role !== "OWNER" &&
+    currentUser.role !== "ADMIN"
+  ) {
+    throw new Error(
+      "Apenas owner ou administrador da plataforma podem criar clinicas."
+    );
+  }
+
   if (currentUser.clinicId) {
     throw new Error(
-      "Creating additional clinics is not available in the V1 tenant workspace."
+      "Nao e possivel criar outra clinica dentro deste workspace na V1."
     );
   }
 
-  const existingClinic =
-    await prisma.clinic.findUnique({
-      where: {
-        slug,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-  if (existingClinic) {
-    throw new Error(
-      "A clinic with this slug already exists."
+  const slug =
+    await buildUniqueClinicSlug(
+      parsed.data.slug?.trim()
+        ? parsed.data.slug
+        : parsed.data.name
     );
-  }
 
-  await prisma.$transaction(
+  const result =
+    await prisma.$transaction(
     async (tx) => {
       const clinic =
         await tx.clinic.create({
@@ -74,15 +80,25 @@ export async function createClinic(
             brandName:
               parsed.data.brandName ||
               null,
+            logoUrl:
+              parsed.data.logoUrl || null,
             slug,
             document:
               parsed.data.document,
-            email: parsed.data.email,
-            phone: parsed.data.phone,
+            email:
+              parsed.data.email.toLowerCase(),
+            phone: normalizeDigits(
+              parsed.data.phone
+            ),
             zipCode:
-              parsed.data.zipCode,
+              normalizeDigits(
+                parsed.data.zipCode
+              ),
             city: parsed.data.city,
-            state: parsed.data.state,
+            state:
+              normalizeClinicState(
+                parsed.data.state
+              ),
             address:
               parsed.data.address,
           },
@@ -92,15 +108,20 @@ export async function createClinic(
             slug: true,
           },
         });
-
-      await tx.appUser.update({
-        where: {
-          id: currentUser.id,
-        },
-        data: {
-          clinicId: clinic.id,
-        },
-      });
+      const clinicMaster =
+        await createClinicMasterUser(
+          {
+            clinicId: clinic.id,
+            clinicName:
+              parsed.data.brandName ||
+              parsed.data.name,
+            email: parsed.data.email,
+            actorDisplayName:
+              actor.displayName,
+            actorUserId: actor.id,
+          },
+          tx
+        );
 
       await ensureClinicModules(
         clinic.id,
@@ -127,12 +148,28 @@ export async function createClinic(
           slug: clinic.slug,
         },
       });
+
+      return {
+        clinic,
+        clinicMaster,
+      };
     }
   );
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/clinics");
-  revalidatePath("/dashboard/billing");
-  revalidatePath("/dashboard/contracts");
-  revalidatePath("/dashboard/modules");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/dashboard/clinics");
+  safeRevalidatePath("/dashboard/billing");
+  safeRevalidatePath("/dashboard/contracts");
+  safeRevalidatePath("/dashboard/modules");
+
+  return {
+    clinicId: result.clinic.id,
+    clinicName: result.clinic.name,
+    clinicMasterEmail:
+      result.clinicMaster
+        .clinicMaster.email,
+    clinicMasterTemporaryPassword:
+      result.clinicMaster
+        .temporaryPassword,
+  };
 }

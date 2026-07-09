@@ -1,0 +1,1 @@
+ALTER TYPE "ClinicSubscriptionStatus" ADD VALUE IF NOT EXISTS 'PENDING';

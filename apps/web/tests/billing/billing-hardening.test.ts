@@ -263,7 +263,7 @@ async function seedFixtures(): Promise<FixtureState> {
             "1991-01-01T00:00:00.000Z"
           ),
           document:
-            "111.111.111-11",
+            "529.982.247-25",
           zipCode: "08000-000",
           city: "Sao Paulo",
           state: "SP",
@@ -283,7 +283,7 @@ async function seedFixtures(): Promise<FixtureState> {
             "1992-02-02T00:00:00.000Z"
           ),
           document:
-            "222.222.222-22",
+            "111.444.777-35",
           zipCode: "09000-000",
           city: "Rio de Janeiro",
           state: "RJ",

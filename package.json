@@ -6,14 +6,23 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
+    "e2e:web:seed": "pnpm --dir apps/web e2e:seed",
+    "test:e2e:web": "pnpm --dir apps/web test:e2e",
+    "qa:web": "pnpm --dir apps/web qa:functional",
+    "qa:web:fast": "pnpm --dir apps/web qa:functional:fast",
     "test:tenant": "pnpm --dir apps/web test:tenant",
+    "test:auth": "pnpm --dir apps/web test:auth",
+    "test:auth-recovery": "pnpm --dir apps/web test:auth-recovery",
+    "test:validation": "pnpm --dir apps/web test:validation",
     "test:rbac": "pnpm --dir apps/web test:rbac",
     "test:membership": "pnpm --dir apps/web test:membership",
     "test:contracts": "pnpm --dir apps/web test:contracts",
     "test:billing": "pnpm --dir apps/web test:billing",
     "test:modules": "pnpm --dir apps/web test:modules",
     "test:audit": "pnpm --dir apps/web test:audit",
-    "test:users": "pnpm --dir apps/web test:users"
+    "test:users": "pnpm --dir apps/web test:users",
+    "test:clinic-bootstrap": "pnpm --dir apps/web test:clinic-bootstrap",
+    "test:messages": "pnpm --dir apps/web test:messages"
   },
   "devDependencies": {
     "turbo": "^2.0.0"
