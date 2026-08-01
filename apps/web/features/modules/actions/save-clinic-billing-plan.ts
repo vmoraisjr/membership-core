@@ -76,10 +76,12 @@ export async function saveClinicBillingPlanAction(
   const trialDays = Number(
     formData.get("trialDays") ?? 14
   );
+  const activeValue = String(
+    formData.get("active") ?? ""
+  ).trim();
   const active =
-    String(
-      formData.get("active") ?? ""
-    ) === "on";
+    activeValue === "on" ||
+    activeValue === "true";
 
   if (name.length < 3) {
     throw new Error(
@@ -189,6 +191,15 @@ export async function saveClinicBillingPlanAction(
   );
   safeRevalidatePath(
     "/dashboard/billing"
+  );
+  safeRevalidatePath(
+    "/dashboard/billing/catalog"
+  );
+  safeRevalidatePath(
+    "/dashboard/billing/subscriptions"
+  );
+  safeRevalidatePath(
+    "/dashboard/billing/payments"
   );
   safeRevalidatePath(
     "/dashboard/clinics"

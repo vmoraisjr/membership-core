@@ -33,6 +33,20 @@ function assertPlatformOwner(user: {
   }
 }
 
+function revalidatePlatformBillingPaths() {
+  safeRevalidatePath("/dashboard/billing");
+  safeRevalidatePath(
+    "/dashboard/billing/catalog"
+  );
+  safeRevalidatePath(
+    "/dashboard/billing/subscriptions"
+  );
+  safeRevalidatePath(
+    "/dashboard/billing/payments"
+  );
+  safeRevalidatePath("/dashboard");
+}
+
 export async function platformUpdateClinicSubscriptionStatusAction(
   formData: FormData
 ) {
@@ -70,8 +84,7 @@ export async function platformUpdateClinicSubscriptionStatusAction(
     }
   );
 
-  safeRevalidatePath("/dashboard/billing");
-  safeRevalidatePath("/dashboard");
+  revalidatePlatformBillingPaths();
 }
 
 export async function platformMarkClinicInvoicePaidAction(
@@ -159,8 +172,7 @@ export async function platformMarkClinicInvoicePaidAction(
     }
   );
 
-  safeRevalidatePath("/dashboard/billing");
-  safeRevalidatePath("/dashboard");
+  revalidatePlatformBillingPaths();
 }
 
 export async function platformMarkClinicInvoiceOverdueAction(
@@ -213,8 +225,7 @@ export async function platformMarkClinicInvoiceOverdueAction(
     }
   );
 
-  safeRevalidatePath("/dashboard/billing");
-  safeRevalidatePath("/dashboard");
+  revalidatePlatformBillingPaths();
 }
 
 export async function platformAssignClinicBillingPlanAction(
@@ -247,6 +258,5 @@ export async function platformAssignClinicBillingPlanAction(
     },
   });
 
-  safeRevalidatePath("/dashboard/billing");
-  safeRevalidatePath("/dashboard");
+  revalidatePlatformBillingPaths();
 }

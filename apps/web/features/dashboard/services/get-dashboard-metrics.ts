@@ -1,8 +1,10 @@
 import {
+  AuditAction,
   ClinicStatus,
   ClinicSubscriptionStatus,
   ModuleStatus,
   PaymentStatus,
+  SupportThreadStatus,
 } from "@prisma/client";
 
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
@@ -110,6 +112,9 @@ export async function getDashboardMetrics() {
     pastDueClinics,
     monthlySaasRevenue,
     moduleCounts,
+    openSupportThreads,
+    pendingInvites,
+    criticalAuditEvents,
   ] = await Promise.all([
     prisma.clinic.count({
       where: {
@@ -159,6 +164,43 @@ export async function getDashboardMetrics() {
         },
       },
     }),
+    prisma.supportThread.count({
+      where: {
+        status: {
+          in: [
+            SupportThreadStatus.OPEN,
+            SupportThreadStatus.IN_PROGRESS,
+            SupportThreadStatus.WAITING_PLATFORM,
+          ],
+        },
+      },
+    }),
+    prisma.userInvite.count({
+      where: {
+        clinicId: null,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+    }),
+    prisma.auditLog.count({
+      where: {
+        createdAt: {
+          gte: new Date(
+            Date.now() -
+              1000 * 60 * 60 * 24 * 7
+          ),
+        },
+        action: {
+          in: [
+            AuditAction.DELETE,
+            AuditAction.DEACTIVATE,
+          ],
+        },
+      },
+    }),
   ]);
 
   return {
@@ -171,6 +213,9 @@ export async function getDashboardMetrics() {
       monthlySaasRevenue:
         monthlySaasRevenue._sum
           .amount ?? 0,
+      openSupportThreads,
+      pendingInvites,
+      criticalAuditEvents,
       activeModuleCounts:
         moduleCounts.map((module) => ({
           key: module.key,

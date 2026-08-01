@@ -6,6 +6,12 @@ import { SectionCard } from "@/components/dashboard/section-card";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import {
+  formatBrazilianCnpj,
+  formatBrazilianPhone,
+  formatBrazilianState,
+  formatBrazilianZipCode,
+} from "@/lib/br-formats";
 
 import { CompanyBrandingForm } from "./company-branding-form";
 import { getCurrentClinicProfile } from "../services/get-current-clinic-profile";
@@ -128,7 +134,9 @@ export async function CompanyProfilePage() {
                 Documento
               </p>
               <p className="detail-field-value">
-                {clinic.document}
+                {formatBrazilianCnpj(
+                  clinic.document
+                )}
               </p>
             </div>
             <div className="detail-field">
@@ -144,7 +152,9 @@ export async function CompanyProfilePage() {
                 Telefone
               </p>
               <p className="detail-field-value">
-                {clinic.phone}
+                {formatBrazilianPhone(
+                  clinic.phone
+                )}
               </p>
             </div>
             <div className="detail-field">
@@ -160,7 +170,7 @@ export async function CompanyProfilePage() {
                 Endereço
               </p>
               <p className="detail-field-value">
-                {clinic.address}, {clinic.city} - {clinic.state}, {clinic.zipCode}
+                {clinic.address}, {clinic.city} - {formatBrazilianState(clinic.state)}, {formatBrazilianZipCode(clinic.zipCode)}
               </p>
             </div>
           </div>

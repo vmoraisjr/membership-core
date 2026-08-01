@@ -6,7 +6,12 @@ import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
+import {
+  FEEDBACK_WARNING_MESSAGES,
+  getFeedbackErrorMessage,
+} from "@/lib/feedback";
 
 import { updateClinicBrandingAction } from "../actions/update-clinic-branding";
 import {
@@ -58,8 +63,8 @@ export function CompanyBrandingForm({
       file.type !== "image/png" &&
       file.type !== "image/svg+xml"
     ) {
-      toast.error(
-        "Envie um arquivo SVG ou PNG."
+      toast.warning(
+        FEEDBACK_WARNING_MESSAGES.unsupportedImageFormat
       );
       return;
     }
@@ -68,8 +73,8 @@ export function CompanyBrandingForm({
       file.size >
       MAX_BRANDING_LOGO_FILE_SIZE_BYTES
     ) {
-      toast.error(
-        "O logo excede o limite de 256 KB."
+      toast.warning(
+        FEEDBACK_WARNING_MESSAGES.oversizedImage
       );
       event.target.value = "";
       return;
@@ -118,13 +123,14 @@ export function CompanyBrandingForm({
           formData
         );
         toast.success(
-          "Identidade da empresa atualizada."
+          "Identidade da empresa atualizada com sucesso."
         );
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "Não foi possível atualizar a identidade da empresa."
+          getFeedbackErrorMessage(
+            error,
+            "Não foi possível atualizar a identidade da empresa."
+          )
         );
       }
     });
@@ -150,16 +156,10 @@ export function CompanyBrandingForm({
       </label>
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px]">
-        <div className="form-section">
-          <div>
-            <p className="form-section-title">
-              Identidade visual
-            </p>
-            <p className="form-section-description">
-              Atualize a apresentação local da empresa sem alterar dados fiscais
-              ou contratuais.
-            </p>
-          </div>
+        <FormSection
+          title="Identidade visual"
+          description="Atualize a apresentação local da empresa sem alterar dados fiscais ou contratuais."
+        >
 
           <label className="field-stack">
             <span className="field-label">
@@ -195,9 +195,9 @@ export function CompanyBrandingForm({
               Remover logo
             </Button>
           </div>
-        </div>
+        </FormSection>
 
-        <div className="form-section">
+        <FormSection>
           <span className="field-label">
             Pré-visualização
           </span>
@@ -215,7 +215,7 @@ export function CompanyBrandingForm({
               </p>
             )}
           </div>
-        </div>
+        </FormSection>
       </div>
 
       <div className="flex justify-end">

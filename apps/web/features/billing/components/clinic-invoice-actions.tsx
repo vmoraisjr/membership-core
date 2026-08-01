@@ -1,6 +1,10 @@
 "use client";
 
 import { PaymentStatus } from "@prisma/client";
+import {
+  AlertTriangle,
+  CircleCheckBig,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
@@ -66,9 +70,14 @@ export function ClinicInvoiceActions({
             <Button
               type="button"
               variant="outline"
+              size="icon-sm"
               disabled={isPending}
+              title={t("billing.actions.markPaid")}
+              aria-label={t(
+                "billing.actions.markPaid"
+              )}
             >
-              {t("billing.actions.markPaid")}
+              <CircleCheckBig className="size-4" />
             </Button>
           }
           onConfirm={() =>
@@ -94,9 +103,14 @@ export function ClinicInvoiceActions({
             <Button
               type="button"
               variant="outline"
+              size="icon-sm"
               disabled={isPending}
+              title={t("billing.actions.markOverdue")}
+              aria-label={t(
+                "billing.actions.markOverdue"
+              )}
             >
-              {t("billing.actions.markOverdue")}
+              <AlertTriangle className="size-4" />
             </Button>
           }
           onConfirm={() =>

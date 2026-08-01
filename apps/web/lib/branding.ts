@@ -2,8 +2,20 @@ export const SHEEP_BRAND_NAME = "Sheep";
 export const SHEEP_BRAND_SUBTITLE =
   "Sistema de Assinatura e Fidelidade";
 export const SHEEP_BRAND_SIGNATURE = `${SHEEP_BRAND_NAME} ${SHEEP_BRAND_SUBTITLE}`;
+export const SHEEP_SYMBOL_BLUE_PATH =
+  "/brand/sheep/sheep-symbol-blue.png";
+export const SHEEP_SYMBOL_DARK_PATH =
+  "/brand/sheep/sheep-symbol-dark.png";
+export const SHEEP_SYMBOL_WHITE_PATH =
+  "/brand/sheep/sheep-symbol-white.png";
+export const SHEEP_APP_ICON_LIGHT_PATH =
+  "/brand/sheep/sheep-app-icon-light.png";
+export const SHEEP_APP_ICON_DARK_PATH =
+  "/brand/sheep/sheep-app-icon-dark.png";
+export const SHEEP_LOCKUP_PATH =
+  "/brand/sheep/sheep-lockup.png";
 export const SHEEP_LOGO_PATH =
-  "/sheep-logo.svg";
+  SHEEP_LOCKUP_PATH;
 
 export type WorkspaceBrand = {
   workspaceLabel: string;

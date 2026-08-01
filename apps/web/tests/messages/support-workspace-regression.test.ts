@@ -31,7 +31,9 @@ import {
 
 type FixtureState = {
   clinicId: string;
+  secondClinicId: string;
   clinicUser: CurrentAppUser;
+  secondClinicUser: CurrentAppUser;
   platformUser: CurrentAppUser;
 };
 
@@ -65,16 +67,6 @@ async function expectRedirect(
 }
 
 async function cleanupFixtures() {
-  const clinic =
-    await prisma.clinic.findFirst({
-      where: {
-        slug: "support-regression",
-      },
-      select: {
-        id: true,
-      },
-    });
-
   await prisma.appUser.deleteMany({
     where: {
       email:
@@ -82,57 +74,111 @@ async function cleanupFixtures() {
     },
   });
 
-  if (!clinic) {
+  const clinics =
+    await prisma.clinic.findMany({
+      where: {
+        slug: {
+          in: [
+            "support-regression",
+            "support-regression-2",
+          ],
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  if (clinics.length === 0) {
     return;
   }
+
+  const clinicIds = clinics.map(
+    (clinic) => clinic.id
+  );
 
   await prisma.$transaction([
     prisma.auditLog.deleteMany({
       where: {
-        clinicId: clinic.id,
+        clinicId: {
+          in: clinicIds,
+        },
       },
     }),
     prisma.supportMessage.deleteMany({
       where: {
-        clinicId: clinic.id,
+        clinicId: {
+          in: clinicIds,
+        },
       },
     }),
     prisma.supportThread.deleteMany({
       where: {
-        clinicId: clinic.id,
+        clinicId: {
+          in: clinicIds,
+        },
       },
     }),
     prisma.appUser.deleteMany({
       where: {
-        clinicId: clinic.id,
+        clinicId: {
+          in: clinicIds,
+        },
       },
     }),
     prisma.clinic.deleteMany({
       where: {
-        id: clinic.id,
+        id: {
+          in: clinicIds,
+        },
       },
     }),
   ]);
 }
 
 async function seedFixtures(): Promise<FixtureState> {
-  const clinic = await prisma.clinic.create({
-    data: {
-      name: "Support Regression Clinic",
-      brandName: "Support Regression",
-      slug: "support-regression",
-      document: "44.444.444/0001-44",
-      email: "support@company.test",
-      phone: "11444444444",
-      zipCode: "04000-000",
-      city: "Sao Paulo",
-      state: "SP",
-      address: "Rua Suporte, 44",
-      status: ClinicStatus.ACTIVE,
-    },
-  });
+  const [
+    clinic,
+    secondClinic,
+  ] = await prisma.$transaction([
+    prisma.clinic.create({
+      data: {
+        name: "Support Regression Clinic",
+        brandName: "Support Regression",
+        slug: "support-regression",
+        document: "44.444.444/0001-44",
+        email: "support@company.test",
+        phone: "11444444444",
+        zipCode: "04000-000",
+        city: "Sao Paulo",
+        state: "SP",
+        address: "Rua Suporte, 44",
+        status: ClinicStatus.ACTIVE,
+      },
+    }),
+    prisma.clinic.create({
+      data: {
+        name: "Support Regression Clinic 2",
+        brandName:
+          "Support Regression 2",
+        slug: "support-regression-2",
+        document: "55.555.555/0001-55",
+        email: "support2@company.test",
+        phone: "11555555555",
+        zipCode: "04100-000",
+        city: "Sao Paulo",
+        state: "SP",
+        address: "Rua Suporte, 55",
+        status: ClinicStatus.ACTIVE,
+      },
+    }),
+  ]);
 
-  const [clinicUserRecord, platformUserRecord] =
+  const [
+    clinicUserRecord,
+    secondClinicUserRecord,
+    platformUserRecord,
+  ] =
     await Promise.all([
       prisma.appUser.create({
         data: {
@@ -140,6 +186,15 @@ async function seedFixtures(): Promise<FixtureState> {
           name: "Company Owner",
           email:
             "owner@support-regression.test",
+          role: AppUserRole.OWNER,
+        },
+      }),
+      prisma.appUser.create({
+        data: {
+          clinicId: secondClinic.id,
+          name: "Second Company Owner",
+          email:
+            "owner@support-regression-2.test",
           role: AppUserRole.OWNER,
         },
       }),
@@ -156,12 +211,21 @@ async function seedFixtures(): Promise<FixtureState> {
 
   return {
     clinicId: clinic.id,
+    secondClinicId: secondClinic.id,
     clinicUser: {
       id: clinicUserRecord.id,
       clinicId: clinic.id,
       name: clinicUserRecord.name,
       email: clinicUserRecord.email,
       role: clinicUserRecord.role,
+    },
+    secondClinicUser: {
+      id: secondClinicUserRecord.id,
+      clinicId: secondClinic.id,
+      name: secondClinicUserRecord.name,
+      email:
+        secondClinicUserRecord.email,
+      role: secondClinicUserRecord.role,
     },
     platformUser: {
       id: platformUserRecord.id,
@@ -320,6 +384,43 @@ async function main() {
           clinicOverview.selectedThread
             ?.messages.length,
           2
+        );
+
+        asUser(fixtures.secondClinicUser);
+
+        const secondClinicOverview =
+          await getSupportThreadsOverview({
+            threadId:
+              createdThread.id,
+          });
+
+        assert.equal(
+          secondClinicOverview.threads.length,
+          0
+        );
+        assert.equal(
+          secondClinicOverview
+            .selectedThread,
+          null
+        );
+
+        const secondClinicReplyForm =
+          new FormData();
+        secondClinicReplyForm.set(
+          "threadId",
+          createdThread.id
+        );
+        secondClinicReplyForm.set(
+          "body",
+          "Tentativa indevida de responder chamado alheio."
+        );
+
+        await assert.rejects(
+          () =>
+            addSupportMessageAction(
+              secondClinicReplyForm
+            ),
+          /Chamado não encontrado/
         );
       }
     );

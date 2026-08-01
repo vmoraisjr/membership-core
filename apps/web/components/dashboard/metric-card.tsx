@@ -7,6 +7,7 @@ type MetricCardProps = {
   value: string;
   hint: string;
   icon?: ReactNode;
+  delta?: ReactNode;
 };
 
 export function MetricCard({
@@ -14,6 +15,7 @@ export function MetricCard({
   value,
   hint,
   icon,
+  delta,
 }: MetricCardProps) {
   return (
     <Card className="metric-tile">
@@ -30,6 +32,10 @@ export function MetricCard({
           <p className="max-w-[26ch] text-xs leading-5 text-muted-foreground">
             {hint}
           </p>
+
+          {delta ? (
+            <div>{delta}</div>
+          ) : null}
         </div>
 
         {icon ? (

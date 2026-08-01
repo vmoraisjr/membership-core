@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import {
   CircleOff,
+  Eye,
   ExternalLink,
   Pencil,
   RotateCcw,
@@ -15,11 +16,13 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { getFeedbackErrorMessage } from "@/lib/feedback";
 
 import { deactivateClinic } from "../actions/deactivate-clinic";
 import { reactivateClinic } from "../actions/reactivate-clinic";
 
 import { ClinicDialog } from "./clinic-dialog";
+import { ClinicQuickViewPanel } from "./clinic-quick-view-panel";
 
 type Props = {
   clinic: {
@@ -35,14 +38,19 @@ type Props = {
     city: string;
     state: string;
     address: string;
-  status: ClinicStatus;
-  clinicSubscriptions?: Array<{
-    id: string;
-    status: string;
-    clinicBillingPlan: {
-      name: string;
+    createdAt: Date;
+    _count: {
+      patients: number;
+      membershipPlans: number;
     };
-  }>;
+    status: ClinicStatus;
+    clinicSubscriptions?: Array<{
+      id: string;
+      status: string;
+      clinicBillingPlan: {
+        name: string;
+      };
+    }>;
   };
   canManageClinic?: boolean;
   isPlatformView?: boolean;
@@ -68,13 +76,14 @@ export function ClinicRowActions({
       );
 
       toast.success(
-        "Clínica desativada."
+        "Empresa cliente desativada com sucesso."
       );
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível desativar a clínica."
+        getFeedbackErrorMessage(
+          error,
+          "Não foi possível desativar a empresa cliente."
+        )
       );
     }
   }
@@ -86,19 +95,36 @@ export function ClinicRowActions({
       );
 
       toast.success(
-        "Clínica reativada."
+        "Empresa cliente reativada com sucesso."
       );
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível reativar a clínica."
+        getFeedbackErrorMessage(
+          error,
+          "Não foi possível reativar a empresa cliente."
+        )
       );
     }
   }
 
   return (
     <div className="flex items-center gap-2">
+      {isPlatformView ? (
+        <ClinicQuickViewPanel
+          clinic={clinic}
+          trigger={
+            <Button
+              size="icon"
+              variant="outline"
+              title="Visão rápida"
+              aria-label="Visão rápida"
+            >
+              <Eye className="size-4" />
+            </Button>
+          }
+        />
+      ) : null}
+
       {isPlatformView ? (
         <Button
           asChild

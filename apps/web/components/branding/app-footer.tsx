@@ -2,7 +2,7 @@ import { BrandMark } from "./brand-mark";
 
 import {
   SHEEP_BRAND_SIGNATURE,
-  SHEEP_LOGO_PATH,
+  SHEEP_LOCKUP_PATH,
 } from "@/lib/branding";
 
 export function AppFooter() {
@@ -15,7 +15,7 @@ export function AppFooter() {
             displayName: "Sheep",
             subtitle:
               "Sistema de Assinatura e Fidelidade",
-            logoUrl: SHEEP_LOGO_PATH,
+            logoUrl: SHEEP_LOCKUP_PATH,
           }}
         />
         <p className="text-right text-xs leading-5 text-muted-foreground">

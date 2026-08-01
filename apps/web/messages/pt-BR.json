@@ -156,13 +156,34 @@
   },
   "auth": {
     "login": {
-      "title": "Entrar",
-      "description": "Acesse o Sheep com uma sessão real no servidor.",
+      "title": "Entrar no Sheep",
+      "description": "Acesse sua operação com segurança.",
+      "headline": "A forma simples de operar recorrência.",
+      "headline1": "Gestão recorrente, simples de operar.",
+      "headline2": "Recorrência, relacionamento e cobrança em uma operação simples.",
+      "subtitle": "Organize planos, pagamentos e relacionamento em uma experiência clara, contínua e sem excesso de telas.",
+      "brandSubtitle": "Plataforma de relacionamento recorrente.",
+      "enterTitle": "Acesse Sheep",
+      "enterDescription": "Operação segura.",
+      "footer": "Sheep é um produto Nortexdigital",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Senha",
+      "showPassword": "Mostrar senha",
+      "hidePassword": "Ocultar senha",
+      "enterButton": "Entrar",
+      "enteringButton": "Entrando...",
+      "loadingTitle": "Acessando Sheep...",
       "invalidCredentials": "E-mail ou senha inválidos.",
       "passwordUpdated": "Senha atualizada. Você já pode entrar.",
-      "forgotPassword": "Esqueceu sua senha?",
+      "forgotPassword": "Esqueci minha senha",
+      "supportText": "Em caso de problemas no acesso, fale com contato@nortexdigital.com.br",
       "seededAccessTitle": "Acesso semeado para desenvolvimento local",
-      "seededAccessDescription": "Senha padrão para usuários semeados:"
+      "seededAccessDescription": "Senha padrão para usuários semeados:",
+      "benefits": {
+        "organizedRevenue": "Receita recorrente organizada",
+        "noTraining": "Operação sem treinamento",
+        "readyToGrow": "Plataforma preparada para crescer"
+      }
     },
     "forgotPassword": {
       "title": "Recuperação de senha",

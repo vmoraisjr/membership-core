@@ -15,14 +15,27 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  SidePanel,
+  SidePanelBody,
+  SidePanelContent,
+  SidePanelDescription,
+  SidePanelFooter,
+  SidePanelHeader,
+  SidePanelTitle,
+  SidePanelTrigger,
+} from "@/components/ui/side-panel";
+import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
+import {
+  FEEDBACK_WARNING_MESSAGES,
+  getFeedbackErrorMessage,
+} from "@/lib/feedback";
+import {
+  formatBrazilianCnpj,
+  formatBrazilianPhone,
+  formatBrazilianState,
+  formatBrazilianZipCode,
+} from "@/lib/br-formats";
 
 import { createClinic } from "../actions/create-clinic";
 import { resetClinicMasterPasswordAction } from "../actions/reset-clinic-master-password";
@@ -149,8 +162,8 @@ export function ClinicDialog({
       file.type !== "image/png" &&
       file.type !== "image/svg+xml"
     ) {
-      toast.error(
-        "Envie um arquivo SVG ou PNG."
+      toast.warning(
+        FEEDBACK_WARNING_MESSAGES.unsupportedImageFormat
       );
       return;
     }
@@ -181,14 +194,14 @@ export function ClinicDialog({
         );
 
         toast.success(
-          "Clínica atualizada."
+          "Empresa cliente atualizada com sucesso."
         );
       } else {
         const result =
           await createClinic(values);
 
         toast.success(
-          `Clínica criada. Master: ${result.clinicMasterEmail}. Senha temporária: ${result.clinicMasterTemporaryPassword}`
+          `Empresa cliente criada com sucesso. Master: ${result.clinicMasterEmail}. Senha temporária: ${result.clinicMasterTemporaryPassword}`
         );
       }
 
@@ -197,16 +210,17 @@ export function ClinicDialog({
       setOpen(false);
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível salvar a clínica."
+        getFeedbackErrorMessage(
+          error,
+          "Não foi possível salvar a empresa cliente."
+        )
       );
     }
   }
 
   function onInvalid() {
-    toast.error(
-      "Revise os campos destacados da clínica antes de continuar."
+    toast.warning(
+      FEEDBACK_WARNING_MESSAGES.reviewBeforeContinue
     );
   }
 
@@ -226,13 +240,14 @@ export function ClinicDialog({
       );
       setClinicMasterPasswordVisible(false);
       toast.success(
-        `Senha do master redefinida para ${result.clinicMasterEmail}.`
+        `Senha temporária redefinida com sucesso para ${result.clinicMasterEmail}.`
       );
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel redefinir a senha do master da clinica."
+        getFeedbackErrorMessage(
+          error,
+          "Não foi possível redefinir a senha do master da empresa."
+        )
       );
     }
   }
@@ -252,348 +267,499 @@ export function ClinicDialog({
           clinicMasterTemporaryPassword
         );
 
-      toast.success(result.message);
+      toast.success(
+        result.message
+      );
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel preparar o envio da senha."
+        getFeedbackErrorMessage(
+          error,
+          "Não foi possível preparar o envio da senha temporária."
+        )
       );
     }
   }
 
   return (
-    <Dialog
+    <SidePanel
       open={open}
       onOpenChange={syncDialogState}
     >
-      <DialogTrigger asChild>
+      <SidePanelTrigger asChild>
         {trigger ?? (
           <Button>Nova empresa</Button>
         )}
-      </DialogTrigger>
+      </SidePanelTrigger>
 
-      <DialogContent
-        className="sm:max-w-3xl"
+      <SidePanelContent
+        className="sm:max-w-[52rem]"
         aria-describedby={undefined}
       >
-        <DialogHeader>
-          <DialogTitle>
+        <SidePanelHeader>
+          <SidePanelTitle>
             {mode === "edit"
               ? "Editar empresa"
               : "Criar empresa"}
-          </DialogTitle>
-          <DialogDescription>
+          </SidePanelTitle>
+          <SidePanelDescription>
             {mode === "edit"
               ? "Revise os dados da empresa, habilite a edição quando necessário e confirme as alterações ao final."
               : "Cadastre uma nova empresa cliente com dados operacionais e identidade visual."}
-          </DialogDescription>
-        </DialogHeader>
+          </SidePanelDescription>
+        </SidePanelHeader>
 
         <form
-          className="form-shell-body grid grid-cols-2 gap-4"
+          className="flex min-h-0 flex-1 flex-col"
           noValidate
         >
-          <div className="col-span-2 form-section">
-            <div>
-              <h3 className="form-section-title">
-                Identidade da empresa
-              </h3>
-              <p className="form-section-description">
-                Estes dados definem como a empresa aparece na plataforma e para sua equipe.
-              </p>
-            </div>
-          </div>
+          <SidePanelBody>
+            <div className="form-shell-body grid grid-cols-2 gap-4">
+              <FormSection
+                className="col-span-2"
+                title="Identidade da empresa"
+                description="Estes dados definem como a empresa aparece na plataforma e para sua equipe."
+              />
 
-          <div className="field-stack">
-            <label className="field-label">
-              Nome
-            </label>
-            <Input
-              placeholder="Razão social ou nome operacional"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.name
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("name")}
-            />
-            {errors.name ? (
-              <p className="field-error">
-                {errors.name.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              Nome de exibição
-            </label>
-            <Input
-              placeholder="Nome da empresa na interface"
-              disabled={!editingEnabled}
-              {...form.register(
-                "brandName"
-              )}
-            />
-            <p className="field-help">
-              Se vazio, usamos o nome principal da empresa.
-            </p>
-          </div>
-
-          <div className="col-span-2 form-section border-dashed">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px]">
-              <div className="space-y-3">
-                <div>
-                  <label className="field-label">
-                    Logo da empresa
-                  </label>
-                  <p className="field-help">
-                    Aceita SVG ou PNG. O arquivo fica salvo na identidade desta
-                    empresa.
-                  </p>
-                </div>
+              <div className="field-stack">
+                <label className="field-label">
+                  Nome
+                </label>
                 <Input
-                  type="file"
-                  accept=".svg,.png,image/svg+xml,image/png"
-                  disabled={!editingEnabled}
-                  onChange={handleLogoFileChange}
-                />
-                <Input
-                  placeholder="Cole um caminho interno como /logo.svg se preferir"
+                  placeholder="Razão social ou nome operacional"
                   disabled={!editingEnabled}
                   aria-invalid={
-                    errors.logoUrl
+                    errors.name
                       ? "true"
                       : "false"
                   }
-                  {...form.register("logoUrl")}
+                  {...form.register("name")}
                 />
-                {errors.logoUrl ? (
+                {errors.name ? (
                   <p className="field-error">
-                    {errors.logoUrl.message}
+                    {errors.name.message}
                   </p>
                 ) : null}
               </div>
-              <div className="flex flex-col gap-2">
-                <p className="field-label">
-                  Pré-visualização
-                </p>
-                <div className="flex min-h-40 items-center justify-center rounded-[1.25rem] border border-border/70 bg-surface-subtle p-4">
-                  {logoPreview ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={logoPreview}
-                      alt="Logo da empresa"
-                      className="max-h-28 max-w-full object-contain"
-                    />
-                  ) : (
-                    <p className="text-center text-xs text-muted-foreground">
-                      O logo aparecerá aqui após seleção.
-                    </p>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  Nome de exibição
+                </label>
+                <Input
+                  placeholder="Nome da empresa na interface"
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "brandName"
                   )}
-                </div>
+                />
+                <p className="field-help">
+                  Se vazio, usamos o nome principal da empresa.
+                </p>
               </div>
+
+              <FormSection className="col-span-2 border-dashed">
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px]">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="field-label">
+                        Logo da empresa
+                      </label>
+                      <p className="field-help">
+                        Aceita SVG ou PNG. O arquivo fica salvo na identidade desta
+                        empresa.
+                      </p>
+                    </div>
+                    <Input
+                      type="file"
+                      accept=".svg,.png,image/svg+xml,image/png"
+                      disabled={!editingEnabled}
+                      onChange={handleLogoFileChange}
+                    />
+                    <Input
+                      placeholder="Cole um caminho interno como /logo.svg se preferir"
+                      disabled={!editingEnabled}
+                      aria-invalid={
+                        errors.logoUrl
+                          ? "true"
+                          : "false"
+                      }
+                      {...form.register("logoUrl")}
+                    />
+                    {errors.logoUrl ? (
+                      <p className="field-error">
+                        {errors.logoUrl.message}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <p className="field-label">
+                      Pré-visualização
+                    </p>
+                    <div className="flex min-h-40 items-center justify-center rounded-[1.25rem] border border-border/70 bg-surface-subtle p-4">
+                      {logoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={logoPreview}
+                          alt="Logo da empresa"
+                          className="max-h-28 max-w-full object-contain"
+                        />
+                      ) : (
+                        <p className="text-center text-xs text-muted-foreground">
+                          O logo aparecerá aqui após seleção.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
+
+              {mode === "create" &&
+              isPlatformView ? (
+                <FormSection
+                  className="col-span-2"
+                  title="Plano inicial"
+                  description="A nova conta cliente nasce com o provisionamento SaaS padrão da plataforma."
+                >
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="detail-field">
+                      <p className="detail-field-label">
+                        Plano provisionado
+                      </p>
+                      <p className="detail-field-value">
+                        Sheep Growth
+                      </p>
+                    </div>
+                    <div className="detail-field">
+                      <p className="detail-field-label">
+                        Ciclo inicial
+                      </p>
+                      <p className="detail-field-value">
+                        Trial de 14 dias
+                      </p>
+                    </div>
+                    <div className="detail-field">
+                      <p className="detail-field-label">
+                        Observação
+                      </p>
+                      <p className="detail-field-value">
+                        O plano pode ser trocado depois na fila de assinaturas SaaS.
+                      </p>
+                    </div>
+                  </div>
+                </FormSection>
+              ) : null}
+
+              <FormSection
+                className="col-span-2"
+                title="Cadastro e localização"
+                description="Informações usadas para identificação da conta, contato e governança."
+              />
+
+              <div className="field-stack">
+                <label className="field-label">
+                  Slug
+                </label>
+                <Input
+                  placeholder="gerado-automaticamente"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.slug
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("slug")}
+                />
+                <p className="field-help">
+                  Opcional. Se ficar em branco, o sistema gera o slug automaticamente.
+                </p>
+                {errors.slug ? (
+                  <p className="field-error">
+                    {errors.slug.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  Documento
+                </label>
+                <Input
+                  placeholder="00.000.000/0000-00"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.document
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("document", {
+                    onChange: (event) => {
+                      event.target.value =
+                        formatBrazilianCnpj(
+                          event.target.value
+                        );
+                    },
+                  })}
+                />
+                {errors.document ? (
+                  <p className="field-error">
+                    {errors.document.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  E-mail
+                </label>
+                <Input
+                  placeholder="contato@clinica.com"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.email
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("email")}
+                />
+                {errors.email ? (
+                  <p className="field-error">
+                    {errors.email.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  Telefone
+                </label>
+                <Input
+                  placeholder="(11) 99999-9999"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.phone
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("phone", {
+                    onChange: (event) => {
+                      event.target.value =
+                        formatBrazilianPhone(
+                          event.target.value
+                        );
+                    },
+                  })}
+                />
+                {errors.phone ? (
+                  <p className="field-error">
+                    {errors.phone.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  CEP
+                </label>
+                <Input
+                  placeholder="00000-000"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.zipCode
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("zipCode", {
+                    onChange: (event) => {
+                      event.target.value =
+                        formatBrazilianZipCode(
+                          event.target.value
+                        );
+                    },
+                  })}
+                />
+                {errors.zipCode ? (
+                  <p className="field-error">
+                    {errors.zipCode.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  Cidade
+                </label>
+                <Input
+                  placeholder="Cidade"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.city
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("city")}
+                />
+                {errors.city ? (
+                  <p className="field-error">
+                    {errors.city.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  Estado
+                </label>
+                <Input
+                  placeholder="UF"
+                  disabled={!editingEnabled}
+                  maxLength={2}
+                  aria-invalid={
+                    errors.state
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("state", {
+                    onChange: (event) => {
+                      event.target.value =
+                        formatBrazilianState(
+                          event.target.value
+                        );
+                    },
+                  })}
+                />
+                {errors.state ? (
+                  <p className="field-error">
+                    {errors.state.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="col-span-2 field-stack">
+                <label className="field-label">
+                  Endereço
+                </label>
+                <Input
+                  placeholder="Rua, número e complemento"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.address
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register(
+                    "address"
+                  )}
+                />
+                {errors.address ? (
+                  <p className="field-error">
+                    {errors.address.message}
+                  </p>
+                ) : null}
+              </div>
+
+              {mode === "edit" &&
+              initialData &&
+              isPlatformView ? (
+                <FormSection
+                  className="col-span-2"
+                  title="Credencial do master da empresa"
+                  description="Redefina a senha temporária e prepare o envio para o e-mail principal da empresa."
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        void handleResetClinicMasterPassword()
+                      }
+                    >
+                      <RefreshCcw className="mr-2 size-4" />
+                      Resetar senha
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+                    <div className="field-stack">
+                      <label className="field-label">
+                        Nova senha temporária
+                      </label>
+                      <div className="relative">
+                        <Input
+                          readOnly
+                          type={
+                            clinicMasterPasswordVisible
+                              ? "text"
+                              : "password"
+                          }
+                          value={
+                            clinicMasterTemporaryPassword
+                          }
+                          placeholder="A senha aparecerá após o reset."
+                        />
+                        <button
+                          type="button"
+                          aria-label={
+                            clinicMasterPasswordVisible
+                              ? "Ocultar senha temporária"
+                              : "Mostrar senha temporária"
+                          }
+                          onClick={() =>
+                            setClinicMasterPasswordVisible(
+                              (current) =>
+                                !current
+                            )
+                          }
+                          className="absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center text-muted-foreground"
+                        >
+                          {clinicMasterPasswordVisible ? (
+                            <EyeOff className="size-4" />
+                          ) : (
+                            <Eye className="size-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={
+                          !clinicMasterTemporaryPassword
+                        }
+                        onClick={() =>
+                          void handleSendClinicMasterPassword()
+                        }
+                      >
+                        <Mail className="mr-2 size-4" />
+                        Enviar senha
+                      </Button>
+                    </div>
+
+                    <div className="flex items-end">
+                      <p className="text-xs text-muted-foreground">
+                        O próximo acesso exigirá troca obrigatória da senha.
+                      </p>
+                    </div>
+                  </div>
+                </FormSection>
+              ) : null}
             </div>
-          </div>
+          </SidePanelBody>
 
-          <div className="col-span-2 form-section">
-            <div>
-              <h3 className="form-section-title">
-                Cadastro e localização
-              </h3>
-              <p className="form-section-description">
-                Informações usadas para identificação da conta, contato e governança.
-              </p>
-            </div>
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              Slug
-            </label>
-            <Input
-              placeholder="gerado-automaticamente"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.slug
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("slug")}
-            />
-            <p className="field-help">
-              Opcional. Se ficar em branco, o sistema gera o slug automaticamente.
-            </p>
-            {errors.slug ? (
-              <p className="field-error">
-                {errors.slug.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              Documento
-            </label>
-            <Input
-              placeholder="CNPJ ou documento"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.document
-                  ? "true"
-                  : "false"
-              }
-              {...form.register(
-                "document"
-              )}
-            />
-            {errors.document ? (
-              <p className="field-error">
-                {errors.document.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              E-mail
-            </label>
-            <Input
-              placeholder="contato@clinica.com"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.email
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("email")}
-            />
-            {errors.email ? (
-              <p className="field-error">
-                {errors.email.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              Telefone
-            </label>
-            <Input
-              placeholder="(11) 99999-9999"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.phone
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("phone")}
-            />
-            {errors.phone ? (
-              <p className="field-error">
-                {errors.phone.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              CEP
-            </label>
-            <Input
-              placeholder="00000-000"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.zipCode
-                  ? "true"
-                  : "false"
-              }
-              {...form.register(
-                "zipCode"
-              )}
-            />
-            {errors.zipCode ? (
-              <p className="field-error">
-                {errors.zipCode.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              Cidade
-            </label>
-            <Input
-              placeholder="Cidade"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.city
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("city")}
-            />
-            {errors.city ? (
-              <p className="field-error">
-                {errors.city.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              Estado
-            </label>
-            <Input
-              placeholder="UF"
-              disabled={!editingEnabled}
-              maxLength={2}
-              aria-invalid={
-                errors.state
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("state")}
-            />
-            {errors.state ? (
-              <p className="field-error">
-                {errors.state.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="col-span-2 field-stack">
-            <label className="field-label">
-              Endereço
-            </label>
-            <Input
-              placeholder="Rua, número e complemento"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.address
-                  ? "true"
-                  : "false"
-              }
-              {...form.register(
-                "address"
-              )}
-            />
-            {errors.address ? (
-              <p className="field-error">
-                {errors.address.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="col-span-2">
+          <SidePanelFooter>
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-between">
+              <div className="text-xs leading-5 text-muted-foreground">
+                {mode === "edit"
+                  ? "As alterações ficam restritas à empresa selecionada e não afetam outras contas."
+                  : "Após a criação, a conta cliente já poderá seguir para configuração inicial."}
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             {mode === "edit" ? (
-              <div className="flex flex-col gap-3 sm:flex-row">
+                  <>
                 {!editingEnabled ? (
                   <Button
                     type="button"
-                    className="w-full"
                     onClick={() =>
                       setEditingEnabled(true)
                     }
@@ -610,7 +776,6 @@ export function ClinicDialog({
                       trigger={
                         <Button
                           type="button"
-                          className="w-full"
                         >
                           Confirmar alterações
                         </Button>
@@ -625,7 +790,6 @@ export function ClinicDialog({
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full"
                       onClick={() => {
                         setEditingEnabled(
                           false
@@ -671,7 +835,7 @@ export function ClinicDialog({
                     </Button>
                   </>
                 )}
-              </div>
+                  </>
             ) : (
               <ConfirmDialog
                 title="Criar clínica?"
@@ -680,7 +844,6 @@ export function ClinicDialog({
                 trigger={
                   <Button
                     type="button"
-                    className="w-full"
                   >
                     Criar empresa
                   </Button>
@@ -693,102 +856,11 @@ export function ClinicDialog({
                 }
               />
             )}
-          </div>
-
-          {mode === "edit" &&
-          initialData &&
-          isPlatformView ? (
-            <div className="col-span-2 form-section">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="form-section-title">
-                    Credencial do master da empresa
-                  </h3>
-                  <p className="form-section-description">
-                    Redefina a senha temporária e prepare o envio para o e-mail principal da empresa.
-                  </p>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    void handleResetClinicMasterPassword()
-                  }
-                >
-                  <RefreshCcw className="mr-2 size-4" />
-                  Resetar senha
-                </Button>
-              </div>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-                <div className="field-stack">
-                  <label className="field-label">
-                    Nova senha temporária
-                  </label>
-                  <div className="relative">
-                    <Input
-                      readOnly
-                      type={
-                        clinicMasterPasswordVisible
-                          ? "text"
-                          : "password"
-                      }
-                      value={
-                        clinicMasterTemporaryPassword
-                      }
-                      placeholder="A senha aparecerá após o reset."
-                    />
-                    <button
-                      type="button"
-                      aria-label={
-                        clinicMasterPasswordVisible
-                          ? "Ocultar senha temporária"
-                          : "Mostrar senha temporária"
-                      }
-                      onClick={() =>
-                        setClinicMasterPasswordVisible(
-                          (current) =>
-                            !current
-                        )
-                      }
-                      className="absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center text-muted-foreground"
-                    >
-                      {clinicMasterPasswordVisible ? (
-                        <EyeOff className="size-4" />
-                      ) : (
-                        <Eye className="size-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={
-                      !clinicMasterTemporaryPassword
-                    }
-                    onClick={() =>
-                      void handleSendClinicMasterPassword()
-                    }
-                  >
-                    <Mail className="mr-2 size-4" />
-                    Enviar senha
-                  </Button>
-                </div>
-
-                <div className="flex items-end">
-                  <p className="text-xs text-muted-foreground">
-                    O próximo acesso exigirá troca obrigatória da senha.
-                  </p>
-                </div>
               </div>
             </div>
-          ) : null}
+          </SidePanelFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SidePanelContent>
+    </SidePanel>
   );
 }

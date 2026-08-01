@@ -24,6 +24,7 @@ import {
   AUDIT_ENTITY_LABELS,
 } from "../services/get-audit-logs";
 import { getTranslations } from "@/i18n/messages";
+import { AuditLogDetailsSidePanel } from "./audit-log-details-side-panel";
 
 type AuditLogItem = {
   id: string;
@@ -86,6 +87,47 @@ function formatMetadata(
 
 function formatDate(value: Date | string) {
   return new Date(value).toLocaleString();
+}
+
+function buildExportHref(
+  filters: AuditLogFilters
+) {
+  const searchParams =
+    new URLSearchParams();
+
+  if (filters.actor) {
+    searchParams.set(
+      "actor",
+      filters.actor
+    );
+  }
+
+  if (filters.entity) {
+    searchParams.set(
+      "entity",
+      filters.entity
+    );
+  }
+
+  if (filters.date) {
+    searchParams.set(
+      "date",
+      filters.date
+    );
+  }
+
+  if (filters.clinicId) {
+    searchParams.set(
+      "clinicId",
+      filters.clinicId
+    );
+  }
+
+  const query = searchParams.toString();
+
+  return query.length > 0
+    ? `/dashboard/audit-logs/export?${query}`
+    : "/dashboard/audit-logs/export";
 }
 
 export function AuditLogTable({
@@ -224,6 +266,14 @@ export function AuditLogTable({
             variant="outline"
             asChild
           >
+            <Link href={buildExportHref(filters)}>
+              Extrair CSV
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            asChild
+          >
             <Link href="/dashboard/audit-logs">
               {t("shared.actions.clear")}
             </Link>
@@ -293,8 +343,31 @@ export function AuditLogTable({
                   </div>
                 </TableCell>
                 <TableCell className="align-top text-sm text-muted-foreground">
-                  {details ??
-                    t("shared.states.noExtraDetails")}
+                  <div className="space-y-3">
+                    <p>
+                      {details ??
+                        t("shared.states.noExtraDetails")}
+                    </p>
+                    <AuditLogDetailsSidePanel
+                      actionLabel={
+                        AUDIT_ACTION_LABELS[
+                          log.action
+                        ]
+                      }
+                      actor={log.actor}
+                      createdAt={formatDate(
+                        log.createdAt
+                      )}
+                      entityId={log.entityId}
+                      entityLabel={
+                        log.entityLabel ??
+                        AUDIT_ENTITY_LABELS[
+                          log.entity
+                        ]
+                      }
+                      metadata={log.metadata}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             );

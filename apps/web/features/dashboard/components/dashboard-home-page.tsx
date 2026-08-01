@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   BadgeDollarSign,
   Building2,
   ClipboardList,
@@ -6,14 +7,14 @@ import {
   HeartPulse,
   MessageSquareMore,
   ReceiptText,
-  ArrowRight,
   ShieldCheck,
   Users,
 } from "lucide-react";
 
-import Link from "next/link";
-
+import { ActionCard } from "@/components/dashboard/action-card";
+import { MetricDelta } from "@/components/dashboard/metric-delta";
 import { MetricCard } from "@/components/dashboard/metric-card";
+import { MetricGrid } from "@/components/dashboard/metric-grid";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { DashboardPage } from "@/components/layout/dashboard-page";
@@ -134,38 +135,19 @@ export async function DashboardHomePage() {
                     "Priorize pagamentos, atrasos e regularizações da empresa.",
                   icon: ReceiptText,
                 },
-              ].map((shortcut) => {
-                const Icon = shortcut.icon;
-
-                return (
-                  <Link
-                    key={shortcut.href}
-                    href={shortcut.href}
-                    className="group surface-subtle p-4 transition-colors hover:bg-background/95"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-3">
-                        <div className="rounded-2xl border border-border/70 bg-background p-3 text-muted-foreground shadow-[var(--shadow-xs)]">
-                          <Icon className="size-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {shortcut.title}
-                          </p>
-                          <p className="mt-2 text-sm text-muted-foreground">
-                            {shortcut.description}
-                          </p>
-                        </div>
-                      </div>
-                      <ArrowRight className="mt-1 size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                    </div>
-                  </Link>
-                );
-              })}
+              ].map((shortcut) => (
+                <ActionCard
+                  key={shortcut.href}
+                  href={shortcut.href}
+                  title={shortcut.title}
+                  description={shortcut.description}
+                  icon={shortcut.icon}
+                />
+              ))}
             </div>
           </SectionCard>
 
-          <div className="page-section-grid md:grid-cols-2 xl:grid-cols-3">
+          <MetricGrid columns="six">
             <MetricCard
               label={t(
                 "dashboard.metrics.activePatients.label"
@@ -175,6 +157,12 @@ export async function DashboardHomePage() {
                 "dashboard.metrics.activePatients.hint"
               )}
               icon={<Users className="size-5" />}
+              delta={
+                <MetricDelta
+                  direction="up"
+                  label="Base ativa"
+                />
+              }
             />
 
             <MetricCard
@@ -201,6 +189,22 @@ export async function DashboardHomePage() {
               icon={
                 <ReceiptText className="size-5" />
               }
+              delta={
+                <MetricDelta
+                  direction={
+                    metrics.overduePatientInvoices >
+                    0
+                      ? "down"
+                      : "neutral"
+                  }
+                  label={
+                    metrics.overduePatientInvoices >
+                    0
+                      ? "Pede ação"
+                      : "Sem alerta"
+                  }
+                />
+              }
             />
 
             <MetricCard
@@ -215,6 +219,12 @@ export async function DashboardHomePage() {
               )}
               icon={
                 <BadgeDollarSign className="size-5" />
+              }
+              delta={
+                <MetricDelta
+                  direction="up"
+                  label="Receita recorrente"
+                />
               }
             />
 
@@ -241,7 +251,7 @@ export async function DashboardHomePage() {
               )}
               icon={<CreditCard className="size-5" />}
             />
-          </div>
+          </MetricGrid>
 
           <SectionCard
             title={t("dashboard.snapshot.title")}
@@ -309,80 +319,151 @@ export async function DashboardHomePage() {
       {metrics.platformMetrics ? (
         <>
           <SectionCard
-            title={t("dashboard.platform.title")}
-            description={t(
-              "dashboard.platform.description"
-            )}
+            title="O que precisa de atenção hoje"
+            description="A visão Plataforma deve responder primeiro onde agir, antes de virar relatório."
           >
-            <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
-              <div className="surface-subtle p-4">
-                <p className="text-sm font-medium">
-                  {t(
-                    "dashboard.platform.activeClinics"
-                  )}
-                </p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {
-                    metrics
-                      .platformMetrics
-                      .activeClinics
-                  }
-                </p>
-              </div>
-
-              <div className="surface-subtle p-4">
-                <p className="text-sm font-medium">
-                  {t(
-                    "dashboard.platform.trialClinics"
-                  )}
-                </p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {
-                    metrics
-                      .platformMetrics
-                      .trialClinics
-                  }
-                </p>
-              </div>
-
-              <div className="surface-subtle p-4">
-                <p className="text-sm font-medium">
-                  {t(
-                    "dashboard.platform.pastDueClinics"
-                  )}
-                </p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {
-                    metrics
-                      .platformMetrics
-                      .pastDueClinics
-                  }
-                </p>
-              </div>
-
-              <div className="surface-subtle p-4">
-                <p className="text-sm font-medium">
-                  {t(
-                    "dashboard.platform.monthlySaasRevenue"
-                  )}
-                </p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {formatCurrency(
-                    metrics
-                      .platformMetrics
-                      .monthlySaasRevenue
-                  )}
-                </p>
-              </div>
+            <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+              {[
+                {
+                  title: "Empresas em teste",
+                  value:
+                    metrics.platformMetrics.trialClinics.toString(),
+                  description:
+                    "Acompanhe tenants que ainda precisam converter para receita recorrente.",
+                  icon: Building2,
+                  href: "/dashboard/billing/subscriptions?status=TRIAL",
+                },
+                {
+                  title: "Empresas em atraso",
+                  value:
+                    metrics.platformMetrics.pastDueClinics.toString(),
+                  description:
+                    "Priorize contas com risco operacional e financeiro.",
+                  icon: AlertTriangle,
+                  href: "/dashboard/billing/payments?status=OVERDUE",
+                },
+                {
+                  title: "Chamados aguardando plataforma",
+                  value:
+                    metrics.platformMetrics.openSupportThreads.toString(),
+                  description:
+                    "Centralize incidentes, solicitações e respostas pendentes.",
+                  icon: MessageSquareMore,
+                  href: "/dashboard/messages?status=WAITING_PLATFORM",
+                },
+                {
+                  title: "Convites pendentes",
+                  value:
+                    metrics.platformMetrics.pendingInvites.toString(),
+                  description:
+                    "Monitore acessos internos ainda não ativados.",
+                  icon: ShieldCheck,
+                  href: "/dashboard/users",
+                },
+                {
+                  title: "Eventos críticos recentes",
+                  value:
+                    metrics.platformMetrics.criticalAuditEvents.toString(),
+                  description:
+                    "Acompanhe exclusões e desativações registradas nos últimos sete dias.",
+                  icon: ClipboardList,
+                  href: "/dashboard/audit-logs",
+                },
+              ].map((item) => (
+                <ActionCard
+                  key={item.title}
+                  href={item.href}
+                  title={`${item.title}: ${item.value}`}
+                  description={item.description}
+                  icon={item.icon}
+                  emphasis="attention"
+                />
+              ))}
             </div>
-
           </SectionCard>
 
           <SectionCard
-            title="Atalhos da plataforma"
-            description="Acesse rapidamente a operação global das contas clientes e a governança da plataforma."
+            title="Panorama da plataforma"
+            description="Depois das prioridades, acompanhe os principais sinais de saúde comercial e cobertura da operação SaaS."
           >
-            <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+            <MetricGrid columns="four">
+              <MetricCard
+                label={t(
+                  "dashboard.platform.activeClinics"
+                )}
+                value={
+                  metrics.platformMetrics.activeClinics.toString()
+                }
+                hint="Contas clientes ativas e aptas para operar na plataforma."
+                icon={<Building2 className="size-5" />}
+                delta={
+                  <MetricDelta
+                    direction="up"
+                    label="Base ativa"
+                  />
+                }
+              />
+              <MetricCard
+                label={t(
+                  "dashboard.platform.trialClinics"
+                )}
+                value={
+                  metrics.platformMetrics.trialClinics.toString()
+                }
+                hint="Empresas avaliando o produto antes da cobrança recorrente."
+                icon={<CreditCard className="size-5" />}
+              />
+              <MetricCard
+                label={t(
+                  "dashboard.platform.pastDueClinics"
+                )}
+                value={
+                  metrics.platformMetrics.pastDueClinics.toString()
+                }
+                hint="Contas com pendências financeiras que merecem acompanhamento."
+                icon={<ReceiptText className="size-5" />}
+                delta={
+                  <MetricDelta
+                    direction={
+                      metrics.platformMetrics.pastDueClinics >
+                      0
+                        ? "down"
+                        : "neutral"
+                    }
+                    label={
+                      metrics.platformMetrics.pastDueClinics >
+                      0
+                        ? "Pede ação"
+                        : "Sem alerta"
+                    }
+                  />
+                }
+              />
+              <MetricCard
+                label={t(
+                  "dashboard.platform.monthlySaasRevenue"
+                )}
+                value={formatCurrency(
+                  metrics.platformMetrics.monthlySaasRevenue
+                )}
+                hint="Receita SaaS efetivamente recebida no mês corrente."
+                icon={<BadgeDollarSign className="size-5" />}
+                delta={
+                  <MetricDelta
+                    direction="up"
+                    label="Receita corrente"
+                  />
+                }
+              />
+            </MetricGrid>
+          </SectionCard>
+
+          <div className="page-section-grid xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+            <SectionCard
+              title="Atalhos da plataforma"
+              description="Acesse rapidamente a operação global das contas clientes e a governança da plataforma."
+            >
+              <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-2">
               {[
                 {
                   href: "/dashboard/clinics",
@@ -392,10 +473,17 @@ export async function DashboardHomePage() {
                   icon: Building2,
                 },
                 {
-                  href: "/dashboard/billing",
-                  title: "Assinaturas e pagamentos",
+                  href: "/dashboard/billing/subscriptions",
+                  title: "Assinaturas SaaS",
                   description:
-                    "Acompanhe assinaturas SaaS, faturas e vencimentos das clínicas.",
+                    "Acompanhe aplicação de planos, status de contas e vencimentos.",
+                  icon: CreditCard,
+                },
+                {
+                  href: "/dashboard/billing/payments",
+                  title: "Pagamentos SaaS",
+                  description:
+                    "Monitore faturas, atrasos e recebimentos das empresas clientes.",
                   icon: ReceiptText,
                 },
                 {
@@ -419,36 +507,50 @@ export async function DashboardHomePage() {
                     "Acompanhe eventos administrativos globais e ações críticas nas clínicas.",
                   icon: ClipboardList,
                 },
-              ].map((shortcut) => {
-                const Icon = shortcut.icon;
+              ].map((shortcut) => (
+                <ActionCard
+                  key={shortcut.href}
+                  href={shortcut.href}
+                  title={shortcut.title}
+                  description={shortcut.description}
+                  icon={shortcut.icon}
+                />
+              ))}
+              </div>
+            </SectionCard>
 
-                return (
-                  <Link
-                    key={shortcut.href}
-                    href={shortcut.href}
-                    className="group surface-subtle p-4 transition-colors hover:bg-background/90"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-2">
-                        <div className="rounded-full border border-border/60 bg-background p-3 text-muted-foreground">
-                          <Icon className="size-5" />
-                        </div>
+            <SectionCard
+              title="Cobertura por módulo"
+              description="Mostra onde a plataforma já está habilitada para operação em clientes ativos."
+            >
+              <div className="space-y-3 p-5">
+                {metrics.platformMetrics.activeModuleCounts.map(
+                  (module) => (
+                    <div
+                      key={module.key}
+                      className="surface-subtle p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="font-medium">
-                            {shortcut.title}
+                          <p className="text-sm font-medium text-foreground">
+                            {module.name}
                           </p>
-                          <p className="mt-2 text-sm text-muted-foreground">
-                            {shortcut.description}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {module.isV1Active
+                              ? "Liberado para a operação atual."
+                              : "Reservado para fases futuras."}
                           </p>
                         </div>
+                        <span className="text-sm font-semibold text-foreground">
+                          {module.enabledClinicCount}
+                        </span>
                       </div>
-                      <ArrowRight className="mt-1 size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </SectionCard>
+                  )
+                )}
+              </div>
+            </SectionCard>
+          </div>
         </>
       ) : null}
     </DashboardPage>

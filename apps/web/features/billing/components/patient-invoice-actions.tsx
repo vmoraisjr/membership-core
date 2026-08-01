@@ -4,6 +4,12 @@ import {
   PaymentMethod,
   PaymentStatus,
 } from "@prisma/client";
+import {
+  AlertTriangle as AlertTriangleIcon,
+  Ban as BanIcon,
+  CircleCheckBig,
+  Save as SaveIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -127,9 +133,14 @@ export function PatientInvoiceActions({
             <Button
               type="button"
               variant="outline"
+              size="icon-sm"
               disabled={isPending}
+              title={t("billing.actions.saveMethod")}
+              aria-label={t(
+                "billing.actions.saveMethod"
+              )}
             >
-              {t("billing.actions.saveMethod")}
+              <SaveIcon className="size-4" />
             </Button>
           }
           onConfirm={() =>
@@ -155,9 +166,16 @@ export function PatientInvoiceActions({
               <Button
                 type="button"
                 variant="outline"
+                size="icon-sm"
                 disabled={isPending}
+                title={t(
+                  "billing.actions.markPaid"
+                )}
+                aria-label={t(
+                  "billing.actions.markPaid"
+                )}
               >
-                {t("billing.actions.markPaid")}
+                <CircleCheckBig className="size-4" />
               </Button>
             }
             onConfirm={() =>
@@ -183,9 +201,16 @@ export function PatientInvoiceActions({
               <Button
                 type="button"
                 variant="outline"
+                size="icon-sm"
                 disabled={isPending}
+                title={t(
+                  "billing.actions.markOverdue"
+                )}
+                aria-label={t(
+                  "billing.actions.markOverdue"
+                )}
               >
-                {t("billing.actions.markOverdue")}
+                <AlertTriangleIcon className="size-4" />
               </Button>
             }
             onConfirm={() =>
@@ -211,10 +236,17 @@ export function PatientInvoiceActions({
             trigger={
               <Button
                 type="button"
-                variant="outline"
+                variant="destructive"
+                size="icon-sm"
                 disabled={isPending}
+                title={t(
+                  "billing.actions.cancelInvoice"
+                )}
+                aria-label={t(
+                  "billing.actions.cancelInvoice"
+                )}
               >
-                {t("billing.actions.cancelInvoice")}
+                <BanIcon className="size-4" />
               </Button>
             }
             onConfirm={() =>

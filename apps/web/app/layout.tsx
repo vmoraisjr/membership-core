@@ -4,7 +4,10 @@ import type { Metadata } from "next";
 
 import { AppFooter } from "@/components/branding/app-footer";
 import { Toaster } from "@/components/ui/sonner";
-import { SHEEP_BRAND_SIGNATURE } from "@/lib/branding";
+import {
+  SHEEP_APP_ICON_LIGHT_PATH,
+  SHEEP_BRAND_SIGNATURE,
+} from "@/lib/branding";
 import messages from "@/messages/pt-BR.json";
 import { TranslationProvider } from "@/i18n/provider";
 import {
@@ -17,6 +20,10 @@ export const metadata: Metadata = {
   description: getMessage(
     "app.metadata.description"
   ),
+  icons: {
+    icon: SHEEP_APP_ICON_LIGHT_PATH,
+    apple: SHEEP_APP_ICON_LIGHT_PATH,
+  },
 };
 
 export default function RootLayout({

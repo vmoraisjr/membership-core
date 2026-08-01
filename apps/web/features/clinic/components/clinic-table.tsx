@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import {
+  Building2,
+  MapPin,
+  Search,
+} from "lucide-react";
 
 import {
   ClinicStatus,
@@ -17,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 
 import { ClinicRowActions } from "./clinic-row-actions";
 
@@ -143,16 +149,19 @@ export function ClinicTable({
             <label className="text-sm font-medium text-muted-foreground">
               Buscar empresa
             </label>
-            <input
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
-              }
-              placeholder="Buscar por nome, exibição ou slug"
-              className="h-10 rounded-xl border border-input bg-background px-3"
-            />
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value
+                  )
+                }
+                placeholder="Buscar por nome, exibição ou slug"
+                className="pl-9"
+              />
+            </div>
           </div>
         </div>
       }
@@ -174,22 +183,34 @@ export function ClinicTable({
           {visibleClinics.map((clinic) => (
             <TableRow key={clinic.id}>
               <TableCell className="min-w-[18rem] align-top">
-                <div className="space-y-1">
-                  <div className="font-medium">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-2xl border border-border/70 bg-[color:var(--color-surface-subtle)] p-3 text-muted-foreground shadow-[var(--shadow-xs)]">
+                    <Building2 className="size-4" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-medium">
                     {clinic.brandName ||
                       clinic.name}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {clinic.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {clinic.slug}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {clinic.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {clinic.slug}
+                    </div>
                   </div>
                 </div>
               </TableCell>
 
               <TableCell className="align-top">
-                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                <span
+                  className={`status-badge ${
+                    clinic.status ===
+                    ClinicStatus.ACTIVE
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
                   {clinic.status ===
                   ClinicStatus.ACTIVE
                     ? "Ativa"
@@ -198,12 +219,15 @@ export function ClinicTable({
               </TableCell>
 
               <TableCell className="min-w-[14rem] align-top">
-                <div className="space-y-1">
-                  <div className="font-medium">
+                <div className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 size-4 text-muted-foreground" />
+                  <div className="space-y-1">
+                    <div className="font-medium">
                     {clinic.city}, {clinic.state}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {clinic.address}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {clinic.address}
+                    </div>
                   </div>
                 </div>
               </TableCell>
@@ -219,13 +243,13 @@ export function ClinicTable({
                           .name
                       }
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <span className="status-badge bg-sky-100 text-sky-700">
                       {
                         clinic
                           .clinicSubscriptions[0]
                           .status
                       }
-                    </div>
+                    </span>
                   </div>
                 ) : (
                   <span className="text-xs text-muted-foreground">
@@ -265,6 +289,16 @@ export function ClinicTable({
                 <EmptyState
                   title="Nenhuma empresa encontrada"
                   description="Ajuste os filtros ou cadastre uma nova conta cliente para continuar."
+                  action={
+                    canManageClinic &&
+                    isPlatformView ? (
+                      <div className="pt-2">
+                        <span className="workspace-kicker">
+                          Revise busca e status
+                        </span>
+                      </div>
+                    ) : undefined
+                  }
                 />
               </TableCell>
             </TableRow>

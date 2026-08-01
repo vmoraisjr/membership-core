@@ -15,6 +15,7 @@ body {
     radial-gradient(circle at top, rgba(46, 109, 246, 0.08), transparent 22%),
     linear-gradient(180deg, #f8fafc 0%, #f3f6fb 24%, #eef3f9 100%);
   color: #111827;
+  font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
 }
 
@@ -62,7 +63,8 @@ body {
 }
 
 :root {
-  --font-sans: "Aptos", "Segoe UI", "Inter", sans-serif;
+  --font-sans: "Atkinson Hyperlegible Next", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-heading: var(--font-sans);
   --color-background: #f8fafc;
   --color-foreground: #111827;
   --color-surface: #ffffff;
@@ -94,6 +96,22 @@ body {
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+  --font-size-4xl: 36px;
+  --line-height-xs: 16px;
+  --line-height-sm: 20px;
+  --line-height-md: 24px;
+  --line-height-lg: 28px;
+  --line-height-xl: 30px;
+  --line-height-2xl: 32px;
+  --line-height-3xl: 38px;
+  --line-height-4xl: 44px;
   --radius-xs: 0.25rem;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
@@ -198,14 +216,14 @@ body {
   h2,
   h3,
   h4 {
-    font-family: "Iowan Old Style", "Georgia", serif;
+    font-family: var(--font-heading);
   }
 }
 
 @layer components {
   .app-shell {
     @apply min-h-screen bg-transparent lg:grid;
-    grid-template-columns: minmax(18rem, 20rem) minmax(0, 1fr);
+    grid-template-columns: minmax(17rem, 18.5rem) minmax(0, 1fr);
   }
 
   .app-shell:has(.app-shell-sidebar[data-collapsed="true"]) {
@@ -213,7 +231,7 @@ body {
   }
 
   .app-shell-sidebar {
-    @apply border-b border-sidebar-border bg-sidebar backdrop-blur-xl lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-b-0;
+    @apply border-b border-sidebar-border bg-sidebar/95 backdrop-blur-xl lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-b-0;
   }
 
   .app-shell-main {
@@ -221,7 +239,7 @@ body {
   }
 
   .app-shell-header {
-    @apply sticky top-0 z-20 border-b border-border/70 bg-background/92 backdrop-blur-xl;
+    @apply sticky top-0 z-20 border-b border-border/60 bg-background/88 backdrop-blur-xl;
   }
 
   .app-shell-content {
@@ -229,7 +247,7 @@ body {
   }
 
   .page-frame {
-    @apply mx-auto flex w-full max-w-[var(--content-max-width)] flex-col gap-6 xl:gap-8;
+    @apply mx-auto flex w-full max-w-[var(--content-max-width)] flex-col gap-5 xl:gap-6;
   }
 
   .page-section-grid {
@@ -257,7 +275,7 @@ body {
   }
 
   .workspace-header {
-    @apply overflow-hidden rounded-[1.25rem] border border-border/80 bg-card/96 px-5 py-5 shadow-[var(--shadow-md)] md:px-7 md:py-6;
+    @apply overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/80 px-5 py-5 shadow-[var(--shadow-xs)] md:px-7 md:py-6;
   }
 
   .workspace-header-grid {
@@ -269,7 +287,9 @@ body {
   }
 
   .workspace-title {
-    @apply text-[2rem] font-semibold tracking-tight text-foreground;
+    font-size: var(--font-size-3xl);
+    line-height: var(--line-height-3xl);
+    @apply font-semibold tracking-tight text-foreground;
   }
 
   .workspace-description {
@@ -281,7 +301,7 @@ body {
   }
 
   .workspace-section {
-    @apply overflow-hidden rounded-[1.25rem] border border-border/80 bg-card/96 shadow-[var(--shadow-md)];
+    @apply overflow-hidden rounded-[1.25rem] border border-border/80 bg-card/96 shadow-[var(--shadow-sm)];
   }
 
   .workspace-section-header {
@@ -289,7 +309,9 @@ body {
   }
 
   .workspace-section-title {
-    @apply text-lg font-semibold tracking-tight text-foreground;
+    font-size: var(--font-size-xl);
+    line-height: var(--line-height-xl);
+    @apply font-semibold tracking-tight text-foreground;
   }
 
   .workspace-section-description {
@@ -297,7 +319,23 @@ body {
   }
 
   .workspace-toolbar {
-    @apply border-b border-border/70 px-5 py-5 md:px-6;
+    @apply border-b border-border/70 px-5 py-4 md:px-6;
+  }
+
+  .attention-card {
+    @apply rounded-[1rem] border border-border/70 bg-background/88 p-4 shadow-[var(--shadow-xs)];
+  }
+
+  .attention-card-title {
+    @apply text-sm font-semibold text-foreground;
+  }
+
+  .attention-card-value {
+    @apply mt-3 text-[1.75rem] leading-8 font-semibold tracking-tight text-foreground;
+  }
+
+  .attention-card-description {
+    @apply mt-2 text-sm leading-6 text-muted-foreground;
   }
 
   .empty-state-block {
@@ -353,7 +391,11 @@ body {
   }
 
   .metric-tile-inner {
-    @apply flex min-h-44 items-start justify-between gap-5 px-5 py-5 md:px-6;
+    @apply flex min-h-40 items-start justify-between gap-5 px-5 py-5 md:px-6;
+  }
+
+  .cn-toast {
+    @apply rounded-2xl border border-border/80 bg-popover shadow-[var(--shadow-md)];
   }
 
   .sidebar-rail-button {

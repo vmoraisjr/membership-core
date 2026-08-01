@@ -7,6 +7,7 @@ import { BrandMark } from "@/components/branding/brand-mark";
 
 import {
   BadgePercent,
+  BookCopy,
   Building2,
   ClipboardList,
   CreditCard,
@@ -19,6 +20,7 @@ import {
   ShieldCheck,
   SquareStack,
   Users,
+  WalletCards,
 } from "lucide-react";
 
 import { usePathname } from "next/navigation";
@@ -31,7 +33,7 @@ import { cn } from "@/lib/utils";
 
 const items = [
   {
-    section: "root",
+    section: "operation",
     label: "navigation.overview",
     href: "/dashboard",
     icon: LayoutDashboard,
@@ -81,7 +83,7 @@ const items = [
   },
 
   {
-    section: "relationship",
+    section: "operation",
     label: "navigation.benefitUsage",
     href: "/dashboard/benefit-usage",
     icon: History,
@@ -89,7 +91,7 @@ const items = [
   },
 
   {
-    section: "finance",
+    section: "operation",
     label: "navigation.payments",
     href: "/dashboard/payments",
     icon: ReceiptText,
@@ -98,17 +100,37 @@ const items = [
   },
 
   {
-    section: "finance",
-    label: "navigation.payments",
-    platformLabel: "Assinaturas SaaS",
-    href: "/dashboard/billing",
-    icon: ReceiptText,
+    section: "operation",
+    label: "Catálogo comercial",
+    platformLabel: "Catálogo comercial",
+    href: "/dashboard/billing/catalog",
+    icon: BookCopy,
     resource: "billing",
     platformOnly: true,
   },
 
   {
-    section: "settings",
+    section: "operation",
+    label: "Assinaturas SaaS",
+    platformLabel: "Assinaturas SaaS",
+    href: "/dashboard/billing/subscriptions",
+    icon: CreditCard,
+    resource: "billing",
+    platformOnly: true,
+  },
+
+  {
+    section: "operation",
+    label: "Pagamentos SaaS",
+    platformLabel: "Pagamentos SaaS",
+    href: "/dashboard/billing/payments",
+    icon: WalletCards,
+    resource: "billing",
+    platformOnly: true,
+  },
+
+  {
+    section: "operation",
     label: "navigation.myCompany",
     href: "/dashboard/company",
     icon: Building2,
@@ -117,30 +139,33 @@ const items = [
   },
 
   {
-    section: "relationship",
+    section: "operation",
     label: "Chamados",
     platformLabel: "Chamados",
     href: "/dashboard/messages",
     icon: MessageSquareMore,
     resource: "messages",
+    platformOnly: true,
   },
 
   {
-    section: "settings",
+    section: "operation",
     label: "navigation.auditLog",
     platformLabel: "Auditoria global",
     href: "/dashboard/audit-logs",
     icon: ClipboardList,
     resource: "auditLogs",
+    platformOnly: true,
   },
 
   {
-    section: "settings",
+    section: "operation",
     label: "navigation.users",
     platformLabel: "Equipe Sheep",
     href: "/dashboard/users",
     icon: ShieldCheck,
     resource: "users",
+    platformOnly: true,
   },
 ].map((item) => item as {
   label: string;
@@ -148,15 +173,9 @@ const items = [
   href: string;
   icon: typeof LayoutDashboard;
   resource: AppResource;
-  section:
-    | "root"
-    | "operation"
-    | "relationship"
-    | "finance"
-    | "settings";
+  section: "operation";
   clinicOnly?: boolean;
   platformOnly?: boolean;
-  platformVisible?: boolean;
 });
 
 type Props = {
@@ -191,14 +210,12 @@ export function DashboardSidebar({
   const [expandedSections, setExpandedSections] =
     useState({
       operation: true,
-      relationship: false,
-      finance: false,
-      settings: false,
     });
   const isPlatformView =
     !hasClinicAssignment;
   const operationExpanded =
     expandedSections.operation ||
+    pathname === "/dashboard" ||
     pathname.startsWith(
       "/dashboard/clinics"
     ) ||
@@ -213,25 +230,19 @@ export function DashboardSidebar({
     ) ||
     pathname.startsWith(
       "/dashboard/benefits"
-    );
-  const relationshipExpanded =
-    expandedSections.relationship ||
+    ) ||
     pathname.startsWith(
       "/dashboard/benefit-usage"
     ) ||
     pathname.startsWith(
       "/dashboard/messages"
-    );
-  const financeExpanded =
-    expandedSections.finance ||
+    ) ||
     pathname.startsWith(
       "/dashboard/payments"
     ) ||
     pathname.startsWith(
       "/dashboard/billing"
-    );
-  const settingsExpanded =
-    expandedSections.settings ||
+    ) ||
     pathname.startsWith(
       "/dashboard/company"
     ) ||
@@ -256,7 +267,6 @@ export function DashboardSidebar({
         isPlatformView) &&
       (hasClinicAssignment ||
         item.platformOnly ||
-        item.platformVisible ||
         !CLINIC_SCOPED_RESOURCES.includes(
           item.resource
         )) &&
@@ -278,6 +288,7 @@ export function DashboardSidebar({
             <BrandMark
               brand={workspaceBrand}
               compact={collapsed}
+              iconOnly={collapsed}
             />
             <button
               type="button"
@@ -317,30 +328,9 @@ export function DashboardSidebar({
         <nav className="flex flex-col gap-6">
           {[
             {
-              id: "root",
-              title: null,
-            },
-            {
               id: "operation",
               title: "Operação",
               expanded: operationExpanded,
-            },
-            {
-              id: "relationship",
-              title: "Relacionamento",
-              expanded:
-                relationshipExpanded,
-            },
-            {
-              id: "finance",
-              title: "Financeiro",
-              expanded: financeExpanded,
-            },
-            {
-              id: "settings",
-              title: "Configurações",
-              expanded:
-                settingsExpanded,
             },
           ].map((section) => {
             const sectionItems =
@@ -368,7 +358,7 @@ export function DashboardSidebar({
                           ...current,
                           [section.id]:
                             !current[
-                              section.id as "operation" | "relationship" | "finance" | "settings"
+                              section.id as "operation"
                             ],
                         })
                       )
@@ -385,8 +375,7 @@ export function DashboardSidebar({
                     </span>
                   </button>
                 ) : null}
-                {(section.id === "root" ||
-                  collapsed ||
+                {(collapsed ||
                   section.expanded) &&
                 sectionItems.map((item) => {
                   const active =

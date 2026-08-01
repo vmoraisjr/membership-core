@@ -1,1 +1,1 @@
-export const APP_NAME = "Membership Core";
+export const APP_NAME = "Sheep";
