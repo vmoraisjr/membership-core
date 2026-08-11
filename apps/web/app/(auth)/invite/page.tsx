@@ -1,3 +1,8 @@
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { AuthCard } from "@/features/auth/components/auth-card";
+import { AuthSubmitButton } from "@/features/auth/components/auth-submit-button";
 import { acceptUserInviteAction } from "@/features/auth/actions/accept-user-invite";
 import { getTranslations } from "@/i18n/messages";
 
@@ -16,13 +21,9 @@ function getErrorMessage(
     case "missing_name":
       return t("auth.invite.missingName");
     case "password_too_short":
-      return t(
-        "auth.invite.passwordTooShort"
-      );
+      return t("auth.invite.passwordTooShort");
     case "password_mismatch":
-      return t(
-        "auth.invite.passwordMismatch"
-      );
+      return t("auth.invite.passwordMismatch");
     case "invalid_token":
       return t("auth.invite.invalidToken");
     default:
@@ -36,111 +37,82 @@ export default async function InvitePage({
   const t = getTranslations();
   const params =
     (await searchParams) ?? {};
-  const errorMessage =
-    getErrorMessage(
-      t,
-      params.error
-    );
+  const errorMessage = getErrorMessage(
+    t,
+    params.error
+  );
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
-      <div className="w-full max-w-md rounded-2xl border bg-background p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("auth.invite.title")}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("auth.invite.description")}
-        </p>
-
-        {errorMessage ? (
-          <p className="mt-4 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm">
-            {errorMessage}
-          </p>
-        ) : null}
-
-        <form
-          action={acceptUserInviteAction}
-          className="mt-6 space-y-4"
+    <AuthCard
+      title={t("auth.invite.title")}
+      description={t("auth.invite.description")}
+      message={errorMessage}
+      messageTone="danger"
+    >
+      <form
+        action={acceptUserInviteAction}
+        className="space-y-5"
+      >
+        <Field
+          htmlFor="token"
+          label={t("auth.invite.tokenLabel")}
         >
-          <div className="space-y-2">
-            <label
-              htmlFor="token"
-              className="text-sm font-medium"
-            >
-              {t("auth.invite.tokenLabel")}
-            </label>
-            <input
-              id="token"
-              name="token"
-              type="text"
-              defaultValue={
-                params.token ?? ""
-              }
-              required
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-            />
-          </div>
+          <Input
+            id="token"
+            name="token"
+            type="text"
+            defaultValue={params.token ?? ""}
+            required
+          />
+        </Field>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="name"
-              className="text-sm font-medium"
-            >
-              {t("shared.labels.fullName")}
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-            />
-          </div>
+        <Field
+          htmlFor="name"
+          label={t("shared.labels.fullName")}
+        >
+          <Input
+            id="name"
+            name="name"
+            type="text"
+            required
+            autoComplete="name"
+          />
+        </Field>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="password"
-              className="text-sm font-medium"
-            >
-              {t("auth.resetPassword.newPassword")}
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              minLength={8}
-              required
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-            />
-          </div>
+        <Field
+          htmlFor="password"
+          label={t("auth.resetPassword.newPassword")}
+        >
+          <PasswordInput
+            id="password"
+            name="password"
+            minLength={8}
+            required
+            autoComplete="new-password"
+            hideLabel={t("auth.login.hidePassword")}
+            showLabel={t("auth.login.showPassword")}
+          />
+        </Field>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="confirmPassword"
-              className="text-sm font-medium"
-            >
-              {t(
-                "auth.resetPassword.confirmPassword"
-              )}
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              minLength={8}
-              required
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-            />
-          </div>
+        <Field
+          htmlFor="confirmPassword"
+          label={t("auth.resetPassword.confirmPassword")}
+        >
+          <PasswordInput
+            id="confirmPassword"
+            name="confirmPassword"
+            minLength={8}
+            required
+            autoComplete="new-password"
+            hideLabel={t("auth.login.hidePassword")}
+            showLabel={t("auth.login.showPassword")}
+          />
+        </Field>
 
-          <button
-            type="submit"
-            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-          >
-            {t("auth.invite.activateAccount")}
-          </button>
-        </form>
-      </div>
-    </main>
+        <AuthSubmitButton
+          label={t("auth.invite.activateAccount")}
+        />
+      </form>
+    </AuthCard>
   );
 }

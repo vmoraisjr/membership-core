@@ -16,7 +16,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslations } from "@/i18n/provider";
 
 import { consumeBenefit } from "../actions/consume-benefit";
 import {
@@ -47,8 +49,12 @@ type Props = {
 export function ConsumeBenefitDialog({
   balances,
   trigger,
-  title = "Registrar uso de benefício",
+  title,
 }: Props) {
+  const t = useTranslations();
+  const dialogTitle =
+    title ??
+    t("benefitUsage.dialog.title");
   const [open, setOpen] = useState(false);
 
   const form =
@@ -132,7 +138,9 @@ export function ConsumeBenefitDialog({
       await consumeBenefit(values);
 
       toast.success(
-        "Uso de benefício registrado."
+        t(
+          "benefitUsage.dialog.saveSuccess"
+        )
       );
 
       form.reset({
@@ -147,7 +155,9 @@ export function ConsumeBenefitDialog({
       toast.error(
         error instanceof Error
           ? error.message
-          : "Não foi possível registrar o uso do benefício."
+          : t(
+              "benefitUsage.dialog.saveError"
+            )
       );
     }
   }
@@ -160,7 +170,9 @@ export function ConsumeBenefitDialog({
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
-            Registrar uso
+            {t(
+              "benefitUsage.dialog.trigger"
+            )}
           </Button>
         )}
       </DialogTrigger>
@@ -168,13 +180,15 @@ export function ConsumeBenefitDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {title}
+            {dialogTitle}
           </DialogTitle>
         </DialogHeader>
 
         {balances.length === 0 ? (
           <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
-            Nenhuma assinatura ativa com benefícios disponíveis foi encontrada.
+            {t(
+              "benefitUsage.dialog.empty"
+            )}
           </div>
         ) : (
           <form
@@ -185,16 +199,19 @@ export function ConsumeBenefitDialog({
           >
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
-                Assinatura do paciente
+                {t(
+                  "benefitUsage.dialog.subscription"
+                )}
               </label>
-              <select
+              <Select
                 {...form.register(
                   "subscriptionId"
                 )}
-                className="h-10 rounded-md border px-3"
               >
                 <option value="">
-                  Selecione uma assinatura
+                  {t(
+                    "benefitUsage.dialog.selectSubscription"
+                  )}
                 </option>
 
                 {Array.from(
@@ -222,24 +239,27 @@ export function ConsumeBenefitDialog({
                     }
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
-                Benefício
+                {t(
+                  "shared.labels.benefit"
+                )}
               </label>
-              <select
+              <Select
                 {...form.register(
                   "membershipBenefitId"
                 )}
-                className="h-10 rounded-md border px-3"
                 disabled={
                   !subscriptionId
                 }
               >
                 <option value="">
-                  Selecione um benefício
+                  {t(
+                    "benefitUsage.dialog.selectBenefit"
+                  )}
                 </option>
 
                 {benefitOptions.map(
@@ -258,39 +278,48 @@ export function ConsumeBenefitDialog({
                     </option>
                   )
                 )}
-              </select>
+              </Select>
             </div>
 
             {selectedBalance && (
               <div className="rounded-md border bg-muted/30 p-4 text-sm">
                 <div className="font-medium">
-                  Saldo atual
+                  {t(
+                    "benefitUsage.dialog.currentBalance"
+                  )}
                 </div>
 
                 <div className="mt-2 flex items-center gap-2 text-muted-foreground">
                   {selectedBalance.remainingQuantity == null ? (
                     <>
                       <InfinityIcon className="size-4" />
-                      Uso sem limite
+                      {t(
+                        "benefitUsage.dialog.unlimitedUsage"
+                      )}
                     </>
                   ) : (
-                    <>
-                      {selectedBalance.remainingQuantity}
-                      {" restante(s) de "}
+                    t(
+                      "benefitUsage.dialog.remainingOutOf",
                       {
-                        selectedBalance.usageLimit
+                        remaining:
+                          selectedBalance.remainingQuantity,
+                        limit:
+                          selectedBalance.usageLimit,
                       }
-                      {selectedBalance.resetPeriod ===
-                      "MONTHLY"
-                        ? " no mês"
-                        : " no total"}
-                    </>
+                    )
                   )}
                 </div>
 
                 {selectedBalance.resetPeriod && (
                   <div className="mt-1 text-muted-foreground">
-                    Renovação mensal do limite.
+                    {selectedBalance.resetPeriod ===
+                    "MONTHLY"
+                      ? t(
+                          "benefitUsage.dialog.resetsMonthly"
+                        )
+                      : t(
+                          "benefitUsage.dialog.resetsYearly"
+                        )}
                   </div>
                 )}
               </div>
@@ -298,7 +327,9 @@ export function ConsumeBenefitDialog({
 
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
-                Quantidade
+                {t(
+                  "shared.labels.quantity"
+                )}
               </label>
               <Input
                 type="number"
@@ -314,10 +345,14 @@ export function ConsumeBenefitDialog({
 
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
-                Utilizado por
+                {t(
+                  "benefitUsage.dialog.usedBy"
+                )}
               </label>
               <Input
-                placeholder="Profissional ou membro da equipe"
+                placeholder={t(
+                  "benefitUsage.dialog.usedByPlaceholder"
+                )}
                 {...form.register(
                   "usedBy"
                 )}
@@ -326,11 +361,15 @@ export function ConsumeBenefitDialog({
 
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
-                Observações
+                {t(
+                  "shared.labels.notes"
+                )}
               </label>
               <Textarea
                 rows={4}
-                placeholder="Observações opcionais"
+                placeholder={t(
+                  "benefitUsage.dialog.notesPlaceholder"
+                )}
                 {...form.register(
                   "notes"
                 )}
@@ -338,7 +377,9 @@ export function ConsumeBenefitDialog({
             </div>
 
             <Button type="submit">
-              Registrar uso
+              {t(
+                "benefitUsage.dialog.trigger"
+              )}
             </Button>
           </form>
         )}

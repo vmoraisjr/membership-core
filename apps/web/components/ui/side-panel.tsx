@@ -50,10 +50,12 @@ function SidePanelOverlay({
 function SidePanelContent({
   className,
   children,
+  side = "right",
   showCloseButton = true,
   "aria-describedby": ariaDescribedBy,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  side?: "left" | "right"
   showCloseButton?: boolean
 }) {
   return (
@@ -61,9 +63,13 @@ function SidePanelContent({
       <SidePanelOverlay />
       <DialogPrimitive.Content
         data-slot="side-panel-content"
+        data-side={side}
         aria-describedby={ariaDescribedBy}
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[46rem] flex-col overflow-hidden border-l border-border/80 bg-popover text-sm text-popover-foreground shadow-[var(--shadow-lg)] outline-none duration-150 data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right sm:w-[min(46rem,100vw)]",
+          "fixed inset-y-0 z-50 flex h-full w-full max-w-[46rem] flex-col overflow-hidden bg-popover text-sm text-popover-foreground shadow-[var(--shadow-lg)] outline-none duration-150 data-open:animate-in data-closed:animate-out sm:w-[min(46rem,100vw)]",
+          side === "left"
+            ? "left-0 border-r border-border/80 data-open:slide-in-from-left data-closed:slide-out-to-left"
+            : "right-0 border-l border-border/80 data-open:slide-in-from-right data-closed:slide-out-to-right",
           className
         )}
         {...props}

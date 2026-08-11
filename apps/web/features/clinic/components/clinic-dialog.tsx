@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, EyeOff, Mail, PencilLine, RefreshCcw } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import {
@@ -11,6 +12,11 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { toast } from "sonner";
+
+import {
+  ClinicStatus,
+  ClinicSubscriptionStatus,
+} from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -26,6 +32,8 @@ import {
 } from "@/components/ui/side-panel";
 import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
+import { StatusIndicator } from "@/components/ui/status-indicator";
+import { useTranslations } from "@/i18n/provider";
 import {
   FEEDBACK_WARNING_MESSAGES,
   getFeedbackErrorMessage,
@@ -36,6 +44,11 @@ import {
   formatBrazilianState,
   formatBrazilianZipCode,
 } from "@/lib/br-formats";
+
+import {
+  getClinicStatusTone,
+  getClinicSubscriptionStatusTone,
+} from "../utils/clinic-status";
 
 import { createClinic } from "../actions/create-clinic";
 import { resetClinicMasterPasswordAction } from "../actions/reset-clinic-master-password";
@@ -61,6 +74,14 @@ type Props = {
     city: string;
     state: string;
     address: string;
+    status: ClinicStatus;
+    clinicSubscriptions?: Array<{
+      id: string;
+      status: ClinicSubscriptionStatus;
+      clinicBillingPlan: {
+        name: string;
+      };
+    }>;
   };
   trigger?: React.ReactNode;
   isPlatformView?: boolean;
@@ -86,6 +107,7 @@ export function ClinicDialog({
   trigger,
   isPlatformView = false,
 }: Props) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [editingEnabled, setEditingEnabled] =
     useState(mode === "create");
@@ -444,6 +466,75 @@ export function ClinicDialog({
                       <p className="detail-field-value">
                         O plano pode ser trocado depois na fila de assinaturas SaaS.
                       </p>
+                    </div>
+                  </div>
+                </FormSection>
+              ) : null}
+
+              {mode === "edit" &&
+              initialData &&
+              isPlatformView ? (
+                <FormSection
+                  className="col-span-2"
+                  title="Status, plano e módulos"
+                  description="Esta seção é informativa. Status é alterado pela ação Ativar/Desativar na listagem e módulos são geridos no workspace desta empresa."
+                >
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="detail-field">
+                      <p className="detail-field-label">
+                        Status da empresa
+                      </p>
+                      <StatusIndicator
+                        tone={getClinicStatusTone(
+                          initialData.status
+                        )}
+                        label={t(
+                          `clinics.status.${initialData.status}`
+                        )}
+                      />
+                    </div>
+                    <div className="detail-field">
+                      <p className="detail-field-label">
+                        Plano SaaS e assinatura
+                      </p>
+                      {initialData
+                        .clinicSubscriptions?.[0] ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="detail-field-value">
+                            {
+                              initialData
+                                .clinicSubscriptions[0]
+                                .clinicBillingPlan
+                                .name
+                            }
+                          </span>
+                          <StatusIndicator
+                            tone={getClinicSubscriptionStatusTone(
+                              initialData
+                                .clinicSubscriptions[0]
+                                .status
+                            )}
+                            label={t(
+                              `billing.status.${initialData.clinicSubscriptions[0].status}`
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <p className="detail-field-value text-muted-foreground">
+                          Sem plano ativo
+                        </p>
+                      )}
+                    </div>
+                    <div className="detail-field">
+                      <p className="detail-field-label">
+                        Módulos
+                      </p>
+                      <Link
+                        href={`/dashboard/clinics/${initialData.id}?tab=modules`}
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        Ver módulos desta empresa
+                      </Link>
                     </div>
                   </div>
                 </FormSection>

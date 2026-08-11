@@ -71,6 +71,9 @@ export async function updateMembershipPlan(
               parsed.data.description,
             monthlyPrice:
               parsed.data.monthlyPrice,
+            annualPrice:
+              parsed.data.annualPrice ??
+              null,
           },
           select: {
             id: true,

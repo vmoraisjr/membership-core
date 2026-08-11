@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 
+import { Field } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
+import { AuthCard } from "@/features/auth/components/auth-card";
+import { AuthSubmitButton } from "@/features/auth/components/auth-submit-button";
 import { completeFirstAccessPasswordAction } from "@/features/auth/actions/complete-first-access-password";
 import { getCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import { getTranslations } from "@/i18n/messages";
 
 type Props = {
   searchParams?: Promise<{
@@ -9,12 +14,15 @@ type Props = {
   }>;
 };
 
-function getErrorMessage(error?: string) {
+function getErrorMessage(
+  t: ReturnType<typeof getTranslations>,
+  error?: string
+) {
   switch (error) {
     case "password_too_short":
-      return "A nova senha precisa ter pelo menos 8 caracteres.";
+      return t("auth.resetPassword.passwordTooShort");
     case "password_mismatch":
-      return "A confirmação de senha precisa ser igual à nova senha.";
+      return t("auth.resetPassword.passwordMismatch");
     default:
       return null;
   }
@@ -23,6 +31,7 @@ function getErrorMessage(error?: string) {
 export default async function FirstAccessPage({
   searchParams,
 }: Props) {
+  const t = getTranslations();
   const currentUser =
     await getCurrentAppUser();
 
@@ -37,78 +46,63 @@ export default async function FirstAccessPage({
   const params =
     (await searchParams) ?? {};
   const errorMessage =
-    getErrorMessage(params.error);
+    getErrorMessage(t, params.error);
   const isClinicUser =
     Boolean(currentUser.clinicId);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
-      <div className="w-full max-w-md rounded-2xl border bg-background p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {isClinicUser
-            ? "Primeiro acesso da clínica"
-            : "Primeiro acesso da plataforma"}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {isClinicUser
-            ? "Defina uma nova senha para continuar usando o painel da clínica."
-            : "Defina uma nova senha para continuar usando a área administrativa da plataforma."}
-        </p>
-
-        {errorMessage ? (
-          <p className="mt-4 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm">
-            {errorMessage}
-          </p>
-        ) : null}
-
-        <form
-          action={
-            completeFirstAccessPasswordAction
-          }
-          className="mt-6 space-y-4"
+    <AuthCard
+      title={
+        isClinicUser
+          ? t("auth.firstAccess.titleClinic")
+          : t("auth.firstAccess.titlePlatform")
+      }
+      description={
+        isClinicUser
+          ? t("auth.firstAccess.descriptionClinic")
+          : t("auth.firstAccess.descriptionPlatform")
+      }
+      message={errorMessage}
+      messageTone="danger"
+    >
+      <form
+        action={completeFirstAccessPasswordAction}
+        className="space-y-5"
+      >
+        <Field
+          htmlFor="password"
+          label={t("auth.resetPassword.newPassword")}
         >
-          <div className="space-y-2">
-            <label
-              htmlFor="password"
-              className="text-sm font-medium"
-            >
-              Nova senha
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              minLength={8}
-              required
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-            />
-          </div>
+          <PasswordInput
+            id="password"
+            name="password"
+            minLength={8}
+            required
+            autoComplete="new-password"
+            hideLabel={t("auth.login.hidePassword")}
+            showLabel={t("auth.login.showPassword")}
+          />
+        </Field>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="confirmPassword"
-              className="text-sm font-medium"
-            >
-              Confirmar senha
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              minLength={8}
-              required
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-            />
-          </div>
+        <Field
+          htmlFor="confirmPassword"
+          label={t("auth.resetPassword.confirmPassword")}
+        >
+          <PasswordInput
+            id="confirmPassword"
+            name="confirmPassword"
+            minLength={8}
+            required
+            autoComplete="new-password"
+            hideLabel={t("auth.login.hidePassword")}
+            showLabel={t("auth.login.showPassword")}
+          />
+        </Field>
 
-          <button
-            type="submit"
-            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-          >
-            Atualizar senha
-          </button>
-        </form>
-      </div>
-    </main>
+        <AuthSubmitButton
+          label={t("auth.firstAccess.submit")}
+        />
+      </form>
+    </AuthCard>
   );
 }

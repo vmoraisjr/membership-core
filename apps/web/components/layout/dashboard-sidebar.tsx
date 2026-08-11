@@ -4,9 +4,16 @@ import { useState } from "react";
 
 import Link from "next/link";
 import { BrandMark } from "@/components/branding/brand-mark";
+import {
+  SidePanel,
+  SidePanelContent,
+  SidePanelDescription,
+  SidePanelTitle,
+} from "@/components/ui/side-panel";
 
 import {
   BadgePercent,
+  Blocks,
   BookCopy,
   Building2,
   ClipboardList,
@@ -15,7 +22,6 @@ import {
   LayoutDashboard,
   MessageSquareMore,
   PanelLeftClose,
-  PanelLeftOpen,
   ReceiptText,
   ShieldCheck,
   SquareStack,
@@ -26,10 +32,12 @@ import {
 import { usePathname } from "next/navigation";
 
 import type { AppRole } from "@/features/auth/constants/roles";
+import { getRoleLabel } from "@/features/auth/constants/roles";
 import { hasPermission, type AppResource } from "@/features/rbac/permissions";
 import { useTranslations } from "@/i18n/provider";
 import type { WorkspaceBrand } from "@/lib/branding";
 import { cn } from "@/lib/utils";
+import { useMobileNav } from "./mobile-nav-context";
 
 const items = [
   {
@@ -140,12 +148,19 @@ const items = [
 
   {
     section: "operation",
-    label: "Chamados",
+    label: "navigation.modules",
+    href: "/dashboard/modules",
+    icon: Blocks,
+    resource: "modules",
+  },
+
+  {
+    section: "operation",
+    label: "navigation.messages",
     platformLabel: "Chamados",
     href: "/dashboard/messages",
     icon: MessageSquareMore,
     resource: "messages",
-    platformOnly: true,
   },
 
   {
@@ -178,8 +193,14 @@ const items = [
   platformOnly?: boolean;
 });
 
+type CurrentUser = {
+  name: string;
+  email: string;
+};
+
 type Props = {
   role: AppRole;
+  currentUser: CurrentUser;
   hasClinicAssignment: boolean;
   hasOperationalAccess: boolean;
   workspaceBrand: WorkspaceBrand;
@@ -192,204 +213,139 @@ const CLINIC_SCOPED_RESOURCES: AppResource[] = [
   "benefits",
   "benefitUsage",
   "billing",
-  "messages",
   "auditLogs",
   "users",
 ];
 
-export function DashboardSidebar({
+function getVisibleItems({
   role,
   hasClinicAssignment,
   hasOperationalAccess,
-  workspaceBrand,
-}: Props) {
-  const t = useTranslations();
-  const pathname = usePathname();
-  const [collapsed, setCollapsed] =
-    useState(false);
-  const [expandedSections, setExpandedSections] =
-    useState({
-      operation: true,
-    });
-  const isPlatformView =
-    !hasClinicAssignment;
-  const operationExpanded =
-    expandedSections.operation ||
-    pathname === "/dashboard" ||
-    pathname.startsWith(
-      "/dashboard/clinics"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/plans"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/patients"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/subscriptions"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/benefits"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/benefit-usage"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/messages"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/payments"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/billing"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/company"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/modules"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/audit-logs"
-    ) ||
-    pathname.startsWith(
-      "/dashboard/users"
-    );
+}: {
+  role: AppRole;
+  hasClinicAssignment: boolean;
+  hasOperationalAccess: boolean;
+}) {
+  const isPlatformView = !hasClinicAssignment;
 
-  const visibleItems = items.filter(
+  return items.filter(
     (item) =>
       (item.section !== "operation" ||
         isPlatformView ||
         hasOperationalAccess) &&
-      (!item.clinicOnly ||
-        hasClinicAssignment) &&
-      (!item.platformOnly ||
-        isPlatformView) &&
+      (!item.clinicOnly || hasClinicAssignment) &&
+      (!item.platformOnly || isPlatformView) &&
       (hasClinicAssignment ||
         item.platformOnly ||
-        !CLINIC_SCOPED_RESOURCES.includes(
-          item.resource
-        )) &&
-      hasPermission(
-        role,
-        item.resource,
-        "view"
-      )
+        !CLINIC_SCOPED_RESOURCES.includes(item.resource)) &&
+      hasPermission(role, item.resource, "view")
   );
+}
+
+type NavContentProps = {
+  role: AppRole;
+  currentUser: CurrentUser;
+  hasClinicAssignment: boolean;
+  hasOperationalAccess: boolean;
+  workspaceBrand: WorkspaceBrand;
+  collapsed: boolean;
+  onNavigate?: () => void;
+};
+
+function SidebarNavContent({
+  role,
+  currentUser,
+  hasClinicAssignment,
+  hasOperationalAccess,
+  workspaceBrand,
+  collapsed,
+  onNavigate,
+}: NavContentProps) {
+  const t = useTranslations();
+  const pathname = usePathname();
+  const [expandedSections, setExpandedSections] = useState({
+    operation: true,
+  });
+  const isPlatformView = !hasClinicAssignment;
+
+  const operationExpanded =
+    expandedSections.operation ||
+    items.some(
+      (item) =>
+        item.href !== "/dashboard" &&
+        (pathname === item.href || pathname.startsWith(`${item.href}/`))
+    ) ||
+    pathname === "/dashboard";
+
+  const visibleItems = getVisibleItems({
+    role,
+    hasClinicAssignment,
+    hasOperationalAccess,
+  });
 
   return (
-    <aside
-      data-collapsed={collapsed}
-      className="app-shell-sidebar"
-    >
-      <div className="flex h-full flex-col gap-8 p-4 lg:p-6">
-        <div className="space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <BrandMark
-              brand={workspaceBrand}
-              compact={collapsed}
-              iconOnly={collapsed}
-            />
-            <button
-              type="button"
-              className="sidebar-rail-button"
-              onClick={() =>
-                setCollapsed(
-                  (current) => !current
-                )
-              }
-              aria-label={
-                collapsed
-                  ? "Expandir menu lateral"
-                  : "Recolher menu lateral"
-              }
-              title={
-                collapsed
-                  ? "Expandir menu lateral"
-                  : "Recolher menu lateral"
-              }
-            >
-              {collapsed ? (
-                <PanelLeftOpen className="size-4" />
-              ) : (
-                <PanelLeftClose className="size-4" />
-              )}
-            </button>
-          </div>
-          {!collapsed ? (
-            <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-              {workspaceBrand.isPlatform
-                ? "Controle global"
-                : t("navigation.workspace")}
-            </p>
-          ) : null}
-        </div>
+    <div className="flex h-full flex-col gap-8 p-4 lg:p-6">
+      <div className="space-y-4">
+        <BrandMark
+          brand={workspaceBrand}
+          compact={collapsed}
+          iconOnly={collapsed}
+        />
+        {!collapsed ? (
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+            {workspaceBrand.isPlatform
+              ? "Controle global"
+              : t("navigation.workspace")}
+          </p>
+        ) : null}
+      </div>
 
-        <nav className="flex flex-col gap-6">
-          {[
-            {
-              id: "operation",
-              title: "Operação",
-              expanded: operationExpanded,
-            },
-          ].map((section) => {
-            const sectionItems =
-              visibleItems.filter(
-                (item) =>
-                  item.section ===
-                  section.id
-              );
+      <nav className="flex flex-1 flex-col gap-6">
+        {[
+          {
+            id: "operation",
+            title: "Operação",
+            expanded: operationExpanded,
+          },
+        ].map((section) => {
+          const sectionItems = visibleItems.filter(
+            (item) => item.section === section.id
+          );
 
-            if (sectionItems.length === 0) {
-              return null;
-            }
+          if (sectionItems.length === 0) {
+            return null;
+          }
 
-            return (
-              <div
-                key={section.id}
-                className="flex flex-col gap-1.5"
-              >
-                {section.title && !collapsed ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedSections(
-                        (current) => ({
-                          ...current,
-                          [section.id]:
-                            !current[
-                              section.id as "operation"
-                            ],
-                        })
-                      )
-                    }
-                    className="sidebar-section-button"
-                  >
-                    <span>
-                      {section.title}
-                    </span>
-                    <span className="text-[10px]">
-                      {section.expanded
-                        ? "Ocultar"
-                        : "Mostrar"}
-                    </span>
-                  </button>
-                ) : null}
-                {(collapsed ||
-                  section.expanded) &&
+          return (
+            <div key={section.id} className="flex flex-col gap-1.5">
+              {section.title && !collapsed ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedSections((current) => ({
+                      ...current,
+                      [section.id]:
+                        !current[section.id as "operation"],
+                    }))
+                  }
+                  className="sidebar-section-button"
+                >
+                  <span>{section.title}</span>
+                  <span className="text-[10px]">
+                    {section.expanded ? "Ocultar" : "Mostrar"}
+                  </span>
+                </button>
+              ) : null}
+              {(collapsed || section.expanded) &&
                 sectionItems.map((item) => {
                   const active =
                     pathname === item.href ||
-                    (item.href !==
-                      "/dashboard" &&
-                      pathname.startsWith(
-                        `${item.href}/`
-                      ));
+                    (item.href !== "/dashboard" &&
+                      pathname.startsWith(`${item.href}/`));
 
                   const Icon = item.icon;
                   const label =
-                    isPlatformView &&
-                    item.platformLabel
+                    isPlatformView && item.platformLabel
                       ? item.platformLabel
                       : t(item.label);
 
@@ -398,10 +354,10 @@ export function DashboardSidebar({
                       key={item.href}
                       href={item.href}
                       title={label}
+                      onClick={onNavigate}
                       className={cn(
                         "sidebar-item",
-                        collapsed &&
-                          "justify-center px-0",
+                        collapsed && "justify-center px-0",
                         active
                           ? "sidebar-item-active"
                           : "sidebar-item-idle"
@@ -410,18 +366,113 @@ export function DashboardSidebar({
                       <Icon className="size-4" />
 
                       {!collapsed ? (
-                        <span className="truncate">
-                          {label}
-                        </span>
+                        <span className="truncate">{label}</span>
                       ) : null}
                     </Link>
                   );
                 })}
-              </div>
-            );
-          })}
-        </nav>
+            </div>
+          );
+        })}
+      </nav>
+
+      <div
+        className={cn(
+          "mt-auto rounded-2xl border border-sidebar-border bg-background/70 p-3",
+          collapsed && "flex justify-center border-transparent bg-transparent p-0"
+        )}
+        title={`${currentUser.name} · ${getRoleLabel(role)} · ${workspaceBrand.displayName}`}
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-primary-soft)] text-xs font-semibold text-primary">
+            {currentUser.name.slice(0, 2).toUpperCase()}
+          </span>
+          {!collapsed ? (
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {currentUser.name}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {getRoleLabel(role)} · {workspaceBrand.displayName}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </div>
-    </aside>
+    </div>
+  );
+}
+
+export function DashboardSidebar({
+  role,
+  currentUser,
+  hasClinicAssignment,
+  hasOperationalAccess,
+  workspaceBrand,
+}: Props) {
+  const [collapsed, setCollapsed] = useState(false);
+  const { open, setOpen } = useMobileNav();
+
+  return (
+    <>
+      <aside
+        data-collapsed={collapsed}
+        className="app-shell-sidebar hidden lg:block"
+      >
+        <div className="app-shell-sidebar-sticky">
+          <SidebarNavContent
+            role={role}
+            currentUser={currentUser}
+            hasClinicAssignment={hasClinicAssignment}
+            hasOperationalAccess={hasOperationalAccess}
+            workspaceBrand={workspaceBrand}
+            collapsed={collapsed}
+          />
+
+          <button
+            type="button"
+            className="sidebar-collapse-toggle"
+            data-collapsed={collapsed}
+            onClick={() => setCollapsed((current) => !current)}
+            aria-label={
+              collapsed
+                ? "Expandir menu lateral"
+                : "Recolher menu lateral"
+            }
+            title={
+              collapsed
+                ? "Expandir menu lateral"
+                : "Recolher menu lateral"
+            }
+          >
+            <PanelLeftClose className="size-3.5" />
+          </button>
+        </div>
+      </aside>
+
+      <SidePanel open={open} onOpenChange={setOpen}>
+        <SidePanelContent
+          side="left"
+          className="max-w-xs border-sidebar-border bg-sidebar p-0 sm:w-72"
+          showCloseButton={false}
+        >
+          <SidePanelTitle className="sr-only">
+            {workspaceBrand.workspaceLabel}
+          </SidePanelTitle>
+          <SidePanelDescription className="sr-only">
+            Menu de navegação
+          </SidePanelDescription>
+          <SidebarNavContent
+            role={role}
+            currentUser={currentUser}
+            hasClinicAssignment={hasClinicAssignment}
+            hasOperationalAccess={hasOperationalAccess}
+            workspaceBrand={workspaceBrand}
+            collapsed={false}
+            onNavigate={() => setOpen(false)}
+          />
+        </SidePanelContent>
+      </SidePanel>
+    </>
   );
 }

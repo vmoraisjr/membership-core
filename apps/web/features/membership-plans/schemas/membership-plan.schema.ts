@@ -8,6 +8,15 @@ export const membershipPlanSchema = z.object({
   description: z.string().optional(),
 
   monthlyPrice: z.coerce.number().min(0),
+
+  annualPrice: z.preprocess(
+    (value) =>
+      typeof value === "string" &&
+      value.trim() === ""
+        ? undefined
+        : value,
+    z.coerce.number().min(0).optional()
+  ),
 });
 
 export type MembershipPlanSchema = z.infer<

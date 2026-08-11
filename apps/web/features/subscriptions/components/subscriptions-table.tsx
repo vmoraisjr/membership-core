@@ -13,8 +13,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
+import { EmptyState } from "@/components/dashboard/empty-state";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { useTranslations } from "@/i18n/provider";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 
 import { SubscriptionRowActions } from "./subscription-row-actions";
 import { SubscriptionStatusBadge } from "./subscription-status-badge";
@@ -33,7 +38,11 @@ type SubscriptionWithRelations = {
   membershipPlan: {
     id: string;
     name: string;
+    monthlyPrice: number | null;
   };
+  patientInvoices?: Array<{
+    dueDate: Date;
+  }>;
 };
 
 type Props = {
@@ -115,6 +124,12 @@ export function SubscriptionsTable({
       }
     );
 
+  const hasAnyFilterApplied =
+    statusFilter !== "all" ||
+    normalizedPatientSearch.length > 0 ||
+    Boolean(selectedPlanId) ||
+    Boolean(selectedPatientId);
+
   return (
     <DataTableContainer
       title={t("subscriptions.title")}
@@ -132,14 +147,13 @@ export function SubscriptionsTable({
             <label className="text-sm font-medium text-muted-foreground">
               {t("shared.filters.statusFilter")}
             </label>
-            <select
+            <Select
               value={statusFilter}
               onChange={(event) =>
                 setStatusFilter(
                   event.target.value
                 )
               }
-              className="h-10 rounded-xl border border-input bg-background px-3"
             >
               <option value="all">
                 {t("shared.filters.all")}
@@ -162,14 +176,14 @@ export function SubscriptionsTable({
               <option value="EXPIRED">
                 {t("subscriptions.statuses.EXPIRED")}
               </option>
-            </select>
+            </Select>
           </div>
 
           <div className="grid gap-2 sm:min-w-80">
             <label className="text-sm font-medium text-muted-foreground">
               {t("shared.filters.filterByPatientName")}
             </label>
-            <input
+            <Input
               value={patientSearch}
               onChange={(event) =>
                 setPatientSearch(
@@ -179,7 +193,6 @@ export function SubscriptionsTable({
               placeholder={t(
                 "shared.filters.filterByPatientName"
               )}
-              className="h-10 rounded-xl border border-input bg-background px-3"
             />
           </div>
         </div>
@@ -197,11 +210,25 @@ export function SubscriptionsTable({
             </TableHead>
 
             <TableHead>
-              {t("shared.labels.status")}
+              {t("shared.labels.amount")}
+            </TableHead>
+
+            <TableHead>
+              {t("shared.labels.startDate")}
             </TableHead>
 
             <TableHead>
               {t("shared.labels.expiresAt")}
+            </TableHead>
+
+            <TableHead>
+              {t(
+                "subscriptions.table.nextPayment"
+              )}
+            </TableHead>
+
+            <TableHead>
+              {t("shared.labels.status")}
             </TableHead>
 
             <TableHead>
@@ -216,21 +243,66 @@ export function SubscriptionsTable({
               <TableRow
                 key={subscription.id}
               >
-                <TableCell className="min-w-[16rem]">
-                  {
-                    subscription.patient
-                      .fullName
-                  }
+                <TableCell className="min-w-[14rem] align-top">
+                  <div className="flex items-center gap-2.5">
+                    <CompanyAvatarMark
+                      name={
+                        subscription.patient
+                          .fullName
+                      }
+                      seed={
+                        subscription.patientId
+                      }
+                    />
+                    {
+                      subscription.patient
+                        .fullName
+                    }
+                  </div>
                 </TableCell>
 
-                <TableCell>
+                <TableCell className="align-top">
                   {
                     subscription
                       .membershipPlan.name
                   }
                 </TableCell>
 
-                <TableCell>
+                <TableCell className="align-top">
+                  {formatCurrency(
+                    subscription
+                      .membershipPlan
+                      .monthlyPrice
+                  )}
+                </TableCell>
+
+                <TableCell className="align-top">
+                  {formatDate(
+                    subscription.startedAt
+                  )}
+                </TableCell>
+
+                <TableCell className="align-top">
+                  {subscription.expiresAt
+                    ? formatDate(
+                        subscription.expiresAt
+                      )
+                    : t("shared.states.noExpiration")}
+                </TableCell>
+
+                <TableCell className="align-top text-sm text-muted-foreground">
+                  {subscription
+                    .patientInvoices?.[0]
+                    ?.dueDate
+                    ? formatDate(
+                        subscription
+                          .patientInvoices[0]
+                          .dueDate
+                      )
+                    : "—"}
+                </TableCell>
+
+                <TableCell className="align-top">
                   <SubscriptionStatusBadge
                     status={
                       subscription.status
@@ -238,15 +310,7 @@ export function SubscriptionsTable({
                   />
                 </TableCell>
 
-                <TableCell>
-                  {subscription.expiresAt
-                    ? new Date(
-                        subscription.expiresAt
-                      ).toLocaleDateString()
-                    : t("shared.states.noExpiration")}
-                </TableCell>
-
-                <TableCell className="text-right">
+                <TableCell className="text-right align-top">
                   <SubscriptionRowActions
                     subscription={{
                       id: subscription.id,
@@ -276,12 +340,21 @@ export function SubscriptionsTable({
             0 && (
             <TableRow>
               <TableCell
-                colSpan={5}
+                colSpan={8}
                 className="p-0"
               >
-                <div className="py-10 text-center text-muted-foreground">
-                  {t("subscriptions.table.empty")}
-                </div>
+                <EmptyState
+                  title={t(
+                    hasAnyFilterApplied
+                      ? "subscriptions.table.noResultsTitle"
+                      : "subscriptions.table.emptyTitle"
+                  )}
+                  description={t(
+                    hasAnyFilterApplied
+                      ? "subscriptions.table.noResultsDescription"
+                      : "subscriptions.table.emptyDescription"
+                  )}
+                />
               </TableCell>
             </TableRow>
           )}

@@ -21,6 +21,7 @@ import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { deactivateMembershipBenefit } from "../actions/deactivate-membership-benefit";
 import { reactivateMembershipBenefit } from "../actions/reactivate-membership-benefit";
 import { deleteMembershipBenefitPermanently } from "../actions/delete-membership-benefit-permanently";
+import { useTranslations } from "@/i18n/provider";
 
 import { MembershipBenefitDialog } from "./membership-benefit-dialog";
 
@@ -60,13 +61,7 @@ export function MembershipBenefitRowActions({
   canManageBenefits = true,
   canDeleteBenefitsPermanently = true,
 }: Props) {
-  if (!canManageBenefits) {
-    return (
-      <span className="text-xs text-muted-foreground">
-        Read only
-      </span>
-    );
-  }
+  const t = useTranslations();
 
   async function handleDeactivate() {
     try {
@@ -75,13 +70,17 @@ export function MembershipBenefitRowActions({
       );
 
       toast.success(
-        "Benefit deactivated."
+        t(
+          "benefits.rowActions.deactivateSuccess"
+        )
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to deactivate benefit."
+          : t(
+              "benefits.rowActions.deactivateError"
+            )
       );
     }
   }
@@ -93,13 +92,17 @@ export function MembershipBenefitRowActions({
       );
 
       toast.success(
-        "Benefit reactivated."
+        t(
+          "benefits.rowActions.reactivateSuccess"
+        )
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to reactivate benefit."
+          : t(
+              "benefits.rowActions.reactivateError"
+            )
       );
     }
   }
@@ -111,19 +114,31 @@ export function MembershipBenefitRowActions({
       );
 
       toast.success(
-        "Benefit permanently deleted."
+        t(
+          "benefits.rowActions.deleteSuccess"
+        )
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to permanently delete benefit."
+          : t(
+              "benefits.rowActions.deleteError"
+            )
       );
     }
   }
 
+  if (!canManageBenefits) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        {t("shared.states.readOnly")}
+      </span>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {benefit.active &&
       planIsActive ? (
         <>
@@ -133,8 +148,12 @@ export function MembershipBenefitRowActions({
             plans={plans}
             trigger={
               <Button
-                size="icon"
-                variant="outline"
+                size="icon-sm"
+                variant="ghost"
+                title={t("shared.actions.edit")}
+                aria-label={t(
+                  "shared.actions.edit"
+                )}
               >
                 <Pencil className="size-4" />
               </Button>
@@ -142,16 +161,29 @@ export function MembershipBenefitRowActions({
           />
 
           <ConfirmDialog
-            title="Deactivate benefit?"
-            description="The benefit will be removed from active flows and remain only for history."
+            title={t(
+              "benefits.rowActions.deactivateTitle"
+            )}
+            description={t(
+              "benefits.rowActions.deactivateDescription"
+            )}
             onConfirm={() =>
               handleDeactivate()
             }
-            actionLabel="Deactivate benefit"
+            actionLabel={t(
+              "benefits.rowActions.deactivateAction"
+            )}
             trigger={
               <Button
-                size="icon"
-                variant="destructive"
+                size="icon-sm"
+                variant="ghost"
+                className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
+                title={t(
+                  "benefits.rowActions.deactivateAction"
+                )}
+                aria-label={t(
+                  "benefits.rowActions.deactivateAction"
+                )}
               >
                 <XCircle className="size-4" />
               </Button>
@@ -161,17 +193,29 @@ export function MembershipBenefitRowActions({
       ) : (
         <>
           <ConfirmDialog
-            title="Reactivate benefit?"
-            description="The benefit will become active again for its plan."
+            title={t(
+              "benefits.rowActions.reactivateTitle"
+            )}
+            description={t(
+              "benefits.rowActions.reactivateDescription"
+            )}
             onConfirm={() =>
               handleReactivate()
             }
-            actionLabel="Reactivate benefit"
+            actionLabel={t(
+              "benefits.rowActions.reactivateAction"
+            )}
             trigger={
               <Button
-                size="icon"
-                variant="outline"
+                size="icon-sm"
+                variant="ghost"
                 disabled={!planIsActive}
+                title={t(
+                  "benefits.rowActions.reactivateAction"
+                )}
+                aria-label={t(
+                  "benefits.rowActions.reactivateAction"
+                )}
               >
                 <RotateCcw className="size-4" />
               </Button>
@@ -180,16 +224,29 @@ export function MembershipBenefitRowActions({
 
           {canDeleteBenefitsPermanently ? (
             <ConfirmDialog
-              title="Delete benefit permanently?"
-              description="This permanently removes the inactive benefit record. This action cannot be undone."
+              title={t(
+                "benefits.rowActions.deleteTitle"
+              )}
+              description={t(
+                "benefits.rowActions.deleteDescription"
+              )}
               onConfirm={() =>
                 handleDelete()
               }
-              actionLabel="Delete permanently"
+              actionLabel={t(
+                "shared.actions.deletePermanently"
+              )}
               trigger={
                 <Button
-                  size="icon"
-                  variant="destructive"
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
+                  title={t(
+                    "shared.actions.deletePermanently"
+                  )}
+                  aria-label={t(
+                    "shared.actions.deletePermanently"
+                  )}
                 >
                   <Trash2 className="size-4" />
                 </Button>

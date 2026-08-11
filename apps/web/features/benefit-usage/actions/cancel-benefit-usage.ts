@@ -42,6 +42,16 @@ export async function cancelBenefitUsageAction(
   const usageId = String(
     formData.get("usageId") ?? ""
   );
+  const reason = String(
+    formData.get("reason") ?? ""
+  ).trim();
+
+  if (!reason) {
+    throw new Error(
+      "A cancellation reason is required."
+    );
+  }
+
   const clinic =
     await getCurrentClinic();
   const actor =
@@ -61,6 +71,7 @@ export async function cancelBenefitUsageAction(
         id: true,
         status: true,
         quantity: true,
+        notes: true,
         subscriptionId: true,
         membershipBenefitId: true,
         membershipBenefit: {
@@ -84,6 +95,11 @@ export async function cancelBenefitUsageAction(
     return;
   }
 
+  const cancellationNote = `Cancelado por ${actor.displayName}: ${reason}`;
+  const nextNotes = usage.notes
+    ? `${usage.notes}\n\n${cancellationNote}`
+    : cancellationNote;
+
   await prisma.$transaction(
     async (tx) => {
       await tx.benefitUsage.update({
@@ -94,6 +110,7 @@ export async function cancelBenefitUsageAction(
           status:
             BenefitUsageStatus.CANCELED,
           canceledAt: new Date(),
+          notes: nextNotes,
         },
       });
 
@@ -118,6 +135,7 @@ export async function cancelBenefitUsageAction(
             usage.subscriptionId,
           membershipBenefitId:
             usage.membershipBenefitId,
+          reason,
         },
       });
     }

@@ -7,16 +7,21 @@ import {
   PauseCircle,
   Search,
   ShieldAlert,
+  WalletCards,
+  XCircle,
 } from "lucide-react";
 import { ClinicSubscriptionStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
+import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { StatusIndicator } from "@/components/ui/status-indicator";
 import {
   Table,
   TableBody,
@@ -31,6 +36,7 @@ import { getCurrentUserRole } from "@/features/auth/services/get-current-user-ro
 import { hasPermission } from "@/features/rbac/permissions";
 import { getTranslations } from "@/i18n/messages";
 import { formatCurrency } from "@/lib/formatters";
+import { getClinicSubscriptionStatusTone } from "@/features/clinic/utils/clinic-status";
 
 import {
   platformAssignClinicBillingPlanAction,
@@ -51,50 +57,16 @@ type Props = {
   };
 };
 
-function getStatusClass(
-  status: ClinicSubscriptionStatus
-) {
-  switch (status) {
-    case ClinicSubscriptionStatus.ACTIVE:
-      return "bg-emerald-100 text-emerald-700";
-    case ClinicSubscriptionStatus.TRIAL:
-    case ClinicSubscriptionStatus.PENDING:
-      return "bg-sky-100 text-sky-700";
-    case ClinicSubscriptionStatus.PAST_DUE:
-    case ClinicSubscriptionStatus.SUSPENDED:
-      return "bg-amber-100 text-amber-800";
-    case ClinicSubscriptionStatus.CANCELED:
-      return "bg-rose-100 text-rose-700";
-  }
-}
-
-function getStatusLabel(
-  status: ClinicSubscriptionStatus
-) {
-  switch (status) {
-    case ClinicSubscriptionStatus.ACTIVE:
-      return "Ativa";
-    case ClinicSubscriptionStatus.TRIAL:
-      return "Trial";
-    case ClinicSubscriptionStatus.PENDING:
-      return "Pendente";
-    case ClinicSubscriptionStatus.PAST_DUE:
-      return "Em atraso";
-    case ClinicSubscriptionStatus.SUSPENDED:
-      return "Suspensa";
-    case ClinicSubscriptionStatus.CANCELED:
-      return "Cancelada";
-  }
-}
-
 function formatOptionalDate(
   value: Date | string | null | undefined
 ) {
   if (!value) {
-    return "Nao definido";
+    return "Não definido";
   }
 
-  return new Date(value).toLocaleDateString();
+  return new Date(value).toLocaleDateString(
+    "pt-BR"
+  );
 }
 
 export async function PlatformSaasSubscriptionsPage({
@@ -210,7 +182,7 @@ export async function PlatformSaasSubscriptionsPage({
 
   const availableStatusActions: Array<{
     status: ClinicSubscriptionStatus;
-    label: string;
+    labelKey: string;
     icon: typeof CircleCheckBig;
     variant:
       | "outline"
@@ -218,36 +190,42 @@ export async function PlatformSaasSubscriptionsPage({
   }> = [
     {
       status: ClinicSubscriptionStatus.ACTIVE,
-      label: "Ativar",
+      labelKey: "billing.actions.markActive",
       icon: CircleCheckBig,
       variant: "outline",
     },
     {
       status: ClinicSubscriptionStatus.TRIAL,
-      label: "Enviar para trial",
+      labelKey: "billing.actions.sendToTrial",
       icon: FlaskConical,
       variant: "outline",
     },
     {
       status: ClinicSubscriptionStatus.SUSPENDED,
-      label: "Suspender",
+      labelKey: "billing.actions.suspend",
       icon: PauseCircle,
       variant: "outline",
     },
     {
       status: ClinicSubscriptionStatus.CANCELED,
-      label: "Cancelar",
+      labelKey: "billing.actions.cancelSubscription",
       icon: Ban,
       variant: "destructive",
     },
   ];
+  const activeCount =
+    overview.clinicSubscriptions.filter(
+      (subscription) =>
+        subscription.status ===
+        ClinicSubscriptionStatus.ACTIVE
+    ).length;
   const trialCount =
     overview.clinicSubscriptions.filter(
       (subscription) =>
         subscription.status ===
         ClinicSubscriptionStatus.TRIAL
     ).length;
-  const overdueCount =
+  const pastDueCount =
     overview.clinicSubscriptions.filter(
       (subscription) =>
         subscription.status ===
@@ -255,37 +233,85 @@ export async function PlatformSaasSubscriptionsPage({
         subscription.status ===
           ClinicSubscriptionStatus.SUSPENDED
     ).length;
+  const canceledCount =
+    overview.clinicSubscriptions.filter(
+      (subscription) =>
+        subscription.status ===
+        ClinicSubscriptionStatus.CANCELED
+    ).length;
 
   return (
     <DashboardPage>
       <PageHeader
         eyebrow="Receita recorrente"
-        title="Assinaturas SaaS"
-        description="Filtre as contas clientes, ajuste o plano aplicado e mude o status com ações mais diretas e visuais."
+        title={t(
+          "billing.subscriptionsPage.title"
+        )}
+        description={t(
+          "billing.subscriptionsPage.description"
+        )}
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
         <MetricCard
-          label="Assinaturas monitoradas"
-          value={String(
-            overview.clinicSubscriptions.length
+          label={t(
+            "billing.subscriptionsPage.metrics.active"
           )}
-          hint="Base total de contas clientes com recorrência SaaS."
+          value={String(activeCount)}
+          hint={t(
+            "billing.subscriptionsPage.metrics.activeHint"
+          )}
           icon={
             <CircleCheckBig className="size-5" />
           }
+          tone="success"
         />
         <MetricCard
-          label="Em trial"
+          label={t(
+            "billing.subscriptionsPage.metrics.trial"
+          )}
           value={String(trialCount)}
-          hint="Empresas em período de ativação comercial."
+          hint={t(
+            "billing.subscriptionsPage.metrics.trialHint"
+          )}
           icon={<FlaskConical className="size-5" />}
+          tone="info"
         />
         <MetricCard
-          label="Precisam de atenção"
-          value={String(overdueCount)}
-          hint="Assinaturas em atraso ou suspensas com maior risco operacional."
+          label={t(
+            "billing.subscriptionsPage.metrics.pastDue"
+          )}
+          value={String(pastDueCount)}
+          hint={t(
+            "billing.subscriptionsPage.metrics.pastDueHint"
+          )}
           icon={<ShieldAlert className="size-5" />}
+          tone="warning"
+        />
+        <MetricCard
+          label={t(
+            "billing.subscriptionsPage.metrics.canceled"
+          )}
+          value={String(canceledCount)}
+          hint={t(
+            "billing.subscriptionsPage.metrics.canceledHint"
+          )}
+          icon={<XCircle className="size-5" />}
+          tone="danger"
+        />
+        <MetricCard
+          label={t(
+            "billing.subscriptionsPage.metrics.mrr"
+          )}
+          value={formatCurrency(
+            overview.platformMetrics
+              .monthlySaasRevenue
+          )}
+          hint={t(
+            "billing.subscriptionsPage.metrics.mrrHint"
+          )}
+          icon={<WalletCards className="size-5" />}
+          tone="brand"
         />
       </div>
 
@@ -299,17 +325,20 @@ export async function PlatformSaasSubscriptionsPage({
           >
             <label className="field-stack">
               <span className="field-label">
-                Empresa
+                {t(
+                  "billing.subscriptionsPage.filters.company"
+                )}
               </span>
-              <select
+              <Select
                 name="clinicId"
                 defaultValue={
                   filters.clinicId ?? ""
                 }
-                className="field-select"
               >
                 <option value="">
-                  Todas as empresas
+                  {t(
+                    "billing.subscriptionsPage.filters.allCompanies"
+                  )}
                 </option>
                 {clinicOptions.map((clinic) => (
                   <option
@@ -319,22 +348,23 @@ export async function PlatformSaasSubscriptionsPage({
                     {clinic.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="field-stack">
               <span className="field-label">
-                Plano
+                {t(
+                  "billing.subscriptionsPage.filters.plan"
+                )}
               </span>
-              <select
+              <Select
                 name="planId"
                 defaultValue={
                   filters.planId ?? ""
                 }
-                className="field-select"
               >
                 <option value="">
-                  Todos os planos
+                  {t("shared.filters.allPlans")}
                 </option>
                 {overview.allPlans.map((plan) => (
                   <option
@@ -344,22 +374,21 @@ export async function PlatformSaasSubscriptionsPage({
                     {plan.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="field-stack">
               <span className="field-label">
-                Status
+                {t("shared.filters.statusFilter")}
               </span>
-              <select
+              <Select
                 name="status"
                 defaultValue={
                   filters.status ?? ""
                 }
-                className="field-select"
               >
                 <option value="">
-                  Todos os status
+                  {t("shared.filters.all")}
                 </option>
                 {Object.values(
                   ClinicSubscriptionStatus
@@ -368,15 +397,19 @@ export async function PlatformSaasSubscriptionsPage({
                     key={status}
                     value={status}
                   >
-                    {getStatusLabel(status)}
+                    {t(
+                      `billing.status.${status}`
+                    )}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="field-stack">
               <span className="field-label">
-                Buscar conta
+                {t(
+                  "billing.subscriptionsPage.filters.searchLabel"
+                )}
               </span>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -385,7 +418,9 @@ export async function PlatformSaasSubscriptionsPage({
                   defaultValue={
                     filters.query ?? ""
                   }
-                  placeholder="Empresa, e-mail ou plano"
+                  placeholder={t(
+                    "billing.subscriptionsPage.filters.searchPlaceholder"
+                  )}
                   className="pl-9"
                 />
               </div>
@@ -394,7 +429,7 @@ export async function PlatformSaasSubscriptionsPage({
             <div className="flex items-end gap-2">
               <Button type="submit">
                 <Filter className="size-4" />
-                Filtrar
+                {t("shared.actions.applyFilters")}
               </Button>
               <Button
                 type="button"
@@ -402,7 +437,7 @@ export async function PlatformSaasSubscriptionsPage({
                 variant="outline"
               >
                 <a href="/dashboard/billing/subscriptions">
-                  Limpar
+                  {t("shared.actions.clear")}
                 </a>
               </Button>
             </div>
@@ -413,22 +448,30 @@ export async function PlatformSaasSubscriptionsPage({
           <TableHeader>
             <TableRow>
               <TableHead>
-                Empresa
+                {t(
+                  "billing.subscriptionsPage.table.company"
+                )}
               </TableHead>
               <TableHead>
-                Plano aplicado
+                {t(
+                  "billing.subscriptionsPage.table.planApplied"
+                )}
               </TableHead>
               <TableHead>
-                Status
+                {t("shared.labels.status")}
               </TableHead>
               <TableHead>
-                Vigência
+                {t(
+                  "billing.subscriptionsPage.table.validity"
+                )}
               </TableHead>
               <TableHead>
-                Última cobrança
+                {t(
+                  "billing.subscriptionsPage.table.lastCharge"
+                )}
               </TableHead>
               <TableHead className="text-right">
-                Ações
+                {t("shared.labels.actions")}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -441,8 +484,12 @@ export async function PlatformSaasSubscriptionsPage({
                   className="p-0"
                 >
                   <EmptyState
-                    title="Nenhuma assinatura SaaS encontrada"
-                    description="Ajuste os filtros para localizar a conta cliente certa."
+                    title={t(
+                      "billing.subscriptionsPage.empty.title"
+                    )}
+                    description={t(
+                      "billing.subscriptionsPage.empty.description"
+                    )}
                     action={
                       <Button
                         type="button"
@@ -450,7 +497,9 @@ export async function PlatformSaasSubscriptionsPage({
                         variant="outline"
                       >
                         <a href="/dashboard/billing/subscriptions">
-                          Limpar filtros
+                          {t(
+                            "shared.actions.clear"
+                          )}
                         </a>
                       </Button>
                     }
@@ -468,19 +517,34 @@ export async function PlatformSaasSubscriptionsPage({
                       key={subscription.id}
                     >
                       <TableCell className="align-top">
-                        <div className="space-y-1">
-                          <div className="font-medium">
-                            {subscription
-                              .clinic
-                              .brandName ??
+                        <div className="flex items-start gap-3">
+                          <CompanyAvatarMark
+                            name={
                               subscription
-                                .clinic.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {
+                                .clinic
+                                .brandName ??
                               subscription
-                                .clinic.email
+                                .clinic.name
                             }
+                            seed={
+                              subscription.clinicId
+                            }
+                            className="mt-0.5"
+                          />
+                          <div className="space-y-1">
+                            <div className="font-medium">
+                              {subscription
+                                .clinic
+                                .brandName ??
+                                subscription
+                                  .clinic.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {
+                                subscription
+                                  .clinic.email
+                              }
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -495,12 +559,12 @@ export async function PlatformSaasSubscriptionsPage({
                             name="subscriptionId"
                             value={subscription.id}
                           />
-                          <select
+                          <Select
                             name="clinicBillingPlanId"
                             defaultValue={
                               subscription.clinicBillingPlanId
                             }
-                            className="field-select h-10"
+                            className="h-10"
                           >
                             {overview.allPlans.map(
                               (plan) => (
@@ -512,9 +576,11 @@ export async function PlatformSaasSubscriptionsPage({
                                 </option>
                               )
                             )}
-                          </select>
+                          </Select>
                           <p className="text-xs text-muted-foreground">
-                            Ajuste o plano comercial vinculado a esta empresa.
+                            {t(
+                              "billing.subscriptionsPage.table.changePlanHint"
+                            )}
                           </p>
                           <Button
                             type="submit"
@@ -523,39 +589,49 @@ export async function PlatformSaasSubscriptionsPage({
                             className="justify-start"
                           >
                             <ArrowRightLeft className="size-4" />
-                            Trocar plano
+                            {t(
+                              "billing.subscriptionsPage.table.changePlan"
+                            )}
                           </Button>
                         </form>
                       </TableCell>
 
                       <TableCell className="align-top">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusClass(
-                            subscription.status
-                          )}`}
-                        >
-                          {getStatusLabel(
+                        <StatusIndicator
+                          tone={getClinicSubscriptionStatusTone(
                             subscription.status
                           )}
-                        </span>
+                          label={t(
+                            `billing.status.${subscription.status}`
+                          )}
+                        />
                       </TableCell>
 
                       <TableCell className="align-top">
                         <div className="space-y-1 text-xs text-muted-foreground">
                           <div>
-                            Início:{" "}
+                            {t(
+                              "billing.subscriptionsPage.table.start"
+                            )}
+                            :{" "}
                             {formatOptionalDate(
                               subscription.startedAt
                             )}
                           </div>
                           <div>
-                            Trial até:{" "}
+                            {t(
+                              "billing.subscriptionsPage.table.trialUntil"
+                            )}
+                            :{" "}
                             {formatOptionalDate(
                               subscription.trialEndsAt
                             )}
                           </div>
                           <div>
-                            Expira em:{" "}
+                            {t(
+                              "billing.subscriptionsPage.table.expiresAt"
+                            )}
+                            :{" "}
                             {formatOptionalDate(
                               subscription.expiresAt
                             )}
@@ -579,7 +655,9 @@ export async function PlatformSaasSubscriptionsPage({
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            Sem cobrança emitida
+                            {t(
+                              "billing.subscriptionsPage.table.noChargeIssued"
+                            )}
                           </span>
                         )}
                       </TableCell>
@@ -603,8 +681,8 @@ export async function PlatformSaasSubscriptionsPage({
                                 .clinicBillingPlan
                                 .name
                             }
-                            currentStatus={getStatusLabel(
-                              subscription.status
+                            currentStatus={t(
+                              `billing.status.${subscription.status}`
                             )}
                             startedAt={
                               subscription.startedAt
@@ -637,6 +715,9 @@ export async function PlatformSaasSubscriptionsPage({
                             .map((action) => {
                               const Icon =
                                 action.icon;
+                              const label = t(
+                                action.labelKey
+                              );
 
                               return (
                                 <form
@@ -672,11 +753,9 @@ export async function PlatformSaasSubscriptionsPage({
                                     variant={
                                       action.variant
                                     }
-                                    title={
-                                      action.label
-                                    }
+                                    title={label}
                                     aria-label={
-                                      action.label
+                                      label
                                     }
                                   >
                                     <Icon className="size-4" />

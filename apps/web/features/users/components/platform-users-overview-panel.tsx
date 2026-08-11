@@ -18,11 +18,13 @@ import {
 } from "react";
 import { toast } from "sonner";
 
+import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   SidePanel,
   SidePanelBody,
@@ -41,10 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  getRoleLabel,
-  isAppRole,
-} from "@/features/auth/constants/roles";
+import { StatusIndicator } from "@/components/ui/status-indicator";
 import {
   FEEDBACK_WARNING_MESSAGES,
   getFeedbackErrorMessage,
@@ -56,6 +55,12 @@ import { resetPlatformUserPasswordAction } from "../actions/reset-platform-user-
 import { updatePlatformUserDetailsAction } from "../actions/update-platform-user-details";
 import { updatePlatformUserStatusAction } from "../actions/update-platform-user-status";
 import type { PlatformUsersOverview } from "../services/get-platform-users-overview";
+import {
+  formatDateInput,
+  getRoleLabelFromValue,
+  getUserStatusLabel,
+  getUserStatusTone,
+} from "../utils/user-display";
 
 type Props = {
   assignableRoles: string[];
@@ -66,54 +71,6 @@ type Props = {
 
 type EditableUser =
   PlatformUsersOverview["users"][number];
-
-function getRoleLabelFromValue(
-  role: string | undefined
-) {
-  if (!role || !isAppRole(role)) {
-    return "-";
-  }
-
-  return getRoleLabel(role);
-}
-
-function getUserStatusLabel(
-  status: AppUserStatus
-) {
-  switch (status) {
-    case AppUserStatus.ACTIVE:
-      return "Ativo";
-    case AppUserStatus.INACTIVE:
-      return "Inativo";
-    default:
-      return "Pendente";
-  }
-}
-
-function getUserStatusClass(
-  status: AppUserStatus
-) {
-  switch (status) {
-    case AppUserStatus.ACTIVE:
-      return "bg-emerald-100 text-emerald-700";
-    case AppUserStatus.INACTIVE:
-      return "bg-slate-200 text-slate-700";
-    default:
-      return "bg-amber-100 text-amber-700";
-  }
-}
-
-function formatDateInput(
-  value: Date | null
-) {
-  if (!value) {
-    return "";
-  }
-
-  return new Date(value)
-    .toISOString()
-    .slice(0, 10);
-}
 
 type UserFormProps = {
   assignableRoles: string[];
@@ -205,14 +162,13 @@ function PlatformUserForm({
         <span className="field-label">
           Perfil de acesso
         </span>
-        <select
+        <Select
           name="role"
           defaultValue={
             initialData?.role ??
             assignableRoles[0] ??
             AppUserRole.ADMIN
           }
-          className="field-select"
         >
           {assignableRoles.map((role) => (
             <option
@@ -224,7 +180,7 @@ function PlatformUserForm({
               )}
             </option>
           ))}
-        </select>
+        </Select>
         <span className="field-help">
           Define o alcance das permissões administrativas dentro do Sheep.
         </span>
@@ -494,14 +450,13 @@ export function PlatformUsersOverviewPanel({
                 <span className="field-label">
                   Perfil
                 </span>
-                <select
+                <Select
                   value={roleFilter}
                   onChange={(event) =>
                     setRoleFilter(
                       event.target.value
                     )
                   }
-                  className="field-select"
                 >
                   <option value="all">
                     Todos os perfis
@@ -516,21 +471,20 @@ export function PlatformUsersOverviewPanel({
                       )}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
 
               <label className="field-stack">
                 <span className="field-label">
                   Status
                 </span>
-                <select
+                <Select
                   value={userStatusFilter}
                   onChange={(event) =>
                     setUserStatusFilter(
                       event.target.value
                     )
                   }
-                  className="field-select"
                 >
                   <option value="all">
                     Todos
@@ -545,7 +499,7 @@ export function PlatformUsersOverviewPanel({
                   >
                     Inativos
                   </option>
-                </select>
+                </Select>
               </label>
 
               <label className="field-stack">
@@ -715,15 +669,22 @@ export function PlatformUsersOverviewPanel({
                 return (
                   <TableRow key={user.id}>
                     <TableCell className="align-top">
-                      <div className="space-y-1">
-                        <div className="font-medium">
-                          {user.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {user.email}
-                          {isCurrentUser
-                            ? " · sessão atual"
-                            : ""}
+                      <div className="flex items-start gap-3">
+                        <CompanyAvatarMark
+                          name={user.name}
+                          seed={user.id}
+                          className="mt-0.5"
+                        />
+                        <div className="space-y-1">
+                          <div className="font-medium">
+                            {user.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {user.email}
+                            {isCurrentUser
+                              ? " · sessão atual"
+                              : ""}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -735,15 +696,14 @@ export function PlatformUsersOverviewPanel({
                       </span>
                     </TableCell>
                     <TableCell className="align-top">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${getUserStatusClass(
-                          user.status
-                        )}`}
-                      >
-                        {getUserStatusLabel(
+                      <StatusIndicator
+                        tone={getUserStatusTone(
                           user.status
                         )}
-                      </span>
+                        label={getUserStatusLabel(
+                          user.status
+                        )}
+                      />
                     </TableCell>
                     <TableCell className="align-top">
                       <div className="space-y-1 text-xs text-muted-foreground">

@@ -770,6 +770,10 @@ async function main() {
           "usageId",
           fixtures.usageId
         );
+        cancelUsageFormData.set(
+          "reason",
+          "RBAC regression test cancellation"
+        );
 
         await cancelBenefitUsageAction(
           cancelUsageFormData

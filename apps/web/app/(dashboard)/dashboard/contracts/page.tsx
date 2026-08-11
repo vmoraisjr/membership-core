@@ -1,8 +1,9 @@
-import { ContractsPage } from "@/features/contracts/components/contracts-page";
-import { renderClinicScopedPage } from "@/features/shared/components/render-clinic-scoped-page";
+import { notFound } from "next/navigation";
 
-export default async function Page() {
-  return renderClinicScopedPage(
-    <ContractsPage />
-  );
+export default function Page() {
+  // Keep contracts code available for future scope without exposing it in V1.
+  // Mirrors the CRM block below; contract templates/records continue to be
+  // created automatically by subscriptions and clinic onboarding regardless
+  // of this page being reachable.
+  notFound();
 }

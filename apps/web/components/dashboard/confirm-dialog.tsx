@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -13,6 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslations } from "@/i18n/provider";
@@ -43,7 +43,7 @@ type Props = {
   onConfirm: (values: {
     typedValue: string;
     detailsValue: string;
-  }) => void;
+  }) => void | Promise<void>;
 };
 
 export function ConfirmDialog({
@@ -63,6 +63,10 @@ export function ConfirmDialog({
   const t = useTranslations();
   const [open, setOpen] =
     useState(false);
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
   const [typedValue, setTypedValue] =
     useState("");
   const [detailsValue, setDetailsValue] =
@@ -89,9 +93,33 @@ export function ConfirmDialog({
   function handleOpenChange(
     nextOpen: boolean
   ) {
+    if (isSubmitting) {
+      return;
+    }
+
     setOpen(nextOpen);
 
     if (!nextOpen) {
+      setTypedValue("");
+      setDetailsValue("");
+    }
+  }
+
+  async function handleConfirmClick() {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await onConfirm({
+        typedValue,
+        detailsValue,
+      });
+    } finally {
+      setIsSubmitting(false);
+      setOpen(false);
       setTypedValue("");
       setDetailsValue("");
     }
@@ -163,21 +191,27 @@ export function ConfirmDialog({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>
+          <AlertDialogCancel
+            disabled={isSubmitting}
+          >
             {t("shared.actions.cancel")}
           </AlertDialogCancel>
 
-          <AlertDialogAction
+          <Button
+            type="button"
             onClick={() =>
-              onConfirm({
-                typedValue,
-                detailsValue,
-              })
+              void handleConfirmClick()
             }
-            disabled={!canConfirm}
+            disabled={
+              !canConfirm || isSubmitting
+            }
           >
-            {actionLabel}
-          </AlertDialogAction>
+            {isSubmitting
+              ? t(
+                  "shared.actions.processing"
+                )
+              : actionLabel}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

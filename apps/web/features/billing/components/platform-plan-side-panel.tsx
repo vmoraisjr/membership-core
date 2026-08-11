@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -14,6 +15,7 @@ import {
   SidePanelTitle,
   SidePanelTrigger,
 } from "@/components/ui/side-panel";
+import { useTranslations } from "@/i18n/provider";
 
 import { saveClinicBillingPlanAction } from "@/features/modules/actions/save-clinic-billing-plan";
 import { getFeedbackErrorMessage } from "@/lib/feedback";
@@ -31,7 +33,7 @@ type Props = {
     trialDays: number;
     active: boolean;
   } | null;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
 };
 
 export function PlatformPlanSidePanel({
@@ -39,6 +41,13 @@ export function PlatformPlanSidePanel({
   initialData,
   trigger,
 }: Props) {
+  const t = useTranslations();
+  const defaultTrigger = (
+    <Button>
+      <Plus className="size-4" />
+      {t("billing.catalogPage.newPlan")}
+    </Button>
+  );
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] =
     useTransition();
@@ -74,7 +83,7 @@ export function PlatformPlanSidePanel({
       onOpenChange={setOpen}
     >
       <SidePanelTrigger asChild>
-        {trigger}
+        {trigger ?? defaultTrigger}
       </SidePanelTrigger>
       <SidePanelContent
         className="sm:max-w-3xl"

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 
 import { MetricCard } from "@/components/dashboard/metric-card";
+import { getTranslations } from "@/i18n/messages";
 
 type Props = {
   overdueCount: number;
@@ -19,26 +20,41 @@ export function PaymentAttentionBar({
   pendingCount,
   totalCount,
 }: Props) {
+  const t = getTranslations();
+
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <MetricCard
-        label="Cobranças emitidas"
+        label={t(
+          "billing.paymentsPage.metrics.issued"
+        )}
         value={String(totalCount)}
-        hint="Faturas SaaS acumuladas no contexto atual."
+        hint={t(
+          "billing.paymentsPage.metrics.issuedHint"
+        )}
         icon={<WalletCards className="size-5" />}
       />
       <MetricCard
-        label="Pendentes"
+        label={t(
+          "billing.paymentsPage.metrics.pending"
+        )}
         value={String(pendingCount)}
-        hint="Cobranças aguardando compensação ou ação operacional."
+        hint={t(
+          "billing.paymentsPage.metrics.pendingHint"
+        )}
         icon={
           <AlertTriangle className="size-5" />
         }
       />
       <MetricCard
-        label="Em atraso"
+        label={t(
+          "billing.paymentsPage.metrics.overdue"
+        )}
         value={String(overdueCount)}
-        hint={`${paidCount} cobrança(s) já estão pagas no histórico filtrado.`}
+        hint={t(
+          "billing.paymentsPage.metrics.overdueHint",
+          { count: paidCount }
+        )}
         icon={<CheckCheck className="size-5" />}
       />
     </div>

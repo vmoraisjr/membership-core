@@ -3,24 +3,21 @@
 import { SubscriptionStatus } from "@prisma/client";
 
 import { getTranslations } from "@/i18n/messages";
-import { cn } from "@/lib/utils";
+import {
+  StatusIndicator,
+  type StatusTone,
+} from "@/components/ui/status-indicator";
 
-const STATUS_STYLES: Record<
+const STATUS_TONES: Record<
   SubscriptionStatus,
-  string
+  StatusTone
 > = {
-  ACTIVE:
-    "border-emerald-200 bg-emerald-50 text-emerald-700",
-  PAUSED:
-    "border-amber-200 bg-amber-50 text-amber-700",
-  PENDING:
-    "border-slate-200 bg-slate-100 text-slate-700",
-  OVERDUE:
-    "border-orange-200 bg-orange-50 text-orange-700",
-  CANCELED:
-    "border-rose-200 bg-rose-50 text-rose-700",
-  EXPIRED:
-    "border-zinc-200 bg-zinc-100 text-zinc-700",
+  ACTIVE: "success",
+  PAUSED: "warning",
+  PENDING: "neutral",
+  OVERDUE: "warning",
+  CANCELED: "danger",
+  EXPIRED: "neutral",
 };
 
 type Props = {
@@ -31,14 +28,13 @@ export function SubscriptionStatusBadge({
   status,
 }: Props) {
   const t = getTranslations();
+
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
-        STATUS_STYLES[status]
+    <StatusIndicator
+      tone={STATUS_TONES[status]}
+      label={t(
+        `subscriptions.statuses.${status}`
       )}
-    >
-      {t(`subscriptions.statuses.${status}`)}
-    </span>
+    />
   );
 }

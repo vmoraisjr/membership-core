@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import { SheepIcon } from "@/components/branding/sheep-mark";
 import {
   SHEEP_LOGO_PATH,
   type WorkspaceBrand,
@@ -19,26 +20,32 @@ export function BrandMark({
   compact = false,
   iconOnly = false,
 }: Props) {
-  const logoUrl =
-    brand?.logoUrl || SHEEP_LOGO_PATH;
+  const logoUrl = brand?.logoUrl;
+  const hasCustomLogo =
+    Boolean(logoUrl) &&
+    logoUrl !== SHEEP_LOGO_PATH;
   const logoSizeClass = compact
     ? "h-11 w-11"
     : "h-14 w-14";
 
   return (
     <div className="flex items-center gap-3">
-      <div
-        className={`relative overflow-hidden rounded-2xl border border-border/70 bg-white/95 shadow-[var(--shadow-xs)] ${logoSizeClass}`}
-      >
-        <Image
-          src={logoUrl}
-          alt={brand?.displayName ?? "Sheep"}
-          width={compact ? 44 : 56}
-          height={compact ? 44 : 56}
-          className="h-full w-full object-contain"
-          unoptimized
-        />
-      </div>
+      {hasCustomLogo ? (
+        <div
+          className={`relative overflow-hidden rounded-2xl border border-border/70 bg-white/95 shadow-[var(--shadow-xs)] ${logoSizeClass}`}
+        >
+          <Image
+            src={logoUrl as string}
+            alt={brand?.displayName ?? "Sheep"}
+            width={compact ? 44 : 56}
+            height={compact ? 44 : 56}
+            className="h-full w-full object-contain"
+            unoptimized
+          />
+        </div>
+      ) : (
+        <SheepIcon className={logoSizeClass} />
+      )}
       <div
         className={`min-w-0 ${iconOnly ? "sr-only" : ""}`}
       >

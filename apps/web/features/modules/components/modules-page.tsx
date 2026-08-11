@@ -3,6 +3,16 @@ import {
   ModuleStatus,
 } from "@prisma/client";
 
+import { Button } from "@/components/ui/button";
+import { StatusIndicator } from "@/components/ui/status-indicator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { ClinicAssignmentRequired } from "@/components/dashboard/clinic-assignment-required";
 import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
@@ -14,24 +24,18 @@ import { getCurrentUserRole } from "@/features/auth/services/get-current-user-ro
 import { getBillingOverview } from "@/features/billing/services/billing-foundation";
 import { hasPermission } from "@/features/rbac/permissions";
 import { getTranslations } from "@/i18n/messages";
-import { formatCurrency } from "@/lib/formatters";
 
 import { PlatformSubscriptionSection } from "@/features/billing/components/platform-subscription-section";
 
 import { disableClinicModuleAction } from "../actions/disable-clinic-module";
 import { enableClinicModuleAction } from "../actions/enable-clinic-module";
-import { saveClinicBillingPlanAction } from "../actions/save-clinic-billing-plan";
 import { getClinicModules } from "../services/module-access";
 import { getPlatformModulesOverview } from "../services/get-platform-modules-overview";
 import { isModuleV1Active } from "../services/module-policy";
-
-function getModuleScopeLabel(
-  key: ModuleKey
-) {
-  return isModuleV1Active(key)
-    ? "Disponivel na operacao atual"
-    : "Reservado para expansoes futuras";
-}
+import {
+  getModuleKeyDescription,
+  getModuleKeyLabel,
+} from "../utils/module-labels";
 
 export async function ModulesPage() {
   const t = getTranslations();
@@ -80,16 +84,24 @@ export async function ModulesPage() {
     return (
       <DashboardPage>
         <PageHeader
-          title="Modulos e planos da plataforma"
-          description="Gerencie os planos comerciais, as regras de liberacao de modulos e a cobertura entregue para as clinicas."
+          title={t(
+            "modules.platformTitle"
+          )}
+          description={t(
+            "modules.platformDescription"
+          )}
         />
 
         <div className="grid gap-4 md:grid-cols-4">
           <SectionCard
-            title="Planos comerciais"
-            description="Quantidade de planos SaaS cadastrados."
+            title={t(
+              "modules.metrics.billingPlans"
+            )}
+            description={t(
+              "modules.metrics.billingPlansHint"
+            )}
           >
-            <div className="p-4 text-3xl font-semibold">
+            <div className="p-4 text-2xl font-semibold tabular-nums">
               {
                 overview.billingPlans
                   .length
@@ -97,10 +109,14 @@ export async function ModulesPage() {
             </div>
           </SectionCard>
           <SectionCard
-            title="Planos ativos"
-            description="Planos disponiveis para novas assinaturas."
+            title={t(
+              "modules.metrics.activePlans"
+            )}
+            description={t(
+              "modules.metrics.activePlansHint"
+            )}
           >
-            <div className="p-4 text-3xl font-semibold">
+            <div className="p-4 text-2xl font-semibold tabular-nums">
               {
                 overview.billingPlans.filter(
                   (plan) => plan.active
@@ -109,10 +125,14 @@ export async function ModulesPage() {
             </div>
           </SectionCard>
           <SectionCard
-            title="Clinicas cobertas"
-            description="Assinaturas vinculadas aos planos comerciais."
+            title={t(
+              "modules.metrics.coveredClinics"
+            )}
+            description={t(
+              "modules.metrics.coveredClinicsHint"
+            )}
           >
-            <div className="p-4 text-3xl font-semibold">
+            <div className="p-4 text-2xl font-semibold tabular-nums">
               {overview.billingPlans.reduce(
                 (total, plan) =>
                   total +
@@ -122,10 +142,14 @@ export async function ModulesPage() {
             </div>
           </SectionCard>
           <SectionCard
-            title="Modulos V1"
-            description="Modulos operacionais liberados hoje."
+            title={t(
+              "modules.metrics.v1Modules"
+            )}
+            description={t(
+              "modules.metrics.v1ModulesHint"
+            )}
           >
-            <div className="p-4 text-3xl font-semibold">
+            <div className="p-4 text-2xl font-semibold tabular-nums">
               {
                 overview.modules.filter(
                   (module) =>
@@ -137,329 +161,177 @@ export async function ModulesPage() {
         </div>
 
         <SectionCard
-          title="Novo plano comercial"
-          description="Cadastre um plano da plataforma com precificacao e janela de trial."
+          title={t(
+            "modules.plansSection.title"
+          )}
+          description={t(
+            "modules.plansSection.description"
+          )}
         >
-          <form
-            action={saveClinicBillingPlanAction}
-            className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-6"
-          >
-            <input
-              type="hidden"
-              name="planId"
-              value=""
-            />
-            <label className="grid gap-2 text-sm xl:col-span-2">
-              <span className="font-medium">
-                Nome
-              </span>
-              <input
-                name="name"
-                required
-                className="h-10 rounded-md border px-3"
-                placeholder="Plano SaaS"
-              />
-            </label>
-            <label className="grid gap-2 text-sm xl:col-span-2">
-              <span className="font-medium">
-                Descricao
-              </span>
-              <input
-                name="description"
-                className="h-10 rounded-md border px-3"
-                placeholder="Resumo comercial"
-              />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium">
-                Mensal
-              </span>
-              <input
-                name="monthlyPrice"
-                type="number"
-                step="0.01"
-                className="h-10 rounded-md border px-3"
-                placeholder="249"
-              />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium">
-                Anual
-              </span>
-              <input
-                name="annualPrice"
-                type="number"
-                step="0.01"
-                className="h-10 rounded-md border px-3"
-                placeholder="2490"
-              />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium">
-                Trial
-              </span>
-              <input
-                name="trialDays"
-                type="number"
-                min="0"
-                defaultValue="14"
-                className="h-10 rounded-md border px-3"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm xl:col-span-1">
-              <input
-                type="checkbox"
-                name="active"
-                defaultChecked
-              />
-              Plano ativo
-            </label>
-            <div className="xl:col-span-6">
-              <button
-                type="submit"
-                className="rounded-md border px-3 py-2 text-sm"
-              >
-                Salvar plano
-              </button>
-            </div>
-          </form>
-        </SectionCard>
-
-        <SectionCard
-          title="Planos e regras de uso"
-          description="Edite precos, vigencia de trial e disponibilidade comercial de cada plano."
-        >
-          <div className="space-y-4 p-4">
-            {overview.billingPlans.map(
-              (plan) => (
-                <form
-                  key={plan.id}
-                  action={saveClinicBillingPlanAction}
-                  className="grid gap-4 rounded-xl border p-4 md:grid-cols-2 xl:grid-cols-6"
-                >
-                  <input
-                    type="hidden"
-                    name="planId"
-                    value={plan.id}
-                  />
-                  <label className="grid gap-2 text-sm xl:col-span-2">
-                    <span className="font-medium">
-                      Nome
-                    </span>
-                    <input
-                      name="name"
-                      defaultValue={plan.name}
-                      required
-                      className="h-10 rounded-md border px-3"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm xl:col-span-2">
-                    <span className="font-medium">
-                      Descricao
-                    </span>
-                    <input
-                      name="description"
-                      defaultValue={
-                        plan.description ??
-                        ""
-                      }
-                      className="h-10 rounded-md border px-3"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium">
-                      Mensal
-                    </span>
-                    <input
-                      name="monthlyPrice"
-                      type="number"
-                      step="0.01"
-                      defaultValue={
-                        plan.monthlyPrice ??
-                        ""
-                      }
-                      className="h-10 rounded-md border px-3"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium">
-                      Anual
-                    </span>
-                    <input
-                      name="annualPrice"
-                      type="number"
-                      step="0.01"
-                      defaultValue={
-                        plan.annualPrice ??
-                        ""
-                      }
-                      className="h-10 rounded-md border px-3"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium">
-                      Trial
-                    </span>
-                    <input
-                      name="trialDays"
-                      type="number"
-                      min="0"
-                      defaultValue={
-                        plan.trialDays
-                      }
-                      className="h-10 rounded-md border px-3"
-                    />
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      name="active"
-                      defaultChecked={
-                        plan.active
-                      }
-                    />
-                    Plano ativo
-                  </label>
-                  <div className="grid gap-1 text-xs text-muted-foreground xl:col-span-3">
-                    <span>
-                      Clinicas vinculadas:{" "}
-                      {
-                        plan.metrics
-                          .clinicCount
-                      }
-                    </span>
-                    <span>
-                      Assinaturas operacionais:{" "}
-                      {
-                        plan.metrics
-                          .activeSubscriptionCount
-                      }
-                    </span>
-                    <span>
-                      Receita base mensal:{" "}
-                      {formatCurrency(
-                        plan.monthlyPrice ??
-                          0
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-end xl:col-span-3 xl:justify-end">
-                    <button
-                      type="submit"
-                      className="rounded-md border px-3 py-2 text-sm"
-                    >
-                      Atualizar plano
-                    </button>
-                  </div>
-                </form>
-              )
-            )}
+          <div className="flex flex-col items-start gap-3 p-4">
+            <p className="text-sm text-muted-foreground">
+              {t(
+                "modules.plansSection.count",
+                {
+                  count:
+                    overview.billingPlans
+                      .length,
+                }
+              )}
+            </p>
+            <Button asChild variant="outline">
+              <a href="/dashboard/billing/catalog">
+                {t(
+                  "modules.plansSection.openCatalog"
+                )}
+              </a>
+            </Button>
           </div>
         </SectionCard>
 
         <SectionCard
-          title="Catalogo de modulos"
-          description="Acompanhe quais modulos estao liberados na versao atual e quais permanecem em roadmap."
+          title={t(
+            "modules.catalogSection.title"
+          )}
+          description={t(
+            "modules.catalogSection.description"
+          )}
         >
-          <div className="overflow-x-auto p-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="py-2">Modulo</th>
-                  <th className="py-2">Chave</th>
-                  <th className="py-2">Status V1</th>
-                  <th className="py-2">Regra</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overview.modules.map(
-                  (module) => (
-                    <tr
-                      key={module.id}
-                      className="border-b"
-                    >
-                      <td className="py-3">
-                        <div className="font-medium">
-                          {module.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {
-                            module.description
-                          }
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        {module.key}
-                      </td>
-                      <td className="py-3">
-                        {module.isV1Active
-                          ? "Ativo"
-                          : "Futuro"}
-                      </td>
-                      <td className="py-3 text-muted-foreground">
-                        {getModuleScopeLabel(
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  {t(
+                    "modules.catalogSection.columns.module"
+                  )}
+                </TableHead>
+                <TableHead>
+                  {t(
+                    "modules.catalogSection.columns.key"
+                  )}
+                </TableHead>
+                <TableHead>
+                  {t(
+                    "modules.catalogSection.columns.statusV1"
+                  )}
+                </TableHead>
+                <TableHead>
+                  {t(
+                    "modules.catalogSection.columns.rule"
+                  )}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {overview.modules.map(
+                (module) => (
+                  <TableRow key={module.id}>
+                    <TableCell>
+                      <div className="font-medium">
+                        {getModuleKeyLabel(
                           module.key
                         )}
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {getModuleKeyDescription(
+                          module.key
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {module.key}
+                    </TableCell>
+                    <TableCell>
+                      <StatusIndicator
+                        tone={
+                          module.isV1Active
+                            ? "success"
+                            : "neutral"
+                        }
+                        label={
+                          module.isV1Active
+                            ? t(
+                                "shared.states.active"
+                              )
+                            : t(
+                                "modules.future"
+                              )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {module.isV1Active
+                        ? t(
+                            "modules.catalogSection.ruleAvailable"
+                          )
+                        : t(
+                            "modules.catalogSection.ruleComingSoon"
+                          )}
+                    </TableCell>
+                  </TableRow>
+                )
+              )}
+            </TableBody>
+          </Table>
         </SectionCard>
 
         <SectionCard
-          title="Cobertura por plano"
-          description="Os planos comerciais herdam a politica global de modulos liberados na plataforma."
+          title={t(
+            "modules.coverageSection.title"
+          )}
+          description={t(
+            "modules.coverageSection.description"
+          )}
         >
-          <div className="overflow-x-auto p-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="py-2">Plano</th>
-                  {overview.modules.map(
-                    (module) => (
-                      <th
-                        key={module.id}
-                        className="py-2"
-                      >
-                        {module.name}
-                      </th>
-                    )
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  {t(
+                    "modules.coverageSection.planColumn"
                   )}
-                </tr>
-              </thead>
-              <tbody>
-                {overview.billingPlans.map(
-                  (plan) => (
-                    <tr
-                      key={plan.id}
-                      className="border-b"
+                </TableHead>
+                {overview.modules.map(
+                  (module) => (
+                    <TableHead
+                      key={module.id}
                     >
-                      <td className="py-3 font-medium">
-                        {plan.name}
-                      </td>
-                      {overview.modules.map(
-                        (module) => (
-                          <td
-                            key={
-                              module.id
-                            }
-                            className="py-3"
-                          >
-                            {module.isV1Active
-                              ? "Incluido"
-                              : "Futuro"}
-                          </td>
-                        )
+                      {getModuleKeyLabel(
+                        module.key
                       )}
-                    </tr>
+                    </TableHead>
                   )
                 )}
-              </tbody>
-            </table>
-          </div>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {overview.billingPlans.map(
+                (plan) => (
+                  <TableRow key={plan.id}>
+                    <TableCell className="font-medium">
+                      {plan.name}
+                    </TableCell>
+                    {overview.modules.map(
+                      (module) => (
+                        <TableCell
+                          key={module.id}
+                          className="text-muted-foreground"
+                        >
+                          {module.isV1Active
+                            ? t(
+                                "modules.coverageSection.included"
+                              )
+                            : t(
+                                "modules.future"
+                              )}
+                        </TableCell>
+                      )
+                    )}
+                  </TableRow>
+                )
+              )}
+            </TableBody>
+          </Table>
         </SectionCard>
       </DashboardPage>
     );
@@ -481,7 +353,9 @@ export async function ModulesPage() {
     <DashboardPage>
       <PageHeader
         title={t("modules.title")}
-        description="Gerencie os módulos da clínica e acompanhe a assinatura comercial da plataforma nesta área administrativa."
+        description={t(
+          "modules.clinicPageDescription"
+        )}
       />
 
       <PlatformSubscriptionSection
@@ -492,133 +366,162 @@ export async function ModulesPage() {
         title={t("modules.clinicModulesTitle")}
         description={t("modules.clinicModulesDescription")}
       >
-        <div className="overflow-x-auto p-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2">
-                  {t("modules.module")}
-                </th>
-                <th className="py-2">
-                  {t("shared.labels.status")}
-                </th>
-                <th className="py-2">
-                  V1
-                </th>
-                <th className="py-2 text-right">
-                  {t("shared.labels.actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {clinicModules.map(
-                (clinicModule) => (
-                  <tr
-                    key={clinicModule.id}
-                    className="border-b"
-                  >
-                    <td className="py-3">
-                      <div className="font-medium">
-                        {
-                          clinicModule
-                            .module.name
-                        }
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {
-                          clinicModule
-                            .module
-                            .description
-                        }
-                      </div>
-                    </td>
-                    <td className="py-3">
-                      {clinicModule.status ===
-                      ModuleStatus.ENABLED
-                        ? t("shared.states.active")
-                        : t("shared.states.inactive")}
-                    </td>
-                    <td className="py-3">
-                      {isModuleV1Active(
-                        clinicModule.module.key
-                      )
-                        ? t("shared.states.active")
-                        : t("modules.future")}
-                    </td>
-                    <td className="py-3 text-right">
-                      {!canManageModules ||
-                      clinicModule.module.key ===
-                        ModuleKey.MEMBERSHIP ? (
-                        <span className="text-xs text-muted-foreground">
-                          {clinicModule.module
-                            .key ===
-                          ModuleKey.MEMBERSHIP
-                            ? t("modules.coreModule")
-                            : t("shared.states.readOnly")}
-                        </span>
-                      ) : !isModuleV1Active(
-                          clinicModule.module.key
-                        ) ? (
-                        <span className="text-xs text-muted-foreground">
-                          {t("modules.v2Only")}
-                        </span>
-                      ) : clinicModule.status ===
-                        ModuleStatus.ENABLED ? (
-                        <form
-                          action={
-                            disableClinicModuleAction
-                          }
-                          id={`disable-module-${clinicModule.id}`}
-                          className="inline-flex"
-                        >
-                          <input
-                            type="hidden"
-                            name="moduleKey"
-                            value={
-                              clinicModule
-                                .module.key
-                            }
-                          />
-                          <ConfirmSubmitButton
-                            formId={`disable-module-${clinicModule.id}`}
-                            title={t("modules.disableTitle")}
-                            description={t("modules.disableDescription", { name: clinicModule.module.name })}
-                            actionLabel={t("modules.disableAction")}
-                            label={t("shared.actions.disable")}
-                          />
-                        </form>
-                      ) : (
-                        <form
-                          action={
-                            enableClinicModuleAction
-                          }
-                          id={`enable-module-${clinicModule.id}`}
-                          className="inline-flex"
-                        >
-                          <input
-                            type="hidden"
-                            name="moduleKey"
-                            value={
-                              clinicModule
-                                .module.key
-                            }
-                          />
-                          <ConfirmSubmitButton
-                            formId={`enable-module-${clinicModule.id}`}
-                            title={t("modules.enableTitle")}
-                            description={t("modules.enableDescription", { name: clinicModule.module.name })}
-                            actionLabel={t("modules.enableAction")}
-                            label={t("shared.actions.enable")}
-                          />
-                        </form>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                {t("modules.module")}
+              </TableHead>
+              <TableHead>
+                {t("shared.labels.status")}
+              </TableHead>
+              <TableHead>
+                {t(
+                  "modules.clinicTable.availabilityColumn"
+                )}
+              </TableHead>
+              <TableHead className="text-right">
+                {t("shared.labels.actions")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {clinicModules.map(
+              (clinicModule) => (
+                <TableRow
+                  key={clinicModule.id}
+                >
+                  <TableCell>
+                    <div className="font-medium">
+                      {getModuleKeyLabel(
+                        clinicModule.module
+                          .key
                       )}
-                    </td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {getModuleKeyDescription(
+                        clinicModule.module
+                          .key
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusIndicator
+                      tone={
+                        clinicModule.status ===
+                        ModuleStatus.ENABLED
+                          ? "success"
+                          : "neutral"
+                      }
+                      label={
+                        clinicModule.status ===
+                        ModuleStatus.ENABLED
+                          ? t(
+                              "shared.states.active"
+                            )
+                          : t(
+                              "shared.states.inactive"
+                            )
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <StatusIndicator
+                      tone={
+                        isModuleV1Active(
+                          clinicModule.module
+                            .key
+                        )
+                          ? "success"
+                          : "neutral"
+                      }
+                      label={
+                        isModuleV1Active(
+                          clinicModule.module
+                            .key
+                        )
+                          ? t(
+                              "shared.states.active"
+                            )
+                          : t(
+                              "modules.future"
+                            )
+                      }
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {!canManageModules ||
+                    clinicModule.module.key ===
+                      ModuleKey.MEMBERSHIP ? (
+                      <span className="text-xs text-muted-foreground">
+                        {clinicModule.module
+                          .key ===
+                        ModuleKey.MEMBERSHIP
+                          ? t("modules.coreModule")
+                          : t("shared.states.readOnly")}
+                      </span>
+                    ) : !isModuleV1Active(
+                        clinicModule.module.key
+                      ) ? (
+                      <span className="text-xs text-muted-foreground">
+                        {t("modules.v2Only")}
+                      </span>
+                    ) : clinicModule.status ===
+                      ModuleStatus.ENABLED ? (
+                      <form
+                        action={
+                          disableClinicModuleAction
+                        }
+                        id={`disable-module-${clinicModule.id}`}
+                        className="inline-flex"
+                      >
+                        <input
+                          type="hidden"
+                          name="moduleKey"
+                          value={
+                            clinicModule
+                              .module.key
+                          }
+                        />
+                        <ConfirmSubmitButton
+                          formId={`disable-module-${clinicModule.id}`}
+                          title={t("modules.disableTitle")}
+                          description={t("modules.disableDescription", { name: getModuleKeyLabel(clinicModule.module.key) })}
+                          actionLabel={t("modules.disableAction")}
+                          label={t("shared.actions.disable")}
+                        />
+                      </form>
+                    ) : (
+                      <form
+                        action={
+                          enableClinicModuleAction
+                        }
+                        id={`enable-module-${clinicModule.id}`}
+                        className="inline-flex"
+                      >
+                        <input
+                          type="hidden"
+                          name="moduleKey"
+                          value={
+                            clinicModule
+                              .module.key
+                          }
+                        />
+                        <ConfirmSubmitButton
+                          formId={`enable-module-${clinicModule.id}`}
+                          title={t("modules.enableTitle")}
+                          description={t("modules.enableDescription", { name: getModuleKeyLabel(clinicModule.module.key) })}
+                          actionLabel={t("modules.enableAction")}
+                          label={t("shared.actions.enable")}
+                        />
+                      </form>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            )}
+          </TableBody>
+        </Table>
       </SectionCard>
     </DashboardPage>
   );

@@ -37,12 +37,29 @@ export async function getSubscriptionFormOptions() {
           id: true,
           name: true,
           monthlyPrice: true,
+          _count: {
+            select: {
+              benefits: {
+                where: {
+                  active: true,
+                },
+              },
+            },
+          },
         },
       }),
     ]);
 
   return {
     patients,
-    membershipPlans,
+    membershipPlans: membershipPlans.map(
+      (plan) => ({
+        id: plan.id,
+        name: plan.name,
+        monthlyPrice: plan.monthlyPrice,
+        activeBenefitsCount:
+          plan._count.benefits,
+      })
+    ),
   };
 }

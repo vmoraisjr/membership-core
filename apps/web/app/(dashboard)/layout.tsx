@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
+import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
 import {
   getCurrentAppUser,
 } from "@/features/auth/services/get-current-app-user";
@@ -42,29 +43,32 @@ export default async function DashboardLayout({
       : false;
 
   return (
-    <div className="app-shell">
-      <DashboardSidebar
-        role={currentUser.role}
-        hasClinicAssignment={Boolean(
-          currentUser.clinicId
-        )}
-        hasOperationalAccess={
-          hasOperationalAccess
-        }
-        workspaceBrand={workspaceBrand}
-      />
-
-      <div className="app-shell-main">
-        <DashboardHeader
+    <MobileNavProvider>
+      <div className="app-shell">
+        <DashboardSidebar
           role={currentUser.role}
           currentUser={currentUser}
+          hasClinicAssignment={Boolean(
+            currentUser.clinicId
+          )}
+          hasOperationalAccess={
+            hasOperationalAccess
+          }
           workspaceBrand={workspaceBrand}
         />
 
-        <main className="app-shell-content">
-          {children}
-        </main>
+        <div className="app-shell-main">
+          <DashboardHeader
+            role={currentUser.role}
+            currentUser={currentUser}
+            workspaceBrand={workspaceBrand}
+          />
+
+          <main className="app-shell-content">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </MobileNavProvider>
   );
 }

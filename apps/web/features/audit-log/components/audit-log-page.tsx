@@ -80,6 +80,7 @@ export async function AuditLogPage({
     logs,
     actorOptions,
     entityOptions,
+    actionOptions,
     clinicOptions,
     isPlatformView,
   } = await getAuditLogs(filters);
@@ -89,12 +90,14 @@ export async function AuditLogPage({
       <PageHeader
         title={
           isPlatformView
-            ? "Auditoria da plataforma"
+            ? t("audit.platformTitle")
             : t("audit.title")
         }
         description={
           isPlatformView
-            ? "Acompanhe eventos administrativos globais e ações críticas relacionadas às clínicas."
+            ? t(
+                "audit.platformDescription"
+              )
             : t("audit.description")
         }
       />
@@ -104,6 +107,7 @@ export async function AuditLogPage({
         filters={filters}
         actorOptions={actorOptions}
         entityOptions={entityOptions}
+        actionOptions={actionOptions}
         clinicOptions={clinicOptions}
         isPlatformView={isPlatformView}
       />

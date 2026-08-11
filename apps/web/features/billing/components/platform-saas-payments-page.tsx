@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { StatusIndicator } from "@/components/ui/status-indicator";
 import {
   Table,
   TableBody,
@@ -26,6 +28,7 @@ import { getCurrentUserRole } from "@/features/auth/services/get-current-user-ro
 import { hasPermission } from "@/features/rbac/permissions";
 import { getTranslations } from "@/i18n/messages";
 import { formatCurrency } from "@/lib/formatters";
+import { getPaymentStatusTone } from "@/features/clinic/utils/clinic-status";
 
 import {
   platformMarkClinicInvoiceOverdueAction,
@@ -42,35 +45,6 @@ type Props = {
     query?: string;
   };
 };
-
-function getStatusClass(status: PaymentStatus) {
-  switch (status) {
-    case PaymentStatus.PAID:
-      return "bg-emerald-100 text-emerald-700";
-    case PaymentStatus.OVERDUE:
-      return "bg-amber-100 text-amber-800";
-    case PaymentStatus.CANCELED:
-    case PaymentStatus.FAILED:
-      return "bg-rose-100 text-rose-700";
-    default:
-      return "bg-slate-100 text-slate-700";
-  }
-}
-
-function getStatusLabel(status: PaymentStatus) {
-  switch (status) {
-    case PaymentStatus.PAID:
-      return "Pago";
-    case PaymentStatus.OVERDUE:
-      return "Em atraso";
-    case PaymentStatus.CANCELED:
-      return "Cancelado";
-    case PaymentStatus.FAILED:
-      return "Falhou";
-    case PaymentStatus.PENDING:
-      return "Pendente";
-  }
-}
 
 export async function PlatformSaasPaymentsPage({
   filters,
@@ -213,8 +187,12 @@ export async function PlatformSaasPaymentsPage({
     <DashboardPage>
       <PageHeader
         eyebrow="Financeiro SaaS"
-        title="Pagamentos SaaS"
-        description="Acompanhe as cobrancas emitidas para cada empresa e execute as atualizacoes operacionais com acoes objetivas."
+        title={t(
+          "billing.paymentsPage.title"
+        )}
+        description={t(
+          "billing.paymentsPage.description"
+        )}
       />
 
       <PaymentAttentionBar
@@ -226,7 +204,7 @@ export async function PlatformSaasPaymentsPage({
 
       <DataTableContainer
         title="Faturas e recebimentos"
-        description="Filtre a fila por empresa, plano ou status da cobranca para atualizar rapidamente o caixa da plataforma."
+        description="Filtre a fila por empresa, plano ou status da cobrança para atualizar rapidamente o caixa da plataforma."
         toolbar={
           <form
             method="get"
@@ -234,17 +212,20 @@ export async function PlatformSaasPaymentsPage({
           >
             <label className="field-stack">
               <span className="field-label">
-                Empresa
+                {t(
+                  "billing.subscriptionsPage.filters.company"
+                )}
               </span>
-              <select
+              <Select
                 name="clinicId"
                 defaultValue={
                   filters.clinicId ?? ""
                 }
-                className="field-select"
               >
                 <option value="">
-                  Todas as empresas
+                  {t(
+                    "billing.subscriptionsPage.filters.allCompanies"
+                  )}
                 </option>
                 {clinicOptions.map((clinic) => (
                   <option
@@ -254,22 +235,23 @@ export async function PlatformSaasPaymentsPage({
                     {clinic.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="field-stack">
               <span className="field-label">
-                Plano
+                {t(
+                  "billing.subscriptionsPage.filters.plan"
+                )}
               </span>
-              <select
+              <Select
                 name="planId"
                 defaultValue={
                   filters.planId ?? ""
                 }
-                className="field-select"
               >
                 <option value="">
-                  Todos os planos
+                  {t("shared.filters.allPlans")}
                 </option>
                 {overview.allPlans.map((plan) => (
                   <option
@@ -279,22 +261,21 @@ export async function PlatformSaasPaymentsPage({
                     {plan.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="field-stack">
               <span className="field-label">
-                Status
+                {t("shared.filters.statusFilter")}
               </span>
-              <select
+              <Select
                 name="status"
                 defaultValue={
                   filters.status ?? ""
                 }
-                className="field-select"
               >
                 <option value="">
-                  Todos os status
+                  {t("shared.filters.all")}
                 </option>
                 {Object.values(PaymentStatus).map(
                   (status) => (
@@ -302,16 +283,20 @@ export async function PlatformSaasPaymentsPage({
                       key={status}
                       value={status}
                     >
-                      {getStatusLabel(status)}
+                      {t(
+                        `billing.status.${status}`
+                      )}
                     </option>
                   )
                 )}
-              </select>
+              </Select>
             </label>
 
             <label className="field-stack">
               <span className="field-label">
-                Buscar cobrança
+                {t(
+                  "billing.paymentsPage.filters.searchLabel"
+                )}
               </span>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -320,7 +305,9 @@ export async function PlatformSaasPaymentsPage({
                   defaultValue={
                     filters.query ?? ""
                   }
-                  placeholder="Empresa, plano ou descrição"
+                  placeholder={t(
+                    "billing.paymentsPage.filters.searchPlaceholder"
+                  )}
                   className="pl-9"
                 />
               </div>
@@ -329,7 +316,7 @@ export async function PlatformSaasPaymentsPage({
             <div className="flex items-end gap-2">
               <Button type="submit">
                 <Filter className="size-4" />
-                Filtrar
+                {t("shared.actions.applyFilters")}
               </Button>
               <Button
                 type="button"
@@ -337,7 +324,7 @@ export async function PlatformSaasPaymentsPage({
                 variant="outline"
               >
                 <a href="/dashboard/billing/payments">
-                  Limpar
+                  {t("shared.actions.clear")}
                 </a>
               </Button>
             </div>
@@ -348,28 +335,32 @@ export async function PlatformSaasPaymentsPage({
           <TableHeader>
             <TableRow>
               <TableHead>
-                Empresa
+                {t(
+                  "billing.subscriptionsPage.table.company"
+                )}
               </TableHead>
               <TableHead>
-                Plano
+                {t("shared.labels.plan")}
               </TableHead>
               <TableHead>
-                Descrição
+                {t("shared.labels.description")}
               </TableHead>
               <TableHead>
-                Vencimento
+                {t("shared.labels.dueDate")}
               </TableHead>
               <TableHead>
-                Valor
+                {t("shared.labels.amount")}
               </TableHead>
               <TableHead>
-                Status
+                {t("shared.labels.status")}
               </TableHead>
               <TableHead>
-                Último pagamento
+                {t(
+                  "billing.paymentsPage.table.lastPayment"
+                )}
               </TableHead>
               <TableHead className="text-right">
-                Ações
+                {t("shared.labels.actions")}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -382,8 +373,12 @@ export async function PlatformSaasPaymentsPage({
                   className="p-0"
                 >
                   <EmptyState
-                    title="Nenhuma cobrança SaaS encontrada"
-                    description="Ajuste os filtros para localizar a fatura certa."
+                    title={t(
+                      "billing.paymentsPage.empty.title"
+                    )}
+                    description={t(
+                      "billing.paymentsPage.empty.description"
+                    )}
                     action={
                       <Button
                         type="button"
@@ -391,7 +386,9 @@ export async function PlatformSaasPaymentsPage({
                         variant="outline"
                       >
                         <a href="/dashboard/billing/payments">
-                          Limpar filtros
+                          {t(
+                            "shared.actions.clear"
+                          )}
                         </a>
                       </Button>
                     }
@@ -428,12 +425,16 @@ export async function PlatformSaasPaymentsPage({
                     </TableCell>
                     <TableCell className="align-top">
                       {invoice.description ??
-                        "Cobrança SaaS"}
+                        t(
+                          "billing.paymentsPage.table.defaultDescription"
+                        )}
                     </TableCell>
                     <TableCell className="align-top">
                       {new Date(
                         invoice.dueDate
-                      ).toLocaleDateString()}
+                      ).toLocaleDateString(
+                        "pt-BR"
+                      )}
                     </TableCell>
                     <TableCell className="align-top">
                       {formatCurrency(
@@ -441,15 +442,14 @@ export async function PlatformSaasPaymentsPage({
                       )}
                     </TableCell>
                     <TableCell className="align-top">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusClass(
-                          invoice.status
-                        )}`}
-                      >
-                        {getStatusLabel(
+                      <StatusIndicator
+                        tone={getPaymentStatusTone(
                           invoice.status
                         )}
-                      </span>
+                        label={t(
+                          `billing.status.${invoice.status}`
+                        )}
+                      />
                     </TableCell>
                     <TableCell className="align-top">
                       {invoice.payments[0] ? (
@@ -459,15 +459,21 @@ export async function PlatformSaasPaymentsPage({
                               invoice
                                 .payments[0]
                                 .paidAt
-                            ).toLocaleDateString()}
+                            ).toLocaleDateString(
+                              "pt-BR"
+                            )}
                           </div>
                           <div className="text-muted-foreground">
-                            Registrado
+                            {t(
+                              "billing.paymentsPage.table.recorded"
+                            )}
                           </div>
                         </div>
                       ) : (
                         <span className="text-xs text-muted-foreground">
-                          Sem pagamento registrado
+                          {t(
+                            "clinics.details.noPaymentRecorded"
+                          )}
                         </span>
                       )}
                     </TableCell>
@@ -489,8 +495,12 @@ export async function PlatformSaasPaymentsPage({
                               type="submit"
                               size="icon-sm"
                               variant="outline"
-                              title="Marcar como pago"
-                              aria-label="Marcar como pago"
+                              title={t(
+                                "billing.actions.markPaid"
+                              )}
+                              aria-label={t(
+                                "billing.actions.markPaid"
+                              )}
                             >
                               <CheckCheck className="size-4" />
                             </Button>
@@ -511,8 +521,12 @@ export async function PlatformSaasPaymentsPage({
                               type="submit"
                               size="icon-sm"
                               variant="outline"
-                              title="Marcar em atraso"
-                              aria-label="Marcar em atraso"
+                              title={t(
+                                "billing.actions.markOverdue"
+                              )}
+                              aria-label={t(
+                                "billing.actions.markOverdue"
+                              )}
                             >
                               <AlertTriangle className="size-4" />
                             </Button>

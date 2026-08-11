@@ -16,8 +16,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { StatusIndicator } from "@/components/ui/status-indicator";
+import { useTranslations } from "@/i18n/provider";
 
 import { MembershipBenefitRowActions } from "./membership-benefit-row-actions";
 
@@ -37,6 +42,7 @@ type BenefitWithPlan = {
   discountAmount?: number | null;
   usageLimit?: number | null;
   resetPeriod?: ResetPeriod | null;
+  usedThisMonth?: number;
 };
 
 type Props = {
@@ -52,22 +58,6 @@ type Props = {
   canDeleteBenefitsPermanently?: boolean;
 };
 
-function getUsagePolicyLabel(
-  benefit: BenefitWithPlan
-) {
-  if (benefit.resetPeriod === "MONTHLY") {
-    return benefit.usageLimit == null
-      ? "Uso mensal sem limite"
-      : `Uso mensal · ${benefit.usageLimit}/mês`;
-  }
-
-  if (benefit.usageLimit != null) {
-    return `Uso total · ${benefit.usageLimit} usos`;
-  }
-
-  return "Sem limite";
-}
-
 export function MembershipBenefitsTable({
   benefits,
   plans,
@@ -75,6 +65,33 @@ export function MembershipBenefitsTable({
   canManageBenefits = true,
   canDeleteBenefitsPermanently = true,
 }: Props) {
+  const t = useTranslations();
+
+  function getUsagePolicyLabel(
+    benefit: BenefitWithPlan
+  ) {
+    if (
+      benefit.resetPeriod === "MONTHLY"
+    ) {
+      return benefit.usageLimit == null
+        ? t(
+            "benefits.table.limitedUnlimitedMonth"
+          )
+        : t(
+            "benefits.table.limitedPerMonth",
+            {
+              count: benefit.usageLimit,
+            }
+          );
+    }
+
+    if (benefit.usageLimit != null) {
+      return `${t("benefits.table.monthlyLimit")} · ${benefit.usageLimit}`;
+    }
+
+    return t("benefits.table.noLimit");
+  }
+
   const [statusFilter, setStatusFilter] =
     useState("all");
   const [planFilter, setPlanFilter] =
@@ -126,56 +143,71 @@ export function MembershipBenefitsTable({
     }
   );
 
+  const hasAnyFilterApplied =
+    statusFilter !== "all" ||
+    planFilter !== "all" ||
+    normalizedSearch.length > 0;
+
   return (
     <DataTableContainer
-      title="Catálogo de benefícios"
+      title={t("benefits.table.title")}
       description={
         selectedPlanId
-          ? "Mostrando apenas benefícios do plano selecionado."
-          : "Benefícios vinculados a planos para operação e histórico."
+          ? t(
+              "benefits.table.filteredDescription"
+            )
+          : t(
+              "benefits.table.description"
+            )
       }
       toolbar={
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="grid gap-2">
             <label className="text-sm font-medium text-muted-foreground">
-              Filtro de status
+              {t(
+                "shared.filters.statusFilter"
+              )}
             </label>
-            <select
+            <Select
               value={statusFilter}
               onChange={(event) =>
                 setStatusFilter(
                   event.target.value
                 )
               }
-              className="h-10 rounded-xl border border-input bg-background px-3"
             >
               <option value="all">
-                Todos
+                {t("shared.filters.all")}
               </option>
               <option value="active">
-                Ativos
+                {t("shared.states.active")}
               </option>
               <option value="inactive">
-                Inativos
+                {t(
+                  "shared.states.inactive"
+                )}
               </option>
-            </select>
+            </Select>
           </div>
 
           <div className="grid gap-2">
             <label className="text-sm font-medium text-muted-foreground">
-              Filtro de plano
+              {t(
+                "shared.filters.planFilter"
+              )}
             </label>
-            <select
+            <Select
               value={planFilter}
               onChange={(e) =>
                 setPlanFilter(
                   e.target.value
                 )
               }
-              className="h-10 rounded-xl border border-input bg-background px-3"
             >
               <option value="all">
-                Todos os planos
+                {t(
+                  "shared.filters.allPlans"
+                )}
               </option>
               {plans.map((plan) => (
                 <option
@@ -185,22 +217,25 @@ export function MembershipBenefitsTable({
                   {plan.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="grid gap-2 sm:min-w-80">
             <label className="text-sm font-medium text-muted-foreground">
-              Buscar benefício
+              {t(
+                "shared.filters.filterByBenefitName"
+              )}
             </label>
-            <input
+            <Input
               value={search}
               onChange={(event) =>
                 setSearch(
                   event.target.value
                 )
               }
-              placeholder="Buscar nome do benefício"
-              className="h-10 rounded-xl border border-input bg-background px-3"
+              placeholder={t(
+                "shared.filters.searchBenefitName"
+              )}
             />
           </div>
         </div>
@@ -210,31 +245,35 @@ export function MembershipBenefitsTable({
         <TableHeader>
           <TableRow>
             <TableHead>
-              Benefício
+              {t("shared.labels.benefit")}
             </TableHead>
 
             <TableHead>
-              Descrição
+              {t("shared.labels.plan")}
             </TableHead>
 
             <TableHead>
-              Percentual
+              {t("benefits.table.type")}
             </TableHead>
 
             <TableHead>
-              Plano
+              {t(
+                "benefits.table.monthlyLimit"
+              )}
             </TableHead>
 
             <TableHead>
-              Status
+              {t(
+                "benefits.table.usedThisMonth"
+              )}
             </TableHead>
 
             <TableHead>
-              Uso
+              {t("shared.labels.status")}
             </TableHead>
 
             <TableHead>
-              Ações
+              {t("shared.labels.actions")}
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -244,44 +283,71 @@ export function MembershipBenefitsTable({
             <TableRow
               key={benefit.id}
             >
-              <TableCell className="min-w-[14rem]">
-                {benefit.title}
+              <TableCell className="min-w-[14rem] align-top">
+                <div className="flex items-start gap-3">
+                  <CompanyAvatarMark
+                    name={benefit.title}
+                    seed={benefit.id}
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-1">
+                    <div className="font-medium">
+                      {benefit.title}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {benefit.description ||
+                        t(
+                          "shared.states.noDescription"
+                        )}
+                    </div>
+                  </div>
+                </div>
               </TableCell>
 
-              <TableCell className="min-w-[18rem] whitespace-normal">
-                {benefit.description ||
-                  "Sem descrição"}
-              </TableCell>
-
-              <TableCell>
-                {benefit.discountPercentage !=
-                null
-                  ? `${benefit.discountPercentage}%`
-                  : "-"}
-              </TableCell>
-
-              <TableCell>
+              <TableCell className="align-top">
                 {
                   benefit.membershipPlan
                     .name
                 }
               </TableCell>
 
-              <TableCell>
-                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                  {benefit.active
-                    ? "Ativo"
-                    : "Inativo"}
-                </span>
+              <TableCell className="align-top">
+                {t(
+                  `benefits.dialog.types.${benefit.type}`
+                )}
               </TableCell>
 
-              <TableCell>
+              <TableCell className="align-top">
                 {getUsagePolicyLabel(
                   benefit
                 )}
               </TableCell>
 
-              <TableCell>
+              <TableCell className="align-top">
+                {benefit.usedThisMonth ??
+                  0}
+              </TableCell>
+
+              <TableCell className="align-top">
+                <StatusIndicator
+                  tone={
+                    benefit.active
+                      ? "success"
+                      : "neutral"
+                  }
+                  label={
+                    benefit.active
+                      ? t(
+                          "shared.states.active"
+                        )
+                      : t(
+                          "shared.states.inactive"
+                        )
+                  }
+                />
+              </TableCell>
+
+              <TableCell className="align-top">
                 <MembershipBenefitRowActions
                   benefit={benefit}
                   plans={plans}
@@ -308,8 +374,16 @@ export function MembershipBenefitsTable({
                 className="p-0"
               >
                 <EmptyState
-                  title="Nenhum benefício encontrado"
-                  description="Nenhum benefício corresponde aos filtros atuais."
+                  title={t(
+                    hasAnyFilterApplied
+                      ? "benefits.table.noResultsTitle"
+                      : "benefits.table.emptyTitle"
+                  )}
+                  description={t(
+                    hasAnyFilterApplied
+                      ? "benefits.table.noResultsDescription"
+                      : "benefits.table.emptyDescription"
+                  )}
                 />
               </TableCell>
             </TableRow>

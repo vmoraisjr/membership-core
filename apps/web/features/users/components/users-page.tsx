@@ -17,7 +17,20 @@ import { getPlatformUsersOverview } from "../services/get-platform-users-overvie
 import { PlatformUsersOverviewPanel } from "./platform-users-overview-panel";
 import { UsersOverviewPanel } from "./users-overview-panel";
 
-export async function UsersPage() {
+type Props = {
+  searchParams?: {
+    inviteCreated?: string;
+    inviteEmail?: string;
+    inviteRole?: string;
+    inviteToken?: string;
+    inviteExpiresAt?: string;
+    inviteError?: string;
+  };
+};
+
+export async function UsersPage({
+  searchParams,
+}: Props = {}) {
   const t = getTranslations();
   const [role, currentUser] =
     await Promise.all([
@@ -87,6 +100,21 @@ export async function UsersPage() {
   const overview =
     await getClinicUsersOverview();
 
+  const inviteFeedback =
+    searchParams?.inviteToken &&
+    searchParams.inviteEmail &&
+    searchParams.inviteRole &&
+    searchParams.inviteExpiresAt
+      ? {
+          email:
+            searchParams.inviteEmail,
+          role: searchParams.inviteRole,
+          token: searchParams.inviteToken,
+          expiresAt:
+            searchParams.inviteExpiresAt,
+        }
+      : null;
+
   return (
     <DashboardPage>
       <PageHeader
@@ -106,6 +134,11 @@ export async function UsersPage() {
         )}
         currentUserId={currentUser.id}
         overview={overview}
+        inviteFeedback={inviteFeedback}
+        inviteError={
+          searchParams?.inviteError ??
+          null
+        }
       />
     </DashboardPage>
   );

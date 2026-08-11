@@ -1,3 +1,5 @@
+import { PaymentStatus } from "@prisma/client";
+
 import prisma from "@/lib/prisma";
 import { getCurrentClinic } from "@/lib/auth/get-current-clinic";
 
@@ -18,6 +20,25 @@ export async function getSubscriptions() {
           patient: true,
 
           membershipPlan: true,
+
+          patientInvoices: {
+            where: {
+              status: {
+                in: [
+                  PaymentStatus.PENDING,
+                  PaymentStatus.OVERDUE,
+                ],
+              },
+            },
+            orderBy: {
+              dueDate: "asc",
+            },
+            take: 1,
+            select: {
+              dueDate: true,
+              status: true,
+            },
+          },
         },
 
         orderBy: {

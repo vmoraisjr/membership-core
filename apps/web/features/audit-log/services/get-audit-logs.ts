@@ -1,4 +1,5 @@
 import {
+  AuditAction,
   AuditEntity,
   Prisma,
 } from "@prisma/client";
@@ -12,6 +13,7 @@ import {
 export type AuditLogFilters = {
   actor?: string;
   entity?: string;
+  action?: string;
   date?: string;
   clinicId?: string;
 };
@@ -27,6 +29,14 @@ function isAuditEntity(
     "APP_USER",
     "USER_INVITE",
   ].includes(value as AuditEntity);
+}
+
+function isAuditAction(
+  value: string
+): value is AuditAction {
+  return Object.values(
+    AuditAction
+  ).includes(value as AuditAction);
 }
 
 function getDateRange(date: string) {
@@ -222,6 +232,11 @@ export async function getAuditLogs(
     where.entity = entity;
   }
 
+  const action = filters.action?.trim();
+  if (action && isAuditAction(action)) {
+    where.action = action;
+  }
+
   if (filters.date) {
     const range = getDateRange(
       filters.date
@@ -235,57 +250,72 @@ export async function getAuditLogs(
     }
   }
 
-  const [logs, actors, entities, clinics] =
-    await Promise.all([
-      prisma.auditLog.findMany({
-        where,
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 200,
-        include: {
-          clinic: {
-            select: {
-              id: true,
-              name: true,
-              brandName: true,
-            },
+  const [
+    logs,
+    actors,
+    entities,
+    actions,
+    clinics,
+  ] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 200,
+      include: {
+        clinic: {
+          select: {
+            id: true,
+            name: true,
+            brandName: true,
           },
         },
-      }),
-      prisma.auditLog.findMany({
-        where,
-        distinct: ["actor"],
-        orderBy: {
-          actor: "asc",
-        },
-        select: {
-          actor: true,
-        },
-      }),
-      prisma.auditLog.findMany({
-        where,
-        distinct: ["entity"],
-        orderBy: {
-          entity: "asc",
-        },
-        select: {
-          entity: true,
-        },
-      }),
-      isPlatformView
-        ? prisma.clinic.findMany({
-            orderBy: {
-              name: "asc",
-            },
-            select: {
-              id: true,
-              name: true,
-              brandName: true,
-            },
-          })
-        : Promise.resolve([]),
-    ]);
+      },
+    }),
+    prisma.auditLog.findMany({
+      where,
+      distinct: ["actor"],
+      orderBy: {
+        actor: "asc",
+      },
+      select: {
+        actor: true,
+      },
+    }),
+    prisma.auditLog.findMany({
+      where,
+      distinct: ["entity"],
+      orderBy: {
+        entity: "asc",
+      },
+      select: {
+        entity: true,
+      },
+    }),
+    prisma.auditLog.findMany({
+      where,
+      distinct: ["action"],
+      orderBy: {
+        action: "asc",
+      },
+      select: {
+        action: true,
+      },
+    }),
+    isPlatformView
+      ? prisma.clinic.findMany({
+          orderBy: {
+            name: "asc",
+          },
+          select: {
+            id: true,
+            name: true,
+            brandName: true,
+          },
+        })
+      : Promise.resolve([]),
+  ]);
 
   return {
     logs,
@@ -296,6 +326,10 @@ export async function getAuditLogs(
     entityOptions: entities.map(
       ({ entity: currentEntity }) =>
         currentEntity
+    ),
+    actionOptions: actions.map(
+      ({ action: currentAction }) =>
+        currentAction
     ),
     clinicOptions: clinics.map(
       (clinic) => ({

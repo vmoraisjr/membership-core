@@ -2,6 +2,7 @@
 
 import {
   CircleOff,
+  Eye,
   Pencil,
   RotateCcw,
   Trash2,
@@ -10,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 
+import Link from "next/link";
 import { toast } from "sonner";
 import { PatientKind } from "@prisma/client";
 
@@ -169,14 +171,42 @@ export function PatientRowActions({
 
   if (!canShowActions) {
     return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          asChild
+          title={t("shared.actions.view")}
+        >
+          <Link
+            href={`/dashboard/patients/${patient.id}`}
+          >
+            <Eye className="size-4" />
+          </Link>
+        </Button>
+
         <span className="text-xs text-muted-foreground">
-        {t("shared.states.readOnly")}
-      </span>
+          {t("shared.states.readOnly")}
+        </span>
+      </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        asChild
+        title={t("shared.actions.view")}
+      >
+        <Link
+          href={`/dashboard/patients/${patient.id}`}
+        >
+          <Eye className="size-4" />
+        </Link>
+      </Button>
+
       {patient.status === "ACTIVE" ? (
         <>
           {canManagePatients ? (
@@ -186,8 +216,14 @@ export function PatientRowActions({
               responsibleOptions={responsibleOptions}
               trigger={
                 <Button
-                  size="icon"
-                  variant="outline"
+                  size="icon-sm"
+                  variant="ghost"
+                  title={t(
+                    "shared.actions.edit"
+                  )}
+                  aria-label={t(
+                    "shared.actions.edit"
+                  )}
                 >
                   <Pencil className="size-4" />
                 </Button>
@@ -227,7 +263,16 @@ export function PatientRowActions({
               plans={plans}
               defaultPatientId={patient.id}
               trigger={
-                <Button size="icon" variant="outline">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  title={t(
+                    "subscriptions.dialog.createTitle"
+                  )}
+                  aria-label={t(
+                    "subscriptions.dialog.createTitle"
+                  )}
+                >
                   <Plus className="size-4" />
                 </Button>
               }
@@ -270,8 +315,15 @@ export function PatientRowActions({
               detailsInput="textarea"
               trigger={
                 <Button
-                  size="icon"
-                  variant="destructive"
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
+                  title={t(
+                    "patients.rowActions.deactivateAction"
+                  )}
+                  aria-label={t(
+                    "patients.rowActions.deactivateAction"
+                  )}
                 >
                   <CircleOff className="size-4" />
                 </Button>
@@ -298,8 +350,14 @@ export function PatientRowActions({
                 )}
                 trigger={
                   <Button
-                    size="icon"
-                    variant="outline"
+                    size="icon-sm"
+                    variant="ghost"
+                    title={t(
+                      "patients.rowActions.reactivateAction"
+                    )}
+                    aria-label={t(
+                      "patients.rowActions.reactivateAction"
+                    )}
                   >
                     <RotateCcw className="size-4" />
                   </Button>
@@ -322,8 +380,15 @@ export function PatientRowActions({
                   )}
                   trigger={
                     <Button
-                      size="icon"
-                      variant="destructive"
+                      size="icon-sm"
+                      variant="ghost"
+                      className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
+                      title={t(
+                        "shared.actions.deletePermanently"
+                      )}
+                      aria-label={t(
+                        "shared.actions.deletePermanently"
+                      )}
                     >
                       <Trash2 className="size-4" />
                     </Button>

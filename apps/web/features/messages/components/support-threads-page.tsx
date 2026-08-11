@@ -1,18 +1,25 @@
 import Link from "next/link";
-import {
-  SupportThreadCategory,
-  SupportThreadStatus,
-} from "@prisma/client";
 
 import { DashboardPage } from "@/components/layout/dashboard-page";
+import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
+import { EmptyState } from "@/components/dashboard/empty-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { StatusIndicator } from "@/components/ui/status-indicator";
+import { Textarea } from "@/components/ui/textarea";
+import { AccessDenied } from "@/features/rbac/components/access-denied";
+import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
+import { hasPermission } from "@/features/rbac/permissions";
 import { getTranslations } from "@/i18n/messages";
 
 import { addSupportMessageAction } from "../actions/add-support-message";
 import { createSupportThreadAction } from "../actions/create-support-thread";
 import { updateSupportThreadStatusAction } from "../actions/update-support-thread-status";
 import { getSupportThreadsOverview } from "../services/get-support-threads-overview";
+import { getSupportThreadStatusTone } from "../utils/support-status";
 
 type Props = {
   filters: {
@@ -23,70 +30,47 @@ type Props = {
   };
 };
 
-function getCategoryLabel(
-  category: SupportThreadCategory
-) {
-  switch (category) {
-    case "INCIDENT":
-      return "Problema";
-    case "REQUEST":
-      return "Solicitação";
-    case "PAYMENT":
-      return "Pagamento";
-    case "REGISTRATION":
-      return "Cadastro";
-    default:
-      return "Outro";
-  }
-}
-
-function getStatusLabel(
-  status: SupportThreadStatus
-) {
-  switch (status) {
-    case "OPEN":
-      return "Aberto";
-    case "IN_PROGRESS":
-      return "Em atendimento";
-    case "WAITING_CLINIC":
-      return "Aguardando clínica";
-    case "WAITING_PLATFORM":
-      return "Aguardando plataforma";
-    case "RESOLVED":
-      return "Resolvido";
-    default:
-      return "Fechado";
-  }
-}
-
-function getStatusClass(
-  status: SupportThreadStatus
-) {
-  switch (status) {
-    case "OPEN":
-      return "bg-sky-100 text-sky-700";
-    case "IN_PROGRESS":
-      return "bg-amber-100 text-amber-800";
-    case "WAITING_CLINIC":
-    case "WAITING_PLATFORM":
-      return "bg-slate-200 text-slate-700";
-    case "RESOLVED":
-      return "bg-emerald-100 text-emerald-700";
-    default:
-      return "bg-rose-100 text-rose-700";
-  }
-}
-
 function formatDate(
   value: Date | string
 ) {
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString(
+    "pt-BR"
+  );
 }
 
 export async function SupportThreadsPage({
   filters,
 }: Props) {
   const t = getTranslations();
+  const role = await getCurrentUserRole();
+
+  if (
+    !hasPermission(
+      role,
+      "messages",
+      "view"
+    )
+  ) {
+    return (
+      <DashboardPage>
+        <AccessDenied
+          title={t(
+            "support.accessDeniedTitle"
+          )}
+          description={t(
+            "support.accessDeniedDescription"
+          )}
+        />
+      </DashboardPage>
+    );
+  }
+
+  const canManageThreads = hasPermission(
+    role,
+    "messages",
+    "manage"
+  );
+
   const overview =
     await getSupportThreadsOverview(
       filters
@@ -100,165 +84,204 @@ export async function SupportThreadsPage({
       <PageHeader
         eyebrow={
           isPlatformView
-            ? "Atendimento global"
-            : "Comunicação com a plataforma"
+            ? t("support.platformEyebrow")
+            : t("support.clinicEyebrow")
         }
         title={
           isPlatformView
-            ? "Chamados da plataforma"
-            : "Chamados da empresa"
+            ? t("support.platformTitle")
+            : t("support.clinicTitle")
         }
         description={
           isPlatformView
-            ? "Comunique-se com as empresas assinantes por tema, status e histórico de atendimento."
-            : "Abra chamados com a plataforma e acompanhe o andamento por tema."
+            ? t(
+                "support.platformDescription"
+              )
+            : t(
+                "support.clinicDescription"
+              )
         }
       />
 
       <div className="page-section-grid xl:grid-cols-[360px_minmax(0,1fr)]">
         <div className="space-y-6">
+          {canManageThreads ? (
+            <SectionCard
+              title={t(
+                "support.newThread.title"
+              )}
+              description={t(
+                "support.newThread.description"
+              )}
+            >
+              <form
+                action={
+                  createSupportThreadAction
+                }
+                className="grid gap-4 p-5"
+              >
+                {isPlatformView ? (
+                  <label className="grid gap-2 text-sm">
+                    <span className="font-medium">
+                      {t(
+                        "support.newThread.clinicLabel"
+                      )}
+                    </span>
+                    <Select
+                      name="clinicId"
+                      required
+                      defaultValue=""
+                    >
+                      <option value="">
+                        {t(
+                          "support.newThread.clinicPlaceholder"
+                        )}
+                      </option>
+                      {overview.clinics.map(
+                        (clinic) => (
+                          <option
+                            key={
+                              clinic.id
+                            }
+                            value={
+                              clinic.id
+                            }
+                          >
+                            {clinic.name}
+                          </option>
+                        )
+                      )}
+                    </Select>
+                  </label>
+                ) : null}
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">
+                    {t(
+                      "support.newThread.subjectLabel"
+                    )}
+                  </span>
+                  <Input
+                    name="subject"
+                    required
+                    placeholder={t(
+                      "support.newThread.subjectPlaceholder"
+                    )}
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">
+                    {t(
+                      "support.newThread.categoryLabel"
+                    )}
+                  </span>
+                  <Select
+                    name="category"
+                    defaultValue="REQUEST"
+                  >
+                    {overview.categoryOptions.map(
+                      (category) => (
+                        <option
+                          key={category}
+                          value={category}
+                        >
+                          {t(
+                            `support.category.${category}`
+                          )}
+                        </option>
+                      )
+                    )}
+                  </Select>
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">
+                    {t(
+                      "support.newThread.bodyLabel"
+                    )}
+                  </span>
+                  <Textarea
+                    name="body"
+                    required
+                    rows={5}
+                    placeholder={t(
+                      "support.newThread.bodyPlaceholder"
+                    )}
+                  />
+                </label>
+
+                <Button type="submit">
+                  {t(
+                    "support.newThread.submit"
+                  )}
+                </Button>
+              </form>
+            </SectionCard>
+          ) : null}
+
           <SectionCard
-            title="Novo chamado"
-            description="Abra um novo tema de atendimento com mensagem inicial."
+            title={t(
+              "support.list.title"
+            )}
+            description={t(
+              "support.list.description"
+            )}
           >
             <form
-              action={
-                createSupportThreadAction
-              }
-              className="grid gap-4 p-5"
+              method="get"
+              className="grid gap-3 border-b p-5"
             >
               {isPlatformView ? (
                 <label className="grid gap-2 text-sm">
                   <span className="font-medium">
-                    Empresa
-                  </span>
-                  <select
-                    name="clinicId"
-                    className="h-10 rounded-md border bg-background px-3"
-                    required
-                  >
-                    <option value="">
-                      Selecione a empresa
-                    </option>
-                    {overview.clinics.map(
-                      (clinic) => (
-                        <option
-                          key={clinic.id}
-                          value={clinic.id}
-                        >
-                          {clinic.name}
-                        </option>
-                      )
+                    {t(
+                      "support.list.clinicLabel"
                     )}
-                  </select>
-                </label>
-              ) : null}
-
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium">
-                  Assunto
-                </span>
-                <input
-                  name="subject"
-                  required
-                  className="h-10 rounded-md border bg-background px-3 text-sm"
-                  placeholder="Ex.: Ajuste de cobrança"
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium">
-                  Categoria
-                </span>
-                <select
-                  name="category"
-                  className="h-10 rounded-md border bg-background px-3"
-                  defaultValue="REQUEST"
-                >
-                  {overview.categoryOptions.map(
-                    (category) => (
-                      <option
-                        key={category}
-                        value={category}
-                      >
-                        {getCategoryLabel(
-                          category
-                        )}
-                      </option>
-                    )
-                  )}
-                </select>
-              </label>
-
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium">
-                  Mensagem inicial
-                </span>
-                <textarea
-                  name="body"
-                  required
-                  rows={5}
-                  className="rounded-md border bg-background px-3 py-2 text-sm"
-                  placeholder="Descreva o problema, solicitação ou contexto do chamado."
-                />
-              </label>
-
-              <button
-                type="submit"
-                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-              >
-                Abrir chamado
-              </button>
-            </form>
-          </SectionCard>
-
-          <SectionCard
-            title="Lista de chamados"
-            description="Filtre por categoria, status e acompanhe a fila atual."
-          >
-            <form method="get" className="grid gap-3 border-b p-5">
-              {isPlatformView ? (
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">
-                    Empresa
                   </span>
-                  <select
+                  <Select
                     name="clinicId"
                     defaultValue={
                       overview.selectedClinicId
                     }
-                    className="h-10 rounded-md border bg-background px-3"
                   >
                     <option value="">
-                      Todas as empresas
+                      {t(
+                        "support.list.allClinics"
+                      )}
                     </option>
                     {overview.clinics.map(
                       (clinic) => (
                         <option
                           key={clinic.id}
-                          value={clinic.id}
+                          value={
+                            clinic.id
+                          }
                         >
                           {clinic.name}
                         </option>
                       )
                     )}
-                  </select>
+                  </Select>
                 </label>
               ) : null}
 
               <label className="grid gap-2 text-sm">
                 <span className="font-medium">
-                  Categoria
+                  {t(
+                    "support.list.categoryLabel"
+                  )}
                 </span>
-                <select
+                <Select
                   name="category"
                   defaultValue={
                     filters.category ?? ""
                   }
-                  className="h-10 rounded-md border bg-background px-3"
                 >
                   <option value="">
-                    Todas
+                    {t(
+                      "support.list.allCategories"
+                    )}
                   </option>
                   {overview.categoryOptions.map(
                     (category) => (
@@ -266,28 +289,31 @@ export async function SupportThreadsPage({
                         key={category}
                         value={category}
                       >
-                        {getCategoryLabel(
-                          category
+                        {t(
+                          `support.category.${category}`
                         )}
                       </option>
                     )
                   )}
-                </select>
+                </Select>
               </label>
 
               <label className="grid gap-2 text-sm">
                 <span className="font-medium">
-                  Status
+                  {t(
+                    "support.list.statusLabel"
+                  )}
                 </span>
-                <select
+                <Select
                   name="status"
                   defaultValue={
                     filters.status ?? ""
                   }
-                  className="h-10 rounded-md border bg-background px-3"
                 >
                   <option value="">
-                    Todos
+                    {t(
+                      "support.list.allStatuses"
+                    )}
                   </option>
                   {overview.statusOptions.map(
                     (status) => (
@@ -295,67 +321,88 @@ export async function SupportThreadsPage({
                         key={status}
                         value={status}
                       >
-                        {getStatusLabel(
-                          status
+                        {t(
+                          `support.status.${status}`
                         )}
                       </option>
                     )
                   )}
-                </select>
+                </Select>
               </label>
 
-              <button
+              <Button
                 type="submit"
-                className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium"
+                variant="outline"
               >
                 {t(
                   "shared.actions.applyFilters"
                 )}
-              </button>
+              </Button>
             </form>
 
             <div className="divide-y">
               {overview.threads.length ===
               0 ? (
-                <div className="p-4 text-sm text-muted-foreground">
-                  Nenhum chamado encontrado neste contexto.
-                </div>
+                <EmptyState
+                  title={t(
+                    "support.empty.title"
+                  )}
+                  description={t(
+                    "support.empty.description"
+                  )}
+                />
               ) : (
                 overview.threads.map(
                   (thread) => (
                     <Link
                       key={thread.id}
                       href={`/dashboard/messages?threadId=${thread.id}`}
-                    className="block px-5 py-4 transition-colors hover:bg-muted/30"
-                  >
+                      className="block px-5 py-4 transition-colors duration-150 hover:bg-[color:var(--color-surface-subtle)]"
+                    >
                       <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <p className="font-medium">
-                            {thread.subject}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {getCategoryLabel(
-                              thread.category
-                            )}
-                            {isPlatformView
-                              ? ` · ${thread.clinic.brandName ?? thread.clinic.name}`
-                              : ""}
-                          </p>
+                        <div className="flex items-start gap-3">
+                          <CompanyAvatarMark
+                            name={
+                              isPlatformView
+                                ? (thread.clinic.brandName ?? thread.clinic.name)
+                                : thread.subject
+                            }
+                            seed={thread.id}
+                            className="mt-0.5"
+                          />
+                          <div className="space-y-1">
+                            <p className="font-medium">
+                              {
+                                thread.subject
+                              }
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {t(
+                                `support.category.${thread.category}`
+                              )}
+                              {isPlatformView
+                                ? ` · ${thread.clinic.brandName ?? thread.clinic.name}`
+                                : ""}
+                            </p>
+                          </div>
                         </div>
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusClass(
-                            thread.status
-                          )}`}
-                        >
-                          {getStatusLabel(
+                        <StatusIndicator
+                          tone={getSupportThreadStatusTone(
                             thread.status
                           )}
-                        </span>
+                          label={t(
+                            `support.status.${thread.status}`
+                          )}
+                        />
                       </div>
                       <p className="mt-2 text-xs text-muted-foreground">
-                        Atualizado em{" "}
-                        {formatDate(
-                          thread.updatedAt
+                        {t(
+                          "support.list.updatedAt",
+                          {
+                            date: formatDate(
+                              thread.updatedAt
+                            ),
+                          }
                         )}
                       </p>
                     </Link>
@@ -367,8 +414,12 @@ export async function SupportThreadsPage({
         </div>
 
         <SectionCard
-          title="Conversa"
-          description="Acompanhe o histórico do chamado selecionado."
+          title={t(
+            "support.conversation.title"
+          )}
+          description={t(
+            "support.conversation.description"
+          )}
         >
           {overview.selectedThread ? (
             <div className="space-y-6 p-5">
@@ -382,65 +433,86 @@ export async function SupportThreadsPage({
                     }
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    {getCategoryLabel(
-                      overview
-                        .selectedThread
-                        .category
+                    {t(
+                      `support.category.${overview.selectedThread.category}`
                     )}
                     {" · "}
-                    {isPlatformView
-                      ? overview
-                          .selectedThread
-                          .clinic.brandName ??
-                        overview
-                          .selectedThread
-                          .clinic.name
-                      : "Empresa atual"}
+                    {overview
+                      .selectedThread
+                      .clinic
+                      .brandName ??
+                      overview
+                        .selectedThread
+                        .clinic.name}
                   </p>
                 </div>
 
-                <form
-                  action={
-                    updateSupportThreadStatusAction
-                  }
-                  className="flex flex-wrap items-center gap-2"
-                >
-                  <input
-                    type="hidden"
-                    name="threadId"
-                    value={
-                      overview
-                        .selectedThread.id
+                {canManageThreads ? (
+                  <form
+                    action={
+                      updateSupportThreadStatusAction
                     }
-                  />
-                  <select
-                    name="status"
-                    defaultValue={
-                      overview
-                        .selectedThread.status
-                    }
-                    className="h-10 rounded-md border bg-background px-3 text-sm"
+                    className="flex flex-wrap items-center gap-2"
                   >
-                    {overview.statusOptions.map(
-                      (status) => (
-                        <option
-                          key={status}
-                          value={status}
-                        >
-                          {getStatusLabel(
-                            status
-                          )}
-                        </option>
-                      )
+                    <input
+                      type="hidden"
+                      name="threadId"
+                      value={
+                        overview
+                          .selectedThread
+                          .id
+                      }
+                    />
+                    <label className="sr-only">
+                      {t(
+                        "support.conversation.updateStatusLabel"
+                      )}
+                    </label>
+                    <Select
+                      name="status"
+                      defaultValue={
+                        overview
+                          .selectedThread
+                          .status
+                      }
+                      className="h-10"
+                    >
+                      {overview.statusOptions.map(
+                        (status) => (
+                          <option
+                            key={status}
+                            value={
+                              status
+                            }
+                          >
+                            {t(
+                              `support.status.${status}`
+                            )}
+                          </option>
+                        )
+                      )}
+                    </Select>
+                    <Button
+                      type="submit"
+                      variant="outline"
+                    >
+                      {t(
+                        "support.conversation.updateStatusAction"
+                      )}
+                    </Button>
+                  </form>
+                ) : (
+                  <StatusIndicator
+                    tone={getSupportThreadStatusTone(
+                      overview
+                        .selectedThread
+                        .status
                     )}
-                  </select>
-                  <button
-                    type="submit"
-                    className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium"
-                  >
-                    Atualizar status
-                  </button>
-                </form>
+                    label={t(
+                      `support.status.${overview.selectedThread.status}`
+                    )}
+                  />
+                )}
               </div>
 
               <div className="space-y-3">
@@ -452,13 +524,19 @@ export async function SupportThreadsPage({
                     >
                       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                         <p className="font-medium">
-                          {message.authorName}
+                          {
+                            message.authorName
+                          }
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {message.authorScope ===
                           "PLATFORM"
-                            ? "Plataforma"
-                            : "Empresa"}
+                            ? t(
+                                "support.conversation.authorPlatform"
+                              )
+                            : t(
+                                "support.conversation.authorClinic"
+                              )}
                           {" · "}
                           {formatDate(
                             message.createdAt
@@ -473,42 +551,49 @@ export async function SupportThreadsPage({
                 )}
               </div>
 
-              <form
-                action={
-                  addSupportMessageAction
-                }
-                className="grid gap-3 border-t pt-4"
-              >
-                <input
-                  type="hidden"
-                  name="threadId"
-                  value={
-                    overview.selectedThread.id
+              {canManageThreads ? (
+                <form
+                  action={
+                    addSupportMessageAction
                   }
-                />
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">
-                    Nova resposta
-                  </span>
-                  <textarea
-                    name="body"
-                    required
-                    rows={5}
-                    className="rounded-md border bg-background px-3 py-2 text-sm"
-                    placeholder="Escreva a próxima atualização deste chamado."
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+                  className="grid gap-3 border-t pt-4"
                 >
-                  Enviar resposta
-                </button>
-              </form>
+                  <input
+                    type="hidden"
+                    name="threadId"
+                    value={
+                      overview
+                        .selectedThread.id
+                    }
+                  />
+                  <label className="grid gap-2 text-sm">
+                    <span className="font-medium">
+                      {t(
+                        "support.conversation.replyLabel"
+                      )}
+                    </span>
+                    <Textarea
+                      name="body"
+                      required
+                      rows={5}
+                      placeholder={t(
+                        "support.conversation.replyPlaceholder"
+                      )}
+                    />
+                  </label>
+                  <Button type="submit">
+                    {t(
+                      "support.conversation.replySubmit"
+                    )}
+                  </Button>
+                </form>
+              ) : null}
             </div>
           ) : (
             <div className="p-4 text-sm text-muted-foreground">
-              Selecione um chamado para ver a conversa.
+              {t(
+                "support.conversation.empty"
+              )}
             </div>
           )}
         </SectionCard>

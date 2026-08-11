@@ -12,6 +12,7 @@ import {
   SidePanelTitle,
   SidePanelTrigger,
 } from "@/components/ui/side-panel";
+import { useTranslations } from "@/i18n/provider";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 
 type Props = {
@@ -41,6 +42,8 @@ export function SaasSubscriptionDetailsPanel({
   expiresAt,
   latestInvoice,
 }: Props) {
+  const t = useTranslations();
+
   return (
     <SidePanel>
       <SidePanelTrigger asChild>
@@ -48,8 +51,12 @@ export function SaasSubscriptionDetailsPanel({
           type="button"
           variant="outline"
           size="icon-sm"
-          title="Ver detalhe da assinatura"
-          aria-label="Ver detalhe da assinatura"
+          title={t(
+            "billing.subscriptionsPage.detailsPanel.trigger"
+          )}
+          aria-label={t(
+            "billing.subscriptionsPage.detailsPanel.trigger"
+          )}
         >
           <Eye className="size-4" />
         </Button>
@@ -63,7 +70,9 @@ export function SaasSubscriptionDetailsPanel({
             {clinicName}
           </SidePanelTitle>
           <SidePanelDescription>
-            Detalhe operacional da assinatura SaaS da conta cliente.
+            {t(
+              "billing.subscriptionsPage.detailsPanel.description"
+            )}
           </SidePanelDescription>
         </SidePanelHeader>
 
@@ -71,7 +80,9 @@ export function SaasSubscriptionDetailsPanel({
           <div className="grid gap-4 md:grid-cols-2">
             <div className="detail-field">
               <p className="detail-field-label">
-                E-mail da conta
+                {t(
+                  "billing.subscriptionsPage.detailsPanel.email"
+                )}
               </p>
               <p className="detail-field-value">
                 {clinicEmail}
@@ -79,7 +90,9 @@ export function SaasSubscriptionDetailsPanel({
             </div>
             <div className="detail-field">
               <p className="detail-field-label">
-                Plano atual
+                {t(
+                  "billing.subscriptionsPage.detailsPanel.currentPlan"
+                )}
               </p>
               <p className="detail-field-value">
                 {currentPlan}
@@ -87,7 +100,9 @@ export function SaasSubscriptionDetailsPanel({
             </div>
             <div className="detail-field">
               <p className="detail-field-label">
-                Status atual
+                {t(
+                  "billing.subscriptionsPage.detailsPanel.currentStatus"
+                )}
               </p>
               <p className="detail-field-value">
                 {currentStatus}
@@ -95,17 +110,23 @@ export function SaasSubscriptionDetailsPanel({
             </div>
             <div className="detail-field">
               <p className="detail-field-label">
-                Última cobrança
+                {t(
+                  "billing.subscriptionsPage.table.lastCharge"
+                )}
               </p>
               <p className="detail-field-value">
                 {latestInvoice
                   ? `${formatDate(latestInvoice.dueDate)} · ${formatCurrency(latestInvoice.amount)}`
-                  : "Sem cobrança emitida"}
+                  : t(
+                      "billing.subscriptionsPage.table.noChargeIssued"
+                    )}
               </p>
             </div>
             <div className="detail-field">
               <p className="detail-field-label">
-                Início
+                {t(
+                  "billing.subscriptionsPage.table.start"
+                )}
               </p>
               <p className="detail-field-value">
                 {formatDate(startedAt)}
@@ -113,7 +134,9 @@ export function SaasSubscriptionDetailsPanel({
             </div>
             <div className="detail-field">
               <p className="detail-field-label">
-                Trial até
+                {t(
+                  "billing.subscriptionsPage.table.trialUntil"
+                )}
               </p>
               <p className="detail-field-value">
                 {formatDate(trialEndsAt)}
@@ -121,7 +144,9 @@ export function SaasSubscriptionDetailsPanel({
             </div>
             <div className="detail-field md:col-span-2">
               <p className="detail-field-label">
-                Expiração prevista
+                {t(
+                  "billing.subscriptionsPage.table.expiresAt"
+                )}
               </p>
               <p className="detail-field-value">
                 {formatDate(expiresAt)}

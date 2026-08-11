@@ -20,6 +20,7 @@
       "edit": "Editar",
       "enable": "Habilitar",
       "open": "Abrir",
+      "processing": "Processando...",
       "reactivate": "Reativar",
       "recordUsage": "Registrar uso",
       "remove": "Remover",
@@ -32,7 +33,8 @@
       "select": "Selecionar",
       "signIn": "Entrar",
       "signOut": "Sair",
-      "updatePassword": "Atualizar senha"
+      "updatePassword": "Atualizar senha",
+      "view": "Visualizar"
     },
     "labels": {
       "actions": "Ações",
@@ -41,7 +43,9 @@
       "benefit": "Benefício",
       "birthDate": "Data de nascimento",
       "city": "Cidade",
+      "contact": "Contato",
       "created": "Criado em",
+      "lastActivity": "Última atividade",
       "date": "Data",
       "description": "Descrição",
       "details": "Detalhes",
@@ -52,6 +56,7 @@
       "entity": "Entidade",
       "expires": "Expira em",
       "expiresAt": "Expira em",
+      "field": "Campo",
       "fullName": "Nome completo",
       "lastLogin": "Último acesso",
       "method": "Método",
@@ -79,11 +84,16 @@
     "filters": {
       "all": "Todos",
       "allEntities": "Todas as entidades",
+      "allPeriods": "Qualquer período",
       "allPlans": "Todos os planos",
       "allUsers": "Todos os usuários",
       "filterByBenefitName": "Filtrar por nome do benefício",
       "filterByPatientName": "Filtrar por nome do paciente",
+      "last30Days": "Últimos 30 dias",
+      "last90Days": "Últimos 90 dias",
+      "periodFilter": "Cadastrado em",
       "planFilter": "Filtro de plano",
+      "thisYear": "Este ano",
       "searchBenefitName": "Buscar nome do benefício",
       "searchByPatientOrDocument": "Buscar por paciente ou documento",
       "searchNameOrDocument": "Buscar nome ou documento",
@@ -139,6 +149,7 @@
     "myCompany": "Minha empresa",
     "auditLog": "Registro de auditoria",
     "users": "Usuários",
+    "messages": "Chamados",
     "workspace": "Workspace operacional da empresa"
   },
   "dashboardLayout": {
@@ -153,6 +164,49 @@
     "title": "Nenhuma clínica vinculada",
     "description": "Esta área exige uma clínica vinculada ao usuário atual. Crie ou acesse uma clínica primeiro para continuar os testes operacionais.",
     "action": "Ir para Clínicas"
+  },
+  "clinics": {
+    "status": {
+      "ACTIVE": "Ativa",
+      "INACTIVE": "Inativa"
+    },
+    "table": {
+      "platformTitle": "Gestão de contas clientes",
+      "clinicTitle": "Administração da empresa",
+      "activeCountDescription": "{count} conta(s) ativa(s) disponível(is) neste contexto.",
+      "columns": {
+        "company": "Empresa",
+        "plan": "Plano SaaS",
+        "users": "Usuários",
+        "patients": "Clientes",
+        "revenue": "Faturamento"
+      },
+      "filters": {
+        "statusActive": "Ativas",
+        "statusInactive": "Inativas",
+        "statusAll": "Todas",
+        "searchLabel": "Buscar empresa",
+        "searchPlaceholder": "Buscar por nome, exibição ou slug"
+      },
+      "noPlan": "Sem plano ativo",
+      "empty": {
+        "title": "Nenhuma empresa encontrada",
+        "description": "Ajuste os filtros ou cadastre uma nova conta cliente para continuar.",
+        "actionHint": "Revise busca e status"
+      }
+    },
+    "details": {
+      "mustChangePassword": "Troca obrigatória",
+      "noPaymentRecorded": "Sem pagamento registrado",
+      "auditEmpty": "Nenhum evento operacional encontrado.",
+      "modulesTitle": "Módulos da conta",
+      "modulesDescription": "Cobertura de módulos liberada para esta empresa cliente na versão atual da plataforma.",
+      "moduleColumn": "Módulo",
+      "moduleV1Column": "Disponibilidade V1",
+      "moduleAvailable": "Disponível",
+      "moduleFuture": "Reservado para expansões futuras",
+      "notInformed": "Não informado"
+    }
   },
   "auth": {
     "login": {
@@ -175,6 +229,7 @@
       "loadingTitle": "Acessando Sheep...",
       "invalidCredentials": "E-mail ou senha inválidos.",
       "passwordUpdated": "Senha atualizada. Você já pode entrar.",
+      "sessionExpired": "Sua sessão expirou. Entre novamente para continuar.",
       "forgotPassword": "Esqueci minha senha",
       "supportText": "Em caso de problemas no acesso, fale com contato@nortexdigital.com.br",
       "seededAccessTitle": "Acesso semeado para desenvolvimento local",
@@ -184,6 +239,13 @@
         "noTraining": "Operação sem treinamento",
         "readyToGrow": "Plataforma preparada para crescer"
       }
+    },
+    "firstAccess": {
+      "titleClinic": "Primeiro acesso da empresa",
+      "titlePlatform": "Primeiro acesso da plataforma",
+      "descriptionClinic": "Defina uma nova senha para continuar usando o painel da empresa.",
+      "descriptionPlatform": "Defina uma nova senha para continuar usando a área administrativa da plataforma.",
+      "submit": "Definir senha e continuar"
     },
     "forgotPassword": {
       "title": "Recuperação de senha",
@@ -217,7 +279,22 @@
       "eyebrow": "Erro no painel",
       "title": "Não foi possível carregar esta visualização do painel",
       "description": "Tente novamente. Se o problema continuar, revise os logs do servidor, a configuração do ambiente e o estado das migrations antes de seguir com os testes de produção."
+    },
+    "global": {
+      "eyebrow": "Erro inesperado",
+      "title": "Algo deu errado",
+      "description": "A aplicação encontrou um erro inesperado. Tente novamente; se o problema continuar, entre em contato com o suporte."
+    },
+    "notFound": {
+      "eyebrow": "Página não encontrada",
+      "title": "Não encontramos esta página",
+      "description": "O endereço acessado não existe ou foi movido.",
+      "backToDashboard": "Voltar para o painel"
     }
+  },
+  "offline": {
+    "title": "Sem conexão com a internet",
+    "description": "Verifique sua conexão. Suas próximas ações podem não ser salvas até a conexão voltar."
   },
   "confirmDialog": {
     "typeToConfirm": "Digite para confirmar"
@@ -253,6 +330,36 @@
         "label": "Planos ativos",
         "hint": "Planos disponíveis atualmente para novas assinaturas"
       }
+    },
+    "greeting": {
+      "morning": "Bom dia",
+      "afternoon": "Boa tarde",
+      "evening": "Boa noite",
+      "withName": "{greeting}, {name}"
+    },
+    "primaryAction": {
+      "clinic": "Nova assinatura",
+      "platform": "Ver contas em atraso"
+    },
+    "revenueTrend": {
+      "title": "Evolução de receita",
+      "description": "Receita de clientes recebida nos últimos 6 meses.",
+      "empty": "Nenhuma receita registrada no período."
+    },
+    "subscriptionsByStatus": {
+      "title": "Assinaturas por status",
+      "description": "Distribuição atual das assinaturas da empresa."
+    },
+    "upcomingRenewals": {
+      "title": "Vencimentos próximos",
+      "description": "Assinaturas ativas que renovam nos próximos 7 dias.",
+      "empty": "Nenhum vencimento nos próximos 7 dias."
+    },
+    "recentActivity": {
+      "title": "Atividades recentes",
+      "description": "Últimas ações registradas na auditoria da empresa.",
+      "empty": "Nenhuma atividade recente registrada.",
+      "accessRestricted": "Disponível apenas para perfis com acesso à auditoria."
     },
     "snapshot": {
       "title": "Resumo operacional",
@@ -301,8 +408,11 @@
       "patient": "Cliente",
       "currentPlan": "Plano atual",
       "noSubscription": "Sem assinatura",
-      "emptyTitle": "Nenhum cliente encontrado",
-      "emptyDescription": "Ajuste os filtros ou crie um novo cadastro de cliente para continuar."
+      "emptyTitle": "Nenhum cliente cadastrado ainda",
+      "emptyDescription": "Crie o primeiro cadastro de cliente para começar a vender planos.",
+      "noResultsTitle": "Nenhum resultado para os filtros atuais",
+      "noResultsDescription": "Ajuste a busca, o status, o plano ou o período para encontrar o cliente.",
+      "totalLabel": "{count} clientes no total"
     },
     "rowActions": {
       "useBenefit": "Usar benefício",
@@ -327,18 +437,29 @@
       "accessDeniedTitle": "Acesso ao paciente negado",
       "accessDeniedDescription": "O perfil atual não pode visualizar o histórico operacional do paciente.",
       "description": "Perfil operacional completo, registros de cobrança, histórico de uso de benefícios e trilha de auditoria relacionada ao paciente.",
+      "backToList": "Voltar para clientes",
+      "tabs": {
+        "overview": "Visão geral",
+        "subscriptions": "Assinaturas",
+        "benefits": "Benefícios",
+        "payments": "Pagamentos",
+        "history": "Histórico"
+      },
       "overviewTitle": "Visão geral do paciente",
       "overviewDescription": "Resumo atual de cadastro e status.",
       "subscriptionsTitle": "Assinaturas",
       "subscriptionsDescription": "Assinaturas atuais e históricas deste paciente.",
+      "noSubscriptions": "Nenhuma assinatura registrada para este cliente.",
       "started": "Início",
       "link": "Link",
       "benefitHistoryTitle": "Histórico de uso de benefício",
       "benefitHistoryDescription": "Inclui registros ativos e cancelados de uso de benefício.",
+      "noBenefitUsage": "Nenhum uso de benefício registrado para este cliente.",
       "usedBy": "Usado por",
       "usedAt": "Usado em",
       "paymentHistoryTitle": "Histórico de pagamentos",
       "paymentHistoryDescription": "Cobranças, pagamentos e histórico de atraso deste paciente.",
+      "noInvoices": "Nenhuma cobrança registrada para este cliente.",
       "invoice": "Cobrança",
       "detached": "Avulso",
       "noPaymentsRecorded": "Nenhum pagamento registrado",
@@ -365,6 +486,10 @@
       "createTitle": "Criar plano",
       "name": "Nome do plano",
       "monthlyPrice": "Preço mensal",
+      "annualPrice": "Preço anual (opcional)",
+      "annualPriceHint": "Preencha apenas se o plano também for vendido no ciclo anual.",
+      "summaryTitle": "Resumo antes de salvar",
+      "summaryStatus": "Status atual",
       "saveSuccess": "Plano atualizado.",
       "createSuccess": "Plano criado.",
       "saveError": "Não foi possível salvar o plano.",
@@ -379,15 +504,21 @@
       "description": "{count} planos ativos disponíveis para assinaturas.",
       "plan": "Plano",
       "monthlyPrice": "Preço mensal",
+      "annualPrice": "Preço anual",
       "benefits": "Benefícios",
       "activeSubscriptions": "Assinaturas ativas",
       "openBenefitsSupport": "Abrir suporte de benefícios",
       "activeBenefitsCount": "{count} ativos",
       "totalRegistered": "{count} cadastrados no total",
-      "emptyTitle": "Nenhum plano encontrado",
-      "emptyDescription": "Ajuste os filtros ou crie um novo plano para continuar."
+      "emptyTitle": "Nenhum plano cadastrado ainda",
+      "emptyDescription": "Crie o primeiro plano para começar a vender assinaturas.",
+      "noResultsTitle": "Nenhum resultado para os filtros atuais",
+      "noResultsDescription": "Ajuste a busca ou o status para encontrar o plano."
     },
     "rowActions": {
+      "clone": "Duplicar plano",
+      "cloneSuccess": "Plano duplicado.",
+      "cloneError": "Não foi possível duplicar o plano.",
       "deactivateTitle": "Desativar plano?",
       "deactivateDescription": "Desativar este plano também desativa benefícios relacionados e cancela assinaturas ativas.",
       "confirmName": "Digite o nome do plano exatamente",
@@ -403,6 +534,22 @@
       "deleteDescription": "Isso remove permanentemente o registro do plano inativo. Esta ação não pode ser desfeita.",
       "deleteSuccess": "Plano excluído permanentemente.",
       "deleteError": "Não foi possível excluir permanentemente o plano."
+    },
+    "details": {
+      "backToList": "Voltar para planos",
+      "overviewTitle": "Visão do plano",
+      "overviewDescription": "Resumo comercial e status atual.",
+      "benefitsTitle": "Benefícios do plano",
+      "benefitsDescription": "Benefícios vinculados a este plano.",
+      "noBenefits": "Nenhum benefício cadastrado para este plano.",
+      "subscribersTitle": "Assinantes",
+      "subscribersDescription": "Clientes com assinatura ativa neste plano.",
+      "noSubscribers": "Nenhum assinante ativo neste plano.",
+      "estimatedRevenue": "Receita mensal estimada",
+      "estimatedRevenueHint": "Assinantes ativos × preço mensal do plano.",
+      "historyTitle": "Histórico básico",
+      "historyDescription": "Últimas alterações registradas para este plano.",
+      "historyEmpty": "Nenhum evento registrado para este plano."
     }
   },
   "benefits": {
@@ -426,6 +573,17 @@
       "notUsageBased": "Este tipo de benefício não é baseado em uso",
       "monthlyUsageLimit": "Limite de uso mensal",
       "resetPeriod": "Período de renovação",
+      "renewalMode": "Renovação do controle",
+      "renewalMonthly": "Mensal",
+      "renewalNone": "Sem renovação automática",
+      "renewalNotApplicable": "Não se aplica",
+      "summaryTitle": "Resumo antes de salvar",
+      "types": {
+        "FREE": "Livre",
+        "PERCENTAGE_DISCOUNT": "Desconto percentual",
+        "FIXED_DISCOUNT": "Desconto fixo",
+        "LIMITED": "Uso controlado"
+      },
       "saveSuccess": "Benefício atualizado.",
       "createSuccess": "Benefício criado.",
       "saveError": "Não foi possível salvar o benefício.",
@@ -443,8 +601,13 @@
       "type": "Tipo",
       "limitedUnlimitedMonth": "LIMITADO · ilimitado/mês",
       "limitedPerMonth": "LIMITADO · {count}/mês",
-      "emptyTitle": "Nenhum benefício encontrado",
-      "emptyDescription": "Nenhum benefício corresponde aos filtros atuais."
+      "monthlyLimit": "Limite mensal",
+      "noLimit": "Sem limite",
+      "usedThisMonth": "Usos no mês",
+      "emptyTitle": "Nenhum benefício cadastrado ainda",
+      "emptyDescription": "Crie o primeiro benefício vinculado a um plano para continuar.",
+      "noResultsTitle": "Nenhum resultado para os filtros atuais",
+      "noResultsDescription": "Ajuste a busca, o status ou o plano para encontrar o benefício."
     },
     "rowActions": {
       "deactivateTitle": "Desativar benefício?",
@@ -490,7 +653,17 @@
     "table": {
       "description": "Acompanhe assinaturas ativas, pendentes, em atraso, canceladas e expiradas.",
       "filteredDescription": "Mostrando assinaturas para o contexto selecionado.",
+      "nextPayment": "Próximo pagamento",
+      "emptyTitle": "Nenhuma assinatura cadastrada ainda",
+      "emptyDescription": "Crie a primeira assinatura para começar a cobrar recorrentemente.",
+      "noResultsTitle": "Nenhum resultado para os filtros atuais",
+      "noResultsDescription": "Ajuste o status ou a busca por cliente para encontrar a assinatura.",
       "empty": "Nenhuma assinatura encontrada."
+    },
+    "summary": {
+      "title": "Resumo financeiro",
+      "monthlyPrice": "Preço mensal",
+      "activeBenefits": "Benefícios ativos no plano"
     },
     "rowActions": {
       "pauseTitle": "Pausar assinatura?",
@@ -557,7 +730,18 @@
       "emptyTitle": "Nenhum histórico de uso encontrado",
       "emptyDescription": "Nenhum consumo de benefício corresponde aos filtros atuais.",
       "canceledOn": "Cancelado em {date}",
-      "cancelUsage": "Cancelar uso"
+      "cancelUsage": "Cancelar uso",
+      "operator": "Operador",
+      "searchLabel": "Buscar cliente, benefício ou operador",
+      "noResultsTitle": "Nenhum resultado para os filtros atuais",
+      "noResultsDescription": "Ajuste a busca, o status ou o período para encontrar o registro.",
+      "cancelTitle": "Cancelar uso de benefício?",
+      "cancelDescription": "O registro permanece no histórico como cancelado — nada é apagado. Apenas OWNER e ADMIN podem cancelar um uso.",
+      "cancelReasonLabel": "Motivo do cancelamento",
+      "cancelReasonPlaceholder": "Descreva por que este uso está sendo cancelado",
+      "cancelAction": "Cancelar uso",
+      "cancelSuccess": "Uso de benefício cancelado.",
+      "cancelError": "Não foi possível cancelar o uso do benefício."
     }
   },
   "billing": {
@@ -590,8 +774,117 @@
       "markOverdue": "Marcar em atraso",
       "cancelInvoice": "Cancelar cobrança",
       "markActive": "Marcar como ativa",
+      "sendToTrial": "Enviar para trial",
       "suspend": "Suspender",
       "cancelSubscription": "Cancelar"
+    },
+    "subscriptionsPage": {
+      "title": "Assinaturas SaaS",
+      "description": "Filtre as contas clientes, ajuste o plano aplicado e mude o status com ações mais diretas e visuais.",
+      "metrics": {
+        "active": "Contas ativas",
+        "activeHint": "Empresas com assinatura SaaS em operação plena.",
+        "trial": "Em trial",
+        "trialHint": "Empresas em período de ativação comercial.",
+        "pastDue": "Inadimplentes",
+        "pastDueHint": "Assinaturas em atraso ou suspensas com maior risco operacional.",
+        "canceled": "Canceladas",
+        "canceledHint": "Contas com assinatura SaaS encerrada.",
+        "mrr": "MRR SaaS",
+        "mrrHint": "Receita recorrente confirmada nas cobranças SaaS pagas neste mês."
+      },
+      "table": {
+        "company": "Empresa",
+        "planApplied": "Plano aplicado",
+        "changePlanHint": "Ajuste o plano comercial vinculado a esta empresa.",
+        "changePlan": "Trocar plano",
+        "validity": "Vigência",
+        "lastCharge": "Última cobrança",
+        "start": "Início",
+        "trialUntil": "Trial até",
+        "expiresAt": "Expira em",
+        "noChargeIssued": "Sem cobrança emitida"
+      },
+      "filters": {
+        "company": "Empresa",
+        "allCompanies": "Todas as empresas",
+        "plan": "Plano",
+        "searchLabel": "Buscar conta",
+        "searchPlaceholder": "Empresa, e-mail ou plano"
+      },
+      "empty": {
+        "title": "Nenhuma assinatura SaaS encontrada",
+        "description": "Ajuste os filtros para localizar a conta cliente certa."
+      },
+      "detailsPanel": {
+        "trigger": "Ver detalhe da assinatura",
+        "description": "Detalhe operacional da assinatura SaaS da conta cliente.",
+        "email": "E-mail da conta",
+        "currentPlan": "Plano atual",
+        "currentStatus": "Status atual"
+      }
+    },
+    "paymentsPage": {
+      "title": "Pagamentos SaaS",
+      "description": "Acompanhe as cobranças emitidas para cada empresa e execute as atualizações operacionais com ações objetivas.",
+      "metrics": {
+        "issued": "Cobranças emitidas",
+        "issuedHint": "Faturas SaaS acumuladas no contexto atual.",
+        "pending": "Pendentes",
+        "pendingHint": "Cobranças aguardando compensação ou ação operacional.",
+        "overdue": "Em atraso",
+        "overdueHint": "{count} cobrança(s) já estão pagas no histórico filtrado."
+      },
+      "table": {
+        "company": "Empresa",
+        "lastPayment": "Último pagamento",
+        "recorded": "Registrado",
+        "defaultDescription": "Cobrança SaaS"
+      },
+      "filters": {
+        "searchLabel": "Buscar cobrança",
+        "searchPlaceholder": "Empresa, plano ou descrição"
+      },
+      "empty": {
+        "title": "Nenhuma cobrança SaaS encontrada",
+        "description": "Ajuste os filtros para localizar a fatura certa."
+      }
+    },
+    "catalogPage": {
+      "title": "Catálogo comercial",
+      "description": "Organize os planos SaaS com nomes claros, preços consistentes e disponibilidade comercial fácil de entender.",
+      "newPlan": "Novo plano",
+      "editPlan": "Editar plano",
+      "metrics": {
+        "registered": "Planos cadastrados",
+        "registeredHint": "Total de opções mantidas no catálogo.",
+        "sellable": "Planos comercializáveis",
+        "sellableHint": "Itens ativos para novas contas clientes.",
+        "coveredClients": "Clientes cobertos",
+        "coveredClientsHint": "Assinaturas SaaS vinculadas aos planos atuais."
+      },
+      "table": {
+        "planName": "Nome do plano",
+        "commercialDescription": "Descrição comercial",
+        "noDescription": "Sem descrição cadastrada.",
+        "monthlyPrice": "Preço mensal",
+        "annualPrice": "Preço anual",
+        "linkedSubscriptions": "Assinaturas ligadas a este plano",
+        "referenceRevenue": "Receita mensal de referência",
+        "available": "Disponível",
+        "outOfCatalog": "Fora do catálogo"
+      },
+      "filters": {
+        "searchLabel": "Buscar plano",
+        "searchPlaceholder": "Nome ou descrição",
+        "availability": "Disponibilidade",
+        "allPlans": "Todos os planos",
+        "onlyActive": "Apenas ativos",
+        "onlyInactive": "Apenas inativos"
+      },
+      "empty": {
+        "description": "Nenhum plano encontrado com os filtros atuais."
+      }
     },
     "sections": {
       "overduePatientInvoices": {
@@ -601,6 +894,22 @@
       "monthlyPatientRevenue": {
         "title": "Receita mensal de clientes",
         "description": "Receita de cobranças pagas reconhecida neste mês."
+      },
+      "receivable": {
+        "title": "A receber",
+        "description": "Soma das cobranças pendentes e em atraso."
+      },
+      "received": {
+        "title": "Recebido no mês",
+        "description": "Soma das cobranças pagas neste mês."
+      },
+      "overdueAmount": {
+        "title": "Vencido",
+        "description": "Soma das cobranças em atraso."
+      },
+      "delinquencyRate": {
+        "title": "Inadimplência",
+        "description": "Percentual do total cobrado que está em atraso."
       },
       "platformSubscription": {
         "title": "Assinatura da plataforma",
@@ -627,6 +936,13 @@
         "title": "Métricas administrativas da plataforma",
         "description": "Visível apenas quando o usuário atual está operando sem vínculo com clínica."
       }
+    },
+    "table": {
+      "methodFilter": "Filtro de forma de pagamento",
+      "dueDateFilter": "Vencimento",
+      "searchPatientOrPlan": "Buscar cliente ou plano",
+      "noResultsTitle": "Nenhum resultado para os filtros atuais",
+      "noResultsDescription": "Ajuste o status, a forma de pagamento, o plano, o vencimento ou a busca."
     },
     "noPaymentHistory": "Sem histórico de pagamento",
     "lockedStatus": "Status bloqueado",
@@ -742,13 +1058,79 @@
     "module": "Módulo",
     "coreModule": "Módulo principal",
     "v2Only": "Apenas V2",
-    "future": "Futuro",
+    "future": "Em breve",
     "disableTitle": "Desabilitar módulo?",
     "disableDescription": "Isso desabilitará {name} para a clínica atual.",
     "disableAction": "Desabilitar módulo",
     "enableTitle": "Habilitar módulo?",
     "enableDescription": "Isso habilitará {name} para a clínica atual.",
-    "enableAction": "Habilitar módulo"
+    "enableAction": "Habilitar módulo",
+    "platformTitle": "Módulos e planos da plataforma",
+    "platformDescription": "Acompanhe os módulos liberados na versão atual e a cobertura entregue por plano comercial.",
+    "clinicPageDescription": "Gerencie os módulos da clínica e acompanhe a assinatura comercial da plataforma nesta área administrativa.",
+    "metrics": {
+      "billingPlans": "Planos comerciais",
+      "billingPlansHint": "Quantidade de planos SaaS cadastrados.",
+      "activePlans": "Planos ativos",
+      "activePlansHint": "Planos disponíveis para novas assinaturas.",
+      "coveredClinics": "Clínicas cobertas",
+      "coveredClinicsHint": "Assinaturas vinculadas aos planos comerciais.",
+      "v1Modules": "Módulos V1",
+      "v1ModulesHint": "Módulos operacionais liberados hoje."
+    },
+    "plansSection": {
+      "title": "Planos comerciais Sheep",
+      "description": "Criação, precificação e disponibilidade de planos são administradas no Catálogo comercial, evitando duas telas divergentes para a mesma informação.",
+      "count": "{count} plano(s) comercial(is) cadastrado(s) hoje.",
+      "openCatalog": "Abrir catálogo comercial"
+    },
+    "catalogSection": {
+      "title": "Catálogo de módulos",
+      "description": "Acompanhe quais módulos estão liberados na versão atual e quais permanecem em roadmap.",
+      "columns": {
+        "module": "Módulo",
+        "key": "Chave",
+        "statusV1": "Status V1",
+        "rule": "Regra"
+      },
+      "ruleAvailable": "Disponível na operação atual",
+      "ruleComingSoon": "Reservado para expansões futuras"
+    },
+    "coverageSection": {
+      "title": "Cobertura por plano",
+      "description": "Os planos comerciais herdam a política global de módulos liberados na plataforma.",
+      "planColumn": "Plano",
+      "included": "Incluído"
+    },
+    "keys": {
+      "MEMBERSHIP": {
+        "name": "Membership",
+        "description": "Assinaturas, cobrança, benefícios e operações de contrato."
+      },
+      "CRM": {
+        "name": "CRM",
+        "description": "Futuro módulo de funil comercial e gestão de leads."
+      },
+      "SCHEDULING": {
+        "name": "Agenda",
+        "description": "Futuro módulo de agendamento de consultas."
+      },
+      "COMMUNICATION": {
+        "name": "Comunicação",
+        "description": "Futuro módulo de comunicação e automação."
+      },
+      "PATIENT_PORTAL": {
+        "name": "Portal do paciente",
+        "description": "Futuro portal de autoatendimento para pacientes."
+      },
+      "ANALYTICS": {
+        "name": "Analytics",
+        "description": "Futuro módulo de análise entre clínicas."
+      }
+    },
+    "clinicTable": {
+      "availabilityColumn": "Disponibilidade"
+    }
   },
   "audit": {
     "accessDeniedTitle": "Acesso ao registro de auditoria negado",
@@ -758,6 +1140,100 @@
     "tableTitle": "Histórico operacional",
     "tableDescription": "Eventos críticos de criação, atualização, ciclo de vida e consumo de benefícios são registrados aqui.",
     "emptyTitle": "Nenhum registro de auditoria encontrado",
-    "emptyDescription": "Ajuste os filtros ou execute uma ação crítica para gerar histórico de auditoria."
+    "emptyDescription": "Ajuste os filtros ou execute uma ação crítica para gerar histórico de auditoria.",
+    "platformTitle": "Auditoria da plataforma",
+    "platformDescription": "Acompanhe eventos administrativos globais e ações críticas relacionadas às clínicas.",
+    "filters": {
+      "clinic": "Clínica",
+      "allClinics": "Todas as clínicas",
+      "action": "Ação",
+      "allActions": "Todas as ações"
+    },
+    "columns": {
+      "clinic": "Clínica"
+    },
+    "export": "Extrair CSV",
+    "details": {
+      "trigger": "Ver detalhes",
+      "title": "Detalhe do evento de auditoria",
+      "description": "Revise o que aconteceu, quem fez e o que mudou antes de agir em plataforma ou clínica.",
+      "action": "Ação",
+      "when": "Quando",
+      "who": "Quem",
+      "where": "Onde",
+      "entity": "Entidade",
+      "changesTitle": "O que mudou",
+      "before": "Antes",
+      "after": "Depois",
+      "additionalDetailsTitle": "Detalhes adicionais",
+      "noAdditionalDetails": "Nenhum detalhe adicional registrado para este evento.",
+      "platform": "Plataforma"
+    }
+  },
+  "support": {
+    "accessDeniedTitle": "Acesso a chamados negado",
+    "accessDeniedDescription": "O perfil atual não pode visualizar os chamados de atendimento.",
+    "platformEyebrow": "Atendimento global",
+    "clinicEyebrow": "Comunicação com a plataforma",
+    "platformTitle": "Chamados da plataforma",
+    "clinicTitle": "Chamados da empresa",
+    "platformDescription": "Comunique-se com as empresas assinantes por tema, status e histórico de atendimento.",
+    "clinicDescription": "Abra chamados com a plataforma e acompanhe o andamento por tema.",
+    "category": {
+      "INCIDENT": "Problema",
+      "REQUEST": "Solicitação",
+      "PAYMENT": "Pagamento",
+      "REGISTRATION": "Cadastro",
+      "OTHER": "Outro"
+    },
+    "status": {
+      "OPEN": "Aberto",
+      "IN_PROGRESS": "Em atendimento",
+      "WAITING_CLINIC": "Aguardando clínica",
+      "WAITING_PLATFORM": "Aguardando plataforma",
+      "RESOLVED": "Resolvido",
+      "CLOSED": "Fechado"
+    },
+    "newThread": {
+      "title": "Novo chamado",
+      "description": "Abra um novo tema de atendimento com mensagem inicial.",
+      "clinicLabel": "Empresa",
+      "clinicPlaceholder": "Selecione a empresa",
+      "subjectLabel": "Assunto",
+      "subjectPlaceholder": "Ex.: Ajuste de cobrança",
+      "categoryLabel": "Categoria",
+      "bodyLabel": "Mensagem inicial",
+      "bodyPlaceholder": "Descreva o problema, solicitação ou contexto do chamado.",
+      "submit": "Abrir chamado"
+    },
+    "list": {
+      "title": "Lista de chamados",
+      "description": "Filtre por categoria, status e acompanhe a fila atual.",
+      "clinicLabel": "Empresa",
+      "allClinics": "Todas as empresas",
+      "categoryLabel": "Categoria",
+      "allCategories": "Todas",
+      "statusLabel": "Status",
+      "allStatuses": "Todos",
+      "updatedAt": "Atualizado em {date}"
+    },
+    "empty": {
+      "title": "Nenhum chamado encontrado",
+      "description": "Ajuste os filtros ou abra um novo chamado para começar."
+    },
+    "conversation": {
+      "title": "Conversa",
+      "description": "Acompanhe o histórico do chamado selecionado.",
+      "empty": "Selecione um chamado para ver a conversa.",
+      "authorPlatform": "Plataforma",
+      "authorClinic": "Empresa",
+      "updateStatusLabel": "Status do chamado",
+      "updateStatusAction": "Atualizar status",
+      "updateStatusConfirmTitle": "Atualizar status do chamado?",
+      "updateStatusConfirmDescription": "O novo status fica visível para a empresa e para a plataforma.",
+      "replyLabel": "Nova resposta",
+      "replyPlaceholder": "Escreva a próxima atualização deste chamado.",
+      "replySubmit": "Enviar resposta"
+    }
   }
 }

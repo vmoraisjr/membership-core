@@ -3,6 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 import { AppFooter } from "@/components/branding/app-footer";
+import { OfflineBanner } from "@/components/layout/offline-banner";
 import { Toaster } from "@/components/ui/sonner";
 import {
   SHEEP_APP_ICON_LIGHT_PATH,
@@ -41,6 +42,7 @@ export default function RootLayout({
           locale={defaultLocale}
           messages={messages}
         >
+          <OfflineBanner />
           <div className="flex min-h-screen flex-col bg-background">
             <div className="flex-1">
               {children}

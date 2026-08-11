@@ -10,7 +10,10 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-import { ClinicStatus } from "@prisma/client";
+import {
+  ClinicStatus,
+  ClinicSubscriptionStatus,
+} from "@prisma/client";
 
 import { toast } from "sonner";
 
@@ -46,7 +49,7 @@ type Props = {
     status: ClinicStatus;
     clinicSubscriptions?: Array<{
       id: string;
-      status: string;
+      status: ClinicSubscriptionStatus;
       clinicBillingPlan: {
         name: string;
       };
@@ -114,8 +117,8 @@ export function ClinicRowActions({
           clinic={clinic}
           trigger={
             <Button
-              size="icon"
-              variant="outline"
+              size="icon-sm"
+              variant="ghost"
               title="Visão rápida"
               aria-label="Visão rápida"
             >
@@ -128,8 +131,8 @@ export function ClinicRowActions({
       {isPlatformView ? (
         <Button
           asChild
-          size="icon"
-          variant="outline"
+          size="icon-sm"
+          variant="ghost"
         >
           <Link
             href={`/dashboard/clinics/${clinic.id}`}
@@ -145,8 +148,8 @@ export function ClinicRowActions({
         isPlatformView={isPlatformView}
         trigger={
           <Button
-            size="icon"
-            variant="outline"
+            size="icon-sm"
+            variant="ghost"
           >
             <Pencil className="size-4" />
           </Button>
@@ -164,8 +167,9 @@ export function ClinicRowActions({
           actionLabel="Desativar clínica"
           trigger={
             <Button
-              size="icon"
-              variant="destructive"
+              size="icon-sm"
+              variant="ghost"
+              className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
             >
               <CircleOff className="size-4" />
             </Button>
@@ -181,8 +185,8 @@ export function ClinicRowActions({
           actionLabel="Reativar clínica"
           trigger={
             <Button
-              size="icon"
-              variant="outline"
+              size="icon-sm"
+              variant="ghost"
             >
               <RotateCcw className="size-4" />
             </Button>

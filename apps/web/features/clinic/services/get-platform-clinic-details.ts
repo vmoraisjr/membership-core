@@ -6,6 +6,7 @@ import {
 
 import prisma from "@/lib/prisma";
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import { ensureClinicModules } from "@/features/modules/services/module-access";
 
 export async function getPlatformClinicDetails(
   clinicId: string
@@ -78,6 +79,9 @@ export async function getPlatformClinicDetails(
       },
     });
 
+  const clinicModules =
+    await ensureClinicModules(clinicId);
+
   const auditLogs =
     await prisma.auditLog.findMany({
       where: {
@@ -126,5 +130,6 @@ export async function getPlatformClinicDetails(
     clinic,
     metrics,
     auditLogs,
+    clinicModules,
   };
 }

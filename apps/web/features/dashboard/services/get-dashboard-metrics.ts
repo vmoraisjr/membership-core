@@ -8,11 +8,16 @@ import {
 } from "@prisma/client";
 
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import { hasPermission } from "@/features/rbac/permissions";
 import prisma from "@/lib/prisma";
 
 import { getBenefitConsumptionMetrics } from "./get-benefit-consumption-metrics";
 import { getActivePatients } from "./get-active-patients";
 import { getActiveSubscriptions } from "./get-active-subscriptions";
+import { getRecentActivity } from "./get-recent-activity";
+import { getRevenueTrend } from "./get-revenue-trend";
+import { getSubscriptionStatusBreakdown } from "./get-subscription-status-breakdown";
+import { getUpcomingRenewals } from "./get-upcoming-renewals";
 
 export async function getDashboardMetrics() {
   const currentUser =
@@ -37,6 +42,12 @@ export async function getDashboardMetrics() {
       );
     }
 
+    const canViewActivity = hasPermission(
+      currentUser.role,
+      "auditLogs",
+      "view"
+    );
+
     const [
       activePatients,
       activeSubscriptionsCount,
@@ -44,6 +55,10 @@ export async function getDashboardMetrics() {
       overduePatientInvoices,
       monthlyPatientRevenue,
       activePlansCount,
+      subscriptionStatusBreakdown,
+      upcomingRenewals,
+      revenueTrend,
+      recentActivity,
     ] = await Promise.all([
       getActivePatients(),
       getActiveSubscriptions(),
@@ -72,6 +87,12 @@ export async function getDashboardMetrics() {
           active: true,
         },
       }),
+      getSubscriptionStatusBreakdown(),
+      getUpcomingRenewals(),
+      getRevenueTrend(),
+      canViewActivity
+        ? getRecentActivity()
+        : Promise.resolve([]),
     ]);
 
     return {
@@ -79,12 +100,18 @@ export async function getDashboardMetrics() {
       clinicName:
         clinic.brandName ??
         clinic.name,
+      currentUserName: currentUser.name,
       activePatients,
       activeSubscriptionsCount,
       overduePatientInvoices,
       monthlyPatientRevenue:
         monthlyPatientRevenue._sum
           .amount ?? 0,
+      subscriptionStatusBreakdown,
+      upcomingRenewals,
+      revenueTrend,
+      recentActivity,
+      canViewRecentActivity: canViewActivity,
       benefitsConsumed:
         benefitConsumptionMetrics.consumedThisMonth,
       benefitUsageEvents:
@@ -102,6 +129,7 @@ export async function getDashboardMetrics() {
     return {
       scope: "platform" as const,
       clinicName: null,
+      currentUserName: currentUser.name,
       platformMetrics: null,
     };
   }
@@ -206,6 +234,7 @@ export async function getDashboardMetrics() {
   return {
     scope: "platform" as const,
     clinicName: null,
+    currentUserName: currentUser.name,
     platformMetrics: {
       activeClinics,
       trialClinics,

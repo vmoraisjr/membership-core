@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   AlertTriangle,
   BadgeDollarSign,
@@ -6,25 +8,43 @@ import {
   CreditCard,
   HeartPulse,
   MessageSquareMore,
+  PlusCircle,
   ReceiptText,
   ShieldCheck,
   Users,
 } from "lucide-react";
 
 import { ActionCard } from "@/components/dashboard/action-card";
+import { AttentionList } from "@/components/dashboard/attention-list";
 import { MetricDelta } from "@/components/dashboard/metric-delta";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { MetricGrid } from "@/components/dashboard/metric-grid";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
+import { Button } from "@/components/ui/button";
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
+import { SubscriptionStatusBadge } from "@/features/subscriptions/components/subscription-status-badge";
 import { getTranslations } from "@/i18n/messages";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 
 import { getDashboardMetrics } from "../services/get-dashboard-metrics";
+
+function getGreeting(
+  t: ReturnType<typeof getTranslations>
+) {
+  const hour = new Date().getHours();
+  const key =
+    hour < 12
+      ? "morning"
+      : hour < 18
+        ? "afternoon"
+        : "evening";
+
+  return t(`dashboard.greeting.${key}`);
+}
 
 export async function DashboardHomePage() {
   const t = getTranslations();
@@ -55,6 +75,33 @@ export async function DashboardHomePage() {
   const metrics =
     await getDashboardMetrics();
 
+  const greetingName =
+    metrics.currentUserName?.split(" ")[0] ?? "";
+  const greetingTitle = greetingName
+    ? t("dashboard.greeting.withName", {
+        greeting: getGreeting(t),
+        name: greetingName,
+      })
+    : t("dashboard.title");
+  const todayLabel = new Intl.DateTimeFormat(
+    "pt-BR",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }
+  ).format(new Date());
+  const canCreateSubscription = hasPermission(
+    role,
+    "subscriptions",
+    "manage"
+  );
+  const canManageBilling = hasPermission(
+    role,
+    "billing",
+    "manage"
+  );
+
   return (
     <DashboardPage>
       <PageHeader
@@ -63,7 +110,7 @@ export async function DashboardHomePage() {
             ? "Workspace da empresa"
             : "Controle global Sheep"
         }
-        title={t("dashboard.title")}
+        title={greetingTitle}
         description={
           metrics.scope === "clinic"
             ? t(
@@ -77,37 +124,150 @@ export async function DashboardHomePage() {
                 "dashboard.platformDescription"
               )
         }
+        action={
+          metrics.scope === "clinic" &&
+          canCreateSubscription ? (
+            <Button asChild>
+              <Link href="/dashboard/subscriptions">
+                <PlusCircle className="size-4" />
+                {t(
+                  "dashboard.primaryAction.clinic"
+                )}
+              </Link>
+            </Button>
+          ) : metrics.platformMetrics &&
+            canManageBilling ? (
+            <Button asChild variant="outline">
+              <Link href="/dashboard/billing/payments?status=OVERDUE">
+                {t(
+                  "dashboard.primaryAction.platform"
+                )}
+              </Link>
+            </Button>
+          ) : undefined
+        }
         meta={
-          metrics.scope === "clinic" ? (
-            <>
-              <span className="workspace-kicker">
-                Operação
-              </span>
-              <span className="workspace-kicker">
-                Cobrança
-              </span>
-              <span className="workspace-kicker">
-                Relacionamento
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="workspace-kicker">
-                SaaS
-              </span>
-              <span className="workspace-kicker">
-                Contas clientes
-              </span>
-              <span className="workspace-kicker">
-                Governança
-              </span>
-            </>
-          )
+          <span className="workspace-kicker">
+            {todayLabel}
+          </span>
         }
       />
 
       {metrics.scope === "clinic" ? (
         <>
+          <MetricGrid columns="six">
+            <MetricCard
+              label={t(
+                "dashboard.metrics.activePatients.label"
+              )}
+              value={metrics.activePatients.toString()}
+              hint={t(
+                "dashboard.metrics.activePatients.hint"
+              )}
+              icon={<Users className="size-5" />}
+              delta={
+                <MetricDelta
+                  direction="up"
+                  label="Base ativa"
+                />
+              }
+            />
+
+            <MetricCard
+              label={t(
+                "dashboard.metrics.activeSubscriptions.label"
+              )}
+              value={metrics.activeSubscriptionsCount.toString()}
+              hint={t(
+                "dashboard.metrics.activeSubscriptions.hint"
+              )}
+              icon={
+                <CreditCard className="size-5" />
+              }
+              tone="info"
+            />
+
+            <MetricCard
+              label={t(
+                "dashboard.metrics.overdueInvoices.label"
+              )}
+              value={metrics.overduePatientInvoices.toString()}
+              hint={t(
+                "dashboard.metrics.overdueInvoices.hint"
+              )}
+              icon={
+                <ReceiptText className="size-5" />
+              }
+              tone="warning"
+              delta={
+                <MetricDelta
+                  direction={
+                    metrics.overduePatientInvoices >
+                    0
+                      ? "down"
+                      : "neutral"
+                  }
+                  label={
+                    metrics.overduePatientInvoices >
+                    0
+                      ? "Pede ação"
+                      : "Sem alerta"
+                  }
+                />
+              }
+            />
+
+            <MetricCard
+              label={t(
+                "dashboard.metrics.monthlyPatientRevenue.label"
+              )}
+              value={formatCurrency(
+                metrics.monthlyPatientRevenue
+              )}
+              hint={t(
+                "dashboard.metrics.monthlyPatientRevenue.hint"
+              )}
+              icon={
+                <BadgeDollarSign className="size-5" />
+              }
+              tone="success"
+              trend={metrics.revenueTrend.map(
+                (month) => month.total
+              )}
+              delta={
+                <MetricDelta
+                  direction="up"
+                  label="Receita recorrente"
+                />
+              }
+            />
+
+            <MetricCard
+              label={t(
+                "dashboard.metrics.benefitsConsumed.label"
+              )}
+              value={metrics.benefitsConsumed.toString()}
+              hint={t(
+                "dashboard.metrics.benefitsConsumed.hint"
+              )}
+              icon={
+                <HeartPulse className="size-5" />
+              }
+              tone="info"
+            />
+
+            <MetricCard
+              label={t(
+                "dashboard.metrics.activePlans.label"
+              )}
+              value={metrics.activePlansCount.toString()}
+              hint={t(
+                "dashboard.metrics.activePlans.hint"
+              )}
+              icon={<CreditCard className="size-5" />}
+            />
+          </MetricGrid>
+
           <SectionCard
             title="O que merece atenção agora"
             description="Ações rápidas e leituras operacionais para reduzir esforço no dia a dia."
@@ -146,112 +306,6 @@ export async function DashboardHomePage() {
               ))}
             </div>
           </SectionCard>
-
-          <MetricGrid columns="six">
-            <MetricCard
-              label={t(
-                "dashboard.metrics.activePatients.label"
-              )}
-              value={metrics.activePatients.toString()}
-              hint={t(
-                "dashboard.metrics.activePatients.hint"
-              )}
-              icon={<Users className="size-5" />}
-              delta={
-                <MetricDelta
-                  direction="up"
-                  label="Base ativa"
-                />
-              }
-            />
-
-            <MetricCard
-              label={t(
-                "dashboard.metrics.activeSubscriptions.label"
-              )}
-              value={metrics.activeSubscriptionsCount.toString()}
-              hint={t(
-                "dashboard.metrics.activeSubscriptions.hint"
-              )}
-              icon={
-                <CreditCard className="size-5" />
-              }
-            />
-
-            <MetricCard
-              label={t(
-                "dashboard.metrics.overdueInvoices.label"
-              )}
-              value={metrics.overduePatientInvoices.toString()}
-              hint={t(
-                "dashboard.metrics.overdueInvoices.hint"
-              )}
-              icon={
-                <ReceiptText className="size-5" />
-              }
-              delta={
-                <MetricDelta
-                  direction={
-                    metrics.overduePatientInvoices >
-                    0
-                      ? "down"
-                      : "neutral"
-                  }
-                  label={
-                    metrics.overduePatientInvoices >
-                    0
-                      ? "Pede ação"
-                      : "Sem alerta"
-                  }
-                />
-              }
-            />
-
-            <MetricCard
-              label={t(
-                "dashboard.metrics.monthlyPatientRevenue.label"
-              )}
-              value={formatCurrency(
-                metrics.monthlyPatientRevenue
-              )}
-              hint={t(
-                "dashboard.metrics.monthlyPatientRevenue.hint"
-              )}
-              icon={
-                <BadgeDollarSign className="size-5" />
-              }
-              delta={
-                <MetricDelta
-                  direction="up"
-                  label="Receita recorrente"
-                />
-              }
-            />
-
-            <MetricCard
-              label={t(
-                "dashboard.metrics.benefitsConsumed.label"
-              )}
-              value={metrics.benefitsConsumed.toString()}
-              hint={t(
-                "dashboard.metrics.benefitsConsumed.hint"
-              )}
-              icon={
-                <HeartPulse className="size-5" />
-              }
-            />
-
-            <MetricCard
-              label={t(
-                "dashboard.metrics.activePlans.label"
-              )}
-              value={metrics.activePlansCount.toString()}
-              hint={t(
-                "dashboard.metrics.activePlans.hint"
-              )}
-              icon={<CreditCard className="size-5" />}
-            />
-          </MetricGrid>
 
           <SectionCard
             title={t("dashboard.snapshot.title")}
@@ -313,78 +367,191 @@ export async function DashboardHomePage() {
               </div>
             </div>
           </SectionCard>
+
+          <div className="page-section-grid xl:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
+            <SectionCard
+              title={t("dashboard.revenueTrend.title")}
+              description={t(
+                "dashboard.revenueTrend.description"
+              )}
+            >
+              {metrics.revenueTrend.some(
+                (month) => month.total > 0
+              ) ? (
+                <div className="flex items-end gap-3 p-5 pt-2">
+                  {(() => {
+                    const maxTotal = Math.max(
+                      ...metrics.revenueTrend.map(
+                        (month) => month.total
+                      ),
+                      1
+                    );
+
+                    return metrics.revenueTrend.map(
+                      (month) => (
+                        <div
+                          key={month.date.toISOString()}
+                          className="flex flex-1 flex-col items-center gap-2"
+                        >
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {formatCurrency(
+                              month.total
+                            )}
+                          </span>
+                          <div className="flex h-32 w-full items-end overflow-hidden rounded-lg bg-[color:var(--color-surface-subtle)]">
+                            <div
+                              className="w-full rounded-lg bg-primary transition-all"
+                              style={{
+                                height: `${Math.max((month.total / maxTotal) * 100, month.total > 0 ? 6 : 0)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs capitalize text-muted-foreground">
+                            {new Intl.DateTimeFormat(
+                              "pt-BR",
+                              { month: "short" }
+                            ).format(month.date)}
+                          </span>
+                        </div>
+                      )
+                    );
+                  })()}
+                </div>
+              ) : (
+                <p className="p-5 pt-2 text-sm text-muted-foreground">
+                  {t("dashboard.revenueTrend.empty")}
+                </p>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title={t(
+                "dashboard.subscriptionsByStatus.title"
+              )}
+              description={t(
+                "dashboard.subscriptionsByStatus.description"
+              )}
+            >
+              <div className="space-y-2 p-5 pt-2">
+                {metrics.subscriptionStatusBreakdown.map(
+                  (entry) => (
+                    <div
+                      key={entry.status}
+                      className="flex items-center justify-between rounded-lg bg-[color:var(--color-surface-subtle)] px-3 py-2"
+                    >
+                      <SubscriptionStatusBadge
+                        status={entry.status}
+                      />
+                      <span className="text-sm font-semibold text-foreground">
+                        {entry.count}
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
+            </SectionCard>
+          </div>
+
+          <div className="page-section-grid xl:grid-cols-2">
+            <SectionCard
+              title={t(
+                "dashboard.upcomingRenewals.title"
+              )}
+              description={t(
+                "dashboard.upcomingRenewals.description"
+              )}
+            >
+              {metrics.upcomingRenewals.length > 0 ? (
+                <div className="space-y-2 p-5 pt-2">
+                  {metrics.upcomingRenewals.map(
+                    (renewal) => (
+                      <div
+                        key={renewal.id}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-[color:var(--color-surface-subtle)] px-3 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {renewal.patientName}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {renewal.planName}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                          {formatDate(
+                            renewal.expiresAt
+                          )}
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : (
+                <p className="p-5 pt-2 text-sm text-muted-foreground">
+                  {t(
+                    "dashboard.upcomingRenewals.empty"
+                  )}
+                </p>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title={t(
+                "dashboard.recentActivity.title"
+              )}
+              description={t(
+                "dashboard.recentActivity.description"
+              )}
+            >
+              {!metrics.canViewRecentActivity ? (
+                <p className="p-5 pt-2 text-sm text-muted-foreground">
+                  {t(
+                    "dashboard.recentActivity.accessRestricted"
+                  )}
+                </p>
+              ) : metrics.recentActivity.length > 0 ? (
+                <div className="space-y-2 p-5 pt-2">
+                  {metrics.recentActivity.map(
+                    (activity) => (
+                      <div
+                        key={activity.id}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-[color:var(--color-surface-subtle)] px-3 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {activity.actionLabel}{" "}
+                            · {activity.entityLabel}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {activity.actor}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                          {formatDate(
+                            activity.createdAt
+                          )}
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : (
+                <p className="p-5 pt-2 text-sm text-muted-foreground">
+                  {t(
+                    "dashboard.recentActivity.empty"
+                  )}
+                </p>
+              )}
+            </SectionCard>
+          </div>
         </>
       ) : null}
 
       {metrics.platformMetrics ? (
         <>
           <SectionCard
-            title="O que precisa de atenção hoje"
-            description="A visão Plataforma deve responder primeiro onde agir, antes de virar relatório."
-          >
-            <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
-              {[
-                {
-                  title: "Empresas em teste",
-                  value:
-                    metrics.platformMetrics.trialClinics.toString(),
-                  description:
-                    "Acompanhe tenants que ainda precisam converter para receita recorrente.",
-                  icon: Building2,
-                  href: "/dashboard/billing/subscriptions?status=TRIAL",
-                },
-                {
-                  title: "Empresas em atraso",
-                  value:
-                    metrics.platformMetrics.pastDueClinics.toString(),
-                  description:
-                    "Priorize contas com risco operacional e financeiro.",
-                  icon: AlertTriangle,
-                  href: "/dashboard/billing/payments?status=OVERDUE",
-                },
-                {
-                  title: "Chamados aguardando plataforma",
-                  value:
-                    metrics.platformMetrics.openSupportThreads.toString(),
-                  description:
-                    "Centralize incidentes, solicitações e respostas pendentes.",
-                  icon: MessageSquareMore,
-                  href: "/dashboard/messages?status=WAITING_PLATFORM",
-                },
-                {
-                  title: "Convites pendentes",
-                  value:
-                    metrics.platformMetrics.pendingInvites.toString(),
-                  description:
-                    "Monitore acessos internos ainda não ativados.",
-                  icon: ShieldCheck,
-                  href: "/dashboard/users",
-                },
-                {
-                  title: "Eventos críticos recentes",
-                  value:
-                    metrics.platformMetrics.criticalAuditEvents.toString(),
-                  description:
-                    "Acompanhe exclusões e desativações registradas nos últimos sete dias.",
-                  icon: ClipboardList,
-                  href: "/dashboard/audit-logs",
-                },
-              ].map((item) => (
-                <ActionCard
-                  key={item.title}
-                  href={item.href}
-                  title={`${item.title}: ${item.value}`}
-                  description={item.description}
-                  icon={item.icon}
-                  emphasis="attention"
-                />
-              ))}
-            </div>
-          </SectionCard>
-
-          <SectionCard
             title="Panorama da plataforma"
-            description="Depois das prioridades, acompanhe os principais sinais de saúde comercial e cobertura da operação SaaS."
+            description="Sinais de saúde comercial e cobertura da operação SaaS."
           >
             <MetricGrid columns="four">
               <MetricCard
@@ -412,6 +579,7 @@ export async function DashboardHomePage() {
                 }
                 hint="Empresas avaliando o produto antes da cobrança recorrente."
                 icon={<CreditCard className="size-5" />}
+                tone="info"
               />
               <MetricCard
                 label={t(
@@ -422,6 +590,7 @@ export async function DashboardHomePage() {
                 }
                 hint="Contas com pendências financeiras que merecem acompanhamento."
                 icon={<ReceiptText className="size-5" />}
+                tone="warning"
                 delta={
                   <MetricDelta
                     direction={
@@ -448,6 +617,7 @@ export async function DashboardHomePage() {
                 )}
                 hint="Receita SaaS efetivamente recebida no mês corrente."
                 icon={<BadgeDollarSign className="size-5" />}
+                tone="success"
                 delta={
                   <MetricDelta
                     direction="up"
@@ -456,6 +626,66 @@ export async function DashboardHomePage() {
                 }
               />
             </MetricGrid>
+          </SectionCard>
+
+          <SectionCard
+            title="O que precisa de atenção hoje"
+            description="A visão Plataforma deve responder primeiro onde agir, antes de virar relatório."
+          >
+            <AttentionList
+              items={[
+                {
+                  title: "Empresas em teste",
+                  value:
+                    metrics.platformMetrics.trialClinics.toString(),
+                  description:
+                    "Acompanhe tenants que ainda precisam converter para receita recorrente.",
+                  icon: Building2,
+                  href: "/dashboard/billing/subscriptions?status=TRIAL",
+                  tone: "info",
+                },
+                {
+                  title: "Empresas em atraso",
+                  value:
+                    metrics.platformMetrics.pastDueClinics.toString(),
+                  description:
+                    "Priorize contas com risco operacional e financeiro.",
+                  icon: AlertTriangle,
+                  href: "/dashboard/billing/payments?status=OVERDUE",
+                  tone: "warning",
+                },
+                {
+                  title: "Chamados aguardando plataforma",
+                  value:
+                    metrics.platformMetrics.openSupportThreads.toString(),
+                  description:
+                    "Centralize incidentes, solicitações e respostas pendentes.",
+                  icon: MessageSquareMore,
+                  href: "/dashboard/messages?status=WAITING_PLATFORM",
+                  tone: "warning",
+                },
+                {
+                  title: "Convites pendentes",
+                  value:
+                    metrics.platformMetrics.pendingInvites.toString(),
+                  description:
+                    "Monitore acessos internos ainda não ativados.",
+                  icon: ShieldCheck,
+                  href: "/dashboard/users",
+                  tone: "info",
+                },
+                {
+                  title: "Eventos críticos recentes",
+                  value:
+                    metrics.platformMetrics.criticalAuditEvents.toString(),
+                  description:
+                    "Acompanhe exclusões e desativações registradas nos últimos sete dias.",
+                  icon: ClipboardList,
+                  href: "/dashboard/audit-logs",
+                  tone: "danger",
+                },
+              ]}
+            />
           </SectionCard>
 
           <div className="page-section-grid xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">

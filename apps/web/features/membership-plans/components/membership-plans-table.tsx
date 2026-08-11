@@ -9,8 +9,11 @@ import { useState } from "react";
 
 import Link from "next/link";
 
+import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -29,6 +32,7 @@ type Plan = {
   name: string;
   description: string | null;
   monthlyPrice: number | null;
+  annualPrice: number | null;
   active: boolean;
   benefits: Array<{
     id: string;
@@ -107,6 +111,10 @@ export function MembershipPlansTable({
     plans.filter((plan) => plan.active)
       .length;
 
+  const hasAnyFilterApplied =
+    statusFilter !== "active" ||
+    normalizedSearch.length > 0;
+
   function getActiveBenefitsCount(
     plan: Plan
   ) {
@@ -128,14 +136,13 @@ export function MembershipPlansTable({
             <label className="text-sm font-medium text-muted-foreground">
               {t("shared.filters.statusFilter")}
             </label>
-            <select
+            <Select
               value={statusFilter}
               onChange={(event) =>
                 setStatusFilter(
                   event.target.value
                 )
               }
-              className="h-10 rounded-xl border border-input bg-background px-3"
             >
               <option value="active">
                 {t("shared.states.active")}
@@ -146,14 +153,14 @@ export function MembershipPlansTable({
               <option value="all">
                 {t("shared.filters.all")}
               </option>
-            </select>
+            </Select>
           </div>
 
           <div className="grid gap-2 sm:min-w-80">
             <label className="text-sm font-medium text-muted-foreground">
               {t("shared.filters.searchPlanOrBenefit")}
             </label>
-            <input
+            <Input
               value={search}
               onChange={(event) =>
                 setSearch(
@@ -163,7 +170,6 @@ export function MembershipPlansTable({
               placeholder={t(
                 "shared.filters.searchPlanOrBenefit"
               )}
-              className="h-10 rounded-xl border border-input bg-background px-3"
             />
           </div>
         </div>
@@ -175,6 +181,7 @@ export function MembershipPlansTable({
             <TableHead>{t("shared.labels.plan")}</TableHead>
             <TableHead>{t("shared.labels.status")}</TableHead>
             <TableHead>{t("plans.dialog.monthlyPrice")}</TableHead>
+            <TableHead>{t("plans.table.annualPrice")}</TableHead>
             <TableHead>{t("plans.table.benefits")}</TableHead>
             <TableHead>
               {t("plans.table.activeSubscriptions")}
@@ -189,20 +196,32 @@ export function MembershipPlansTable({
           {visiblePlans.map((plan) => (
             <TableRow key={plan.id}>
               <TableCell className="align-top">
-                <div className="space-y-1">
-                  <div className="font-medium">
-                    {plan.name}
+                <div className="flex items-start gap-3">
+                  <CompanyAvatarMark
+                    name={plan.name}
+                    seed={plan.id}
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-1">
+                    <div className="font-medium">
+                      <Link
+                        href={`/dashboard/plans/${plan.id}`}
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        {plan.name}
+                      </Link>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {plan.description ||
+                        t("shared.states.noDescription")}
+                    </div>
+                    <Link
+                      href={`/dashboard/benefits?planId=${plan.id}`}
+                      className="text-xs text-primary underline-offset-4 hover:underline"
+                    >
+                      {t("plans.table.openBenefitsSupport")}
+                    </Link>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {plan.description ||
-                      t("shared.states.noDescription")}
-                  </div>
-                  <Link
-                    href={`/dashboard/benefits?planId=${plan.id}`}
-                    className="text-xs text-primary underline-offset-4 hover:underline"
-                  >
-                    {t("plans.table.openBenefitsSupport")}
-                  </Link>
                 </div>
               </TableCell>
 
@@ -218,6 +237,14 @@ export function MembershipPlansTable({
                 {formatCurrency(
                   plan.monthlyPrice
                 )}
+              </TableCell>
+
+              <TableCell className="align-top text-sm text-muted-foreground">
+                {plan.annualPrice
+                  ? formatCurrency(
+                      plan.annualPrice
+                    )
+                  : "—"}
               </TableCell>
 
               <TableCell className="align-top">
@@ -260,6 +287,8 @@ export function MembershipPlansTable({
                     monthlyPrice: Number(
                       plan.monthlyPrice
                     ),
+                    annualPrice:
+                      plan.annualPrice,
                     active: plan.active,
                   }}
                   benefitPlans={benefitPlans}
@@ -280,13 +309,19 @@ export function MembershipPlansTable({
           {visiblePlans.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="p-0"
               >
                 <EmptyState
-                  title={t("plans.table.emptyTitle")}
+                  title={t(
+                    hasAnyFilterApplied
+                      ? "plans.table.noResultsTitle"
+                      : "plans.table.emptyTitle"
+                  )}
                   description={t(
-                    "plans.table.emptyDescription"
+                    hasAnyFilterApplied
+                      ? "plans.table.noResultsDescription"
+                      : "plans.table.emptyDescription"
                   )}
                 />
               </TableCell>

@@ -1,7 +1,3 @@
-import {
-  ClinicSubscriptionStatus,
-  PaymentStatus,
-} from "@prisma/client";
 import Link from "next/link";
 import {
   Building2,
@@ -10,18 +6,43 @@ import {
   WalletCards,
 } from "lucide-react";
 
+import { ModuleStatus } from "@prisma/client";
+
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
-import { formatCurrency, formatEnumLabel } from "@/lib/formatters";
+import { StatusIndicator } from "@/components/ui/status-indicator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { getTranslations } from "@/i18n/messages";
+import { formatCurrency } from "@/lib/formatters";
 import {
   formatBrazilianCnpj,
   formatBrazilianPhone,
   formatBrazilianState,
   formatBrazilianZipCode,
 } from "@/lib/br-formats";
+import {
+  AUDIT_ACTION_LABELS,
+  AUDIT_ENTITY_LABELS,
+} from "@/features/audit-log/services/get-audit-logs";
+import {
+  getUserStatusLabel,
+  getUserStatusTone,
+} from "@/features/users/utils/user-display";
+import { isModuleV1Active } from "@/features/modules/services/module-policy";
 
+import {
+  getClinicSubscriptionStatusTone,
+  getPaymentStatusTone,
+} from "../utils/clinic-status";
 import { getPlatformClinicDetails } from "../services/get-platform-clinic-details";
 
 type Props = {
@@ -29,45 +50,34 @@ type Props = {
   activeTab?: string;
 };
 
-function getStatusBadgeClass(
-  status:
-    | ClinicSubscriptionStatus
-    | PaymentStatus
-) {
-  switch (status) {
-    case ClinicSubscriptionStatus.ACTIVE:
-    case PaymentStatus.PAID:
-      return "bg-emerald-100 text-emerald-700";
-    case ClinicSubscriptionStatus.TRIAL:
-    case ClinicSubscriptionStatus.PENDING:
-      return "bg-sky-100 text-sky-700";
-    case ClinicSubscriptionStatus.PAST_DUE:
-    case ClinicSubscriptionStatus.SUSPENDED:
-    case PaymentStatus.OVERDUE:
-      return "bg-amber-100 text-amber-800";
-    default:
-      return "bg-rose-100 text-rose-700";
-  }
-}
-
-function formatDate(
-  value: Date | null | undefined
-) {
-  if (!value) {
-    return "Nao informado";
-  }
-
-  return new Date(value).toLocaleDateString();
-}
-
 export async function PlatformClinicDetailsPage({
   clinicId,
   activeTab = "overview",
 }: Props) {
-  const { clinic, metrics, auditLogs } =
-    await getPlatformClinicDetails(
-      clinicId
+  const t = getTranslations();
+  const {
+    clinic,
+    metrics,
+    auditLogs,
+    clinicModules,
+  } = await getPlatformClinicDetails(
+    clinicId
+  );
+
+  function formatDate(
+    value: Date | null | undefined
+  ) {
+    if (!value) {
+      return t(
+        "clinics.details.notInformed"
+      );
+    }
+
+    return new Date(value).toLocaleDateString(
+      "pt-BR"
     );
+  }
+
   const tabs = [
     {
       id: "overview",
@@ -84,6 +94,10 @@ export async function PlatformClinicDetailsPage({
     {
       id: "users",
       label: "Usuários",
+    },
+    {
+      id: "modules",
+      label: "Módulos",
     },
     {
       id: "audit",
@@ -119,7 +133,7 @@ export async function PlatformClinicDetailsPage({
         }
       />
 
-      <div className="grid gap-3 rounded-2xl border bg-background/90 p-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-3 rounded-2xl border bg-background/90 p-3 md:grid-cols-3 xl:grid-cols-7">
         {tabs.map((tab) => (
           <Link
             key={tab.id}
@@ -141,7 +155,7 @@ export async function PlatformClinicDetailsPage({
           <MetricCard
             label="Plano atual"
             value={metrics.platformPlan}
-            hint={`Status atual: ${formatEnumLabel(metrics.platformStatus)}`}
+            hint={`Status atual: ${t(`billing.status.${metrics.platformStatus}`)}`}
             icon={<CreditCard className="size-5" />}
           />
           <MetricCard
@@ -161,7 +175,7 @@ export async function PlatformClinicDetailsPage({
           <MetricCard
             label="Equipe local"
             value={String(metrics.users)}
-            hint={`Pagamento mais recente: ${formatEnumLabel(metrics.latestPaymentStatus)}`}
+            hint={`Pagamento mais recente: ${t(`billing.status.${metrics.latestPaymentStatus}`)}`}
             icon={<ShieldCheck className="size-5" />}
           />
         </div>
@@ -245,49 +259,154 @@ export async function PlatformClinicDetailsPage({
           title="Master da empresa"
           description="Acompanhe o usuário principal e eventos de credencial."
         >
-          <div className="overflow-x-auto p-5">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="py-2">Nome</th>
-                  <th className="py-2">E-mail</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2">Último acesso</th>
-                  <th className="py-2">Troca obrigatória</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clinic.appUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="border-b last:border-b-0"
-                  >
-                    <td className="py-3">
-                      {user.name}
-                    </td>
-                    <td className="py-3">
-                      {user.email}
-                    </td>
-                    <td className="py-3">
-                      {formatEnumLabel(
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  {t(
+                    "shared.labels.fullName"
+                  )}
+                </TableHead>
+                <TableHead>
+                  {t("shared.labels.email")}
+                </TableHead>
+                <TableHead>
+                  {t(
+                    "shared.labels.status"
+                  )}
+                </TableHead>
+                <TableHead>
+                  {t(
+                    "shared.labels.lastLogin"
+                  )}
+                </TableHead>
+                <TableHead>
+                  {t(
+                    "clinics.details.mustChangePassword"
+                  )}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clinic.appUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    {user.name}
+                  </TableCell>
+                  <TableCell>
+                    {user.email}
+                  </TableCell>
+                  <TableCell>
+                    <StatusIndicator
+                      tone={getUserStatusTone(
                         user.status
                       )}
-                    </td>
-                    <td className="py-3">
-                      {formatDate(
-                        user.lastLoginAt
+                      label={getUserStatusLabel(
+                        user.status
                       )}
-                    </td>
-                    <td className="py-3">
-                      {user.mustChangePassword
-                        ? "Sim"
-                        : "Não"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {formatDate(
+                      user.lastLoginAt
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {user.mustChangePassword
+                      ? "Sim"
+                      : "Não"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </SectionCard>
+      )}
+
+      {(activeTab === "overview" ||
+        activeTab === "modules") && (
+        <SectionCard
+          title={t(
+            "clinics.details.modulesTitle"
+          )}
+          description={t(
+            "clinics.details.modulesDescription"
+          )}
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  {t(
+                    "clinics.details.moduleColumn"
+                  )}
+                </TableHead>
+                <TableHead>
+                  {t(
+                    "shared.labels.status"
+                  )}
+                </TableHead>
+                <TableHead>
+                  {t(
+                    "clinics.details.moduleV1Column"
+                  )}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clinicModules.map(
+                (clinicModule) => (
+                  <TableRow
+                    key={clinicModule.id}
+                  >
+                    <TableCell>
+                      <div className="font-medium">
+                        {
+                          clinicModule
+                            .module.name
+                        }
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {
+                          clinicModule
+                            .module
+                            .description
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusIndicator
+                        tone={
+                          clinicModule.status ===
+                          ModuleStatus.ENABLED
+                            ? "success"
+                            : "neutral"
+                        }
+                        label={t(
+                          clinicModule.status ===
+                          ModuleStatus.ENABLED
+                            ? "shared.states.active"
+                            : "shared.states.inactive"
+                        )}
+                      />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {isModuleV1Active(
+                        clinicModule.module
+                          .key
+                      )
+                        ? t(
+                            "clinics.details.moduleAvailable"
+                          )
+                        : t(
+                            "clinics.details.moduleFuture"
+                          )}
+                    </TableCell>
+                  </TableRow>
+                )
+              )}
+            </TableBody>
+          </Table>
         </SectionCard>
       )}
 
@@ -317,15 +436,14 @@ export async function PlatformClinicDetailsPage({
                     )}
                   </p>
                 </div>
-                <span
-                  className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusBadgeClass(
-                    metrics.platformStatus
-                  )}`}
-                >
-                  {formatEnumLabel(
+                <StatusIndicator
+                  tone={getClinicSubscriptionStatusTone(
                     metrics.platformStatus
                   )}
-                </span>
+                  label={t(
+                    `billing.status.${metrics.platformStatus}`
+                  )}
+                />
               </div>
             </div>
           </div>
@@ -365,75 +483,84 @@ export async function PlatformClinicDetailsPage({
                         )}
                       </p>
                     </div>
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusBadgeClass(
-                        subscription.status
-                      )}`}
-                    >
-                      {formatEnumLabel(
+                    <StatusIndicator
+                      tone={getClinicSubscriptionStatusTone(
                         subscription.status
                       )}
-                    </span>
+                      label={t(
+                        `billing.status.${subscription.status}`
+                      )}
+                    />
                   </div>
 
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-left">
-                          <th className="py-2">
-                            Descrição
-                          </th>
-                          <th className="py-2">
-                            Valor
-                          </th>
-                          <th className="py-2">
-                            Vencimento
-                          </th>
-                          <th className="py-2">
-                            Status
-                          </th>
-                          <th className="py-2">
-                            Histórico
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                  <div className="mt-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>
+                            {t(
+                              "shared.labels.description"
+                            )}
+                          </TableHead>
+                          <TableHead>
+                            {t(
+                              "shared.labels.amount"
+                            )}
+                          </TableHead>
+                          <TableHead>
+                            {t(
+                              "shared.labels.dueDate"
+                            )}
+                          </TableHead>
+                          <TableHead>
+                            {t(
+                              "shared.labels.status"
+                            )}
+                          </TableHead>
+                          <TableHead>
+                            {t(
+                              "shared.labels.paymentHistory"
+                            )}
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {subscription.invoices.map(
                           (invoice) => (
-                            <tr
+                            <TableRow
                               key={invoice.id}
-                              className="border-b last:border-b-0"
                             >
-                              <td className="py-3">
+                              <TableCell>
                                 {invoice.description ??
                                   invoice.id}
-                              </td>
-                              <td className="py-3">
+                              </TableCell>
+                              <TableCell>
                                 {formatCurrency(
                                   invoice.amount
                                 )}
-                              </td>
-                              <td className="py-3">
+                              </TableCell>
+                              <TableCell>
                                 {formatDate(
                                   invoice.dueDate
                                 )}
-                              </td>
-                              <td className="py-3">
-                                <span
-                                  className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusBadgeClass(
-                                    invoice.status
-                                  )}`}
-                                >
-                                  {formatEnumLabel(
+                              </TableCell>
+                              <TableCell>
+                                <StatusIndicator
+                                  tone={getPaymentStatusTone(
                                     invoice.status
                                   )}
-                                </span>
-                              </td>
-                              <td className="py-3">
+                                  label={t(
+                                    `billing.status.${invoice.status}`
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
                                 {invoice.payments
                                   .length === 0 ? (
                                   <span className="text-xs text-muted-foreground">
-                                    Sem pagamento registrado
+                                    {t(
+                                      "clinics.details.noPaymentRecorded"
+                                    )}
                                   </span>
                                 ) : (
                                   <div className="space-y-1 text-xs">
@@ -444,8 +571,8 @@ export async function PlatformClinicDetailsPage({
                                             payment.id
                                           }
                                         >
-                                          {formatEnumLabel(
-                                            payment.status
+                                          {t(
+                                            `billing.status.${payment.status}`
                                           )}
                                           {" · "}
                                           {formatDate(
@@ -456,12 +583,12 @@ export async function PlatformClinicDetailsPage({
                                     )}
                                   </div>
                                 )}
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           )
                         )}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               )
@@ -479,7 +606,9 @@ export async function PlatformClinicDetailsPage({
           <div className="divide-y divide-border/60">
             {auditLogs.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground">
-                Nenhum evento operacional encontrado.
+                {t(
+                  "clinics.details.auditEmpty"
+                )}
               </div>
             ) : (
               auditLogs.map((entry) => (
@@ -489,18 +618,20 @@ export async function PlatformClinicDetailsPage({
                 >
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <p className="font-medium">
-                      {formatEnumLabel(
+                      {AUDIT_ACTION_LABELS[
                         entry.action
-                      )}{" "}
+                      ] ?? entry.action}{" "}
                       ·{" "}
-                      {formatEnumLabel(
+                      {AUDIT_ENTITY_LABELS[
                         entry.entity
-                      )}
+                      ] ?? entry.entity}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(
                         entry.createdAt
-                      ).toLocaleString()}
+                      ).toLocaleString(
+                        "pt-BR"
+                      )}
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">

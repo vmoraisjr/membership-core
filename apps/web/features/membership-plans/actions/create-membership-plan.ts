@@ -53,6 +53,10 @@ export async function createMembershipPlan(
             monthlyPrice:
               parsed.data.monthlyPrice,
 
+            annualPrice:
+              parsed.data.annualPrice ??
+              null,
+
             active: true,
           },
           select: {

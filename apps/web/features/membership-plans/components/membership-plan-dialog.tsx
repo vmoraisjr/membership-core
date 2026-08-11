@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -33,8 +33,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/i18n/provider";
+import { formatCurrency } from "@/lib/formatters";
 
 import { Textarea } from "@/components/ui/textarea";
 
@@ -54,6 +56,13 @@ type Props = {
     description: string | null;
 
     monthlyPrice: Prisma.Decimal | number;
+
+    annualPrice?:
+      | Prisma.Decimal
+      | number
+      | null;
+
+    active?: boolean;
   };
 
   trigger?: React.ReactNode;
@@ -84,8 +93,19 @@ export function MembershipPlanDialog({
         description: "",
 
         monthlyPrice: 0,
+
+        annualPrice: undefined,
       },
     });
+
+  const watchedName = useWatch({
+    control: form.control,
+    name: "name",
+  });
+  const watchedMonthlyPrice = useWatch({
+    control: form.control,
+    name: "monthlyPrice",
+  });
 
   const getDefaultValues =
     useCallback(() => {
@@ -93,6 +113,7 @@ export function MembershipPlanDialog({
         name: "",
         description: "",
         monthlyPrice: 0,
+        annualPrice: undefined,
       };
     }, []);
 
@@ -109,6 +130,12 @@ export function MembershipPlanDialog({
           monthlyPrice: Number(
             initialData.monthlyPrice
           ),
+          annualPrice:
+            initialData.annualPrice != null
+              ? Number(
+                  initialData.annualPrice
+                )
+              : undefined,
         };
       }
 
@@ -198,51 +225,138 @@ export function MembershipPlanDialog({
         </DialogHeader>
 
         <form className="flex flex-col gap-4">
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              {t("plans.dialog.name")}
-            </label>
-            <Input
-              placeholder={t("plans.dialog.name")}
-              disabled={!editingEnabled}
-              {...form.register("name")}
-            />
-          </div>
+          <FormSection
+            title="Informações"
+            description="Nome e descrição usados na vitrine comercial do plano."
+          >
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t("plans.dialog.name")}
+                </label>
+                <Input
+                  placeholder={t("plans.dialog.name")}
+                  disabled={!editingEnabled}
+                  {...form.register("name")}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              {t("shared.labels.description")}
-            </label>
-            <Textarea
-              placeholder={t(
-                "shared.labels.description"
-              )}
-              disabled={!editingEnabled}
-              {...form.register(
-                "description"
-              )}
-            />
-          </div>
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t("shared.labels.description")}
+                </label>
+                <Textarea
+                  placeholder={t(
+                    "shared.labels.description"
+                  )}
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "description"
+                  )}
+                />
+              </div>
+            </div>
+          </FormSection>
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              {t("plans.dialog.monthlyPrice")}
-            </label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder={t(
-                "plans.dialog.monthlyPrice"
-              )}
-              disabled={!editingEnabled}
-              {...form.register(
-                "monthlyPrice",
-                {
-                  valueAsNumber: true,
-                }
-              )}
-            />
-          </div>
+          <FormSection
+            title="Preço"
+            description="Defina a periodicidade mensal e, opcionalmente, o preço anual."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t("plans.dialog.monthlyPrice")}
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={t(
+                    "plans.dialog.monthlyPrice"
+                  )}
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "monthlyPrice",
+                    {
+                      valueAsNumber: true,
+                    }
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t("plans.dialog.annualPrice")}
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={t(
+                    "plans.dialog.annualPrice"
+                  )}
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "annualPrice"
+                  )}
+                />
+                <p className="field-help">
+                  {t(
+                    "plans.dialog.annualPriceHint"
+                  )}
+                </p>
+              </div>
+            </div>
+          </FormSection>
+
+          <FormSection
+            title={t(
+              "plans.dialog.summaryTitle"
+            )}
+          >
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
+              <div className="detail-field">
+                <p className="detail-field-label">
+                  {t("plans.dialog.name")}
+                </p>
+                <p className="detail-field-value">
+                  {watchedName || "—"}
+                </p>
+              </div>
+              <div className="detail-field">
+                <p className="detail-field-label">
+                  {t(
+                    "plans.dialog.monthlyPrice"
+                  )}
+                </p>
+                <p className="detail-field-value">
+                  {formatCurrency(
+                    Number(
+                      watchedMonthlyPrice
+                    ) || 0
+                  )}
+                </p>
+              </div>
+              {mode === "edit" &&
+              initialData ? (
+                <div className="detail-field">
+                  <p className="detail-field-label">
+                    {t(
+                      "plans.dialog.summaryStatus"
+                    )}
+                  </p>
+                  <p className="detail-field-value">
+                    {initialData.active ===
+                    false
+                      ? t(
+                          "shared.states.inactive"
+                        )
+                      : t(
+                          "shared.states.active"
+                        )}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </FormSection>
 
           {mode === "edit" ? (
             <div className="flex flex-col gap-3 sm:flex-row">

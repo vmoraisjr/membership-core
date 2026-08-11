@@ -1,12 +1,15 @@
 import Link from "next/link";
 
 import type {
+  AuditAction,
   AuditEntity,
   Prisma,
 } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import {
@@ -23,6 +26,7 @@ import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_LABELS,
 } from "../services/get-audit-logs";
+import { humanizeAuditMetadata } from "../utils/humanize-metadata";
 import { getTranslations } from "@/i18n/messages";
 import { AuditLogDetailsSidePanel } from "./audit-log-details-side-panel";
 
@@ -47,6 +51,7 @@ type Props = {
   filters: AuditLogFilters;
   actorOptions: string[];
   entityOptions: AuditEntity[];
+  actionOptions: AuditAction[];
   clinicOptions: Array<{
     id: string;
     name: string;
@@ -54,39 +59,10 @@ type Props = {
   isPlatformView: boolean;
 };
 
-function formatMetadata(
-  metadata: Prisma.JsonValue | null
-) {
-  if (!metadata || typeof metadata !== "object") {
-    return null;
-  }
-
-  if (Array.isArray(metadata)) {
-    return metadata.join(", ");
-  }
-
-  const entries = Object.entries(metadata);
-
-  if (entries.length === 0) {
-    return null;
-  }
-
-  return entries
-    .slice(0, 3)
-    .map(([key, value]) => {
-      const label = key
-        .replace(/([A-Z])/g, " $1")
-        .replace(/^./, (char) =>
-          char.toUpperCase()
-        );
-
-      return `${label}: ${String(value)}`;
-    })
-    .join(" | ");
-}
-
 function formatDate(value: Date | string) {
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString(
+    "pt-BR"
+  );
 }
 
 function buildExportHref(
@@ -106,6 +82,13 @@ function buildExportHref(
     searchParams.set(
       "entity",
       filters.entity
+    );
+  }
+
+  if (filters.action) {
+    searchParams.set(
+      "action",
+      filters.action
     );
   }
 
@@ -130,11 +113,62 @@ function buildExportHref(
     : "/dashboard/audit-logs/export";
 }
 
+function SummaryPreview({
+  metadata,
+}: {
+  metadata: Prisma.JsonValue | null;
+}) {
+  const t = getTranslations();
+  const { changes, fields } =
+    humanizeAuditMetadata(metadata);
+
+  if (
+    changes.length === 0 &&
+    fields.length === 0
+  ) {
+    return (
+      <p>
+        {t(
+          "shared.states.noExtraDetails"
+        )}
+      </p>
+    );
+  }
+
+  const changePreview = changes
+    .slice(0, 2)
+    .map(
+      (change) =>
+        `${change.label}: ${change.before} → ${change.after}`
+    );
+  const fieldPreview = fields
+    .slice(
+      0,
+      Math.max(
+        0,
+        2 - changePreview.length
+      )
+    )
+    .map(
+      (field) =>
+        `${field.label}: ${field.value}`
+    );
+
+  return (
+    <p>
+      {[...changePreview, ...fieldPreview].join(
+        " · "
+      )}
+    </p>
+  );
+}
+
 export function AuditLogTable({
   logs,
   filters,
   actorOptions,
   entityOptions,
+  actionOptions,
   clinicOptions,
   isPlatformView,
 }: Props) {
@@ -146,7 +180,7 @@ export function AuditLogTable({
     >
       <form
         method="get"
-        className={`grid gap-4 border-b p-6 ${isPlatformView ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}
+        className={`grid gap-4 border-b p-6 ${isPlatformView ? "lg:grid-cols-6" : "lg:grid-cols-5"}`}
       >
         <div className="grid gap-2">
           <label
@@ -155,13 +189,12 @@ export function AuditLogTable({
           >
             {t("shared.labels.user")}
           </label>
-          <select
+          <Select
             id="actor"
             name="actor"
             defaultValue={
               filters.actor ?? ""
             }
-            className="h-10 rounded-md border bg-background px-3"
           >
             <option value="">
               {t("shared.filters.allUsers")}
@@ -174,7 +207,7 @@ export function AuditLogTable({
                 {actor}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="grid gap-2">
@@ -184,13 +217,12 @@ export function AuditLogTable({
           >
             {t("shared.labels.entity")}
           </label>
-          <select
+          <Select
             id="entity"
             name="entity"
             defaultValue={
               filters.entity ?? ""
             }
-            className="h-10 rounded-md border bg-background px-3"
           >
             <option value="">
               {t("shared.filters.allEntities")}
@@ -207,7 +239,39 @@ export function AuditLogTable({
                 }
               </option>
             ))}
-          </select>
+          </Select>
+        </div>
+
+        <div className="grid gap-2">
+          <label
+            htmlFor="action"
+            className="text-sm text-muted-foreground"
+          >
+            {t("audit.filters.action")}
+          </label>
+          <Select
+            id="action"
+            name="action"
+            defaultValue={
+              filters.action ?? ""
+            }
+          >
+            <option value="">
+              {t(
+                "audit.filters.allActions"
+              )}
+            </option>
+            {actionOptions.map((action) => (
+              <option
+                key={action}
+                value={action}
+              >
+                {AUDIT_ACTION_LABELS[
+                  action
+                ] ?? action}
+              </option>
+            ))}
+          </Select>
         </div>
 
         <div className="grid gap-2">
@@ -233,18 +297,19 @@ export function AuditLogTable({
               htmlFor="clinicId"
               className="text-sm text-muted-foreground"
             >
-              Clínica
+              {t("audit.filters.clinic")}
             </label>
-            <select
+            <Select
               id="clinicId"
               name="clinicId"
               defaultValue={
                 filters.clinicId ?? ""
               }
-              className="h-10 rounded-md border bg-background px-3"
             >
               <option value="">
-                Todas as clínicas
+                {t(
+                  "audit.filters.allClinics"
+                )}
               </option>
               {clinicOptions.map((clinic) => (
                 <option
@@ -254,7 +319,7 @@ export function AuditLogTable({
                   {clinic.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         ) : null}
 
@@ -267,7 +332,7 @@ export function AuditLogTable({
             asChild
           >
             <Link href={buildExportHref(filters)}>
-              Extrair CSV
+              {t("audit.export")}
             </Link>
           </Button>
           <Button
@@ -286,7 +351,7 @@ export function AuditLogTable({
           <TableRow>
             <TableHead>{t("shared.labels.when")}</TableHead>
             {isPlatformView ? (
-              <TableHead>Clínica</TableHead>
+              <TableHead>{t("audit.columns.clinic")}</TableHead>
             ) : null}
             <TableHead>{t("shared.labels.user")}</TableHead>
             <TableHead>{t("shared.labels.actions")}</TableHead>
@@ -297,10 +362,10 @@ export function AuditLogTable({
 
         <TableBody>
           {logs.map((log) => {
-            const details =
-              formatMetadata(
-                log.metadata
-              );
+            const clinicLabel = log.clinic
+              ? log.clinic.brandName ??
+                log.clinic.name
+              : t("audit.details.platform");
 
             return (
               <TableRow key={log.id}>
@@ -311,14 +376,16 @@ export function AuditLogTable({
                 </TableCell>
                 {isPlatformView ? (
                   <TableCell className="align-top">
-                    {log.clinic
-                      ? log.clinic.brandName ??
-                        log.clinic.name
-                      : "Plataforma"}
+                    {clinicLabel}
                   </TableCell>
                 ) : null}
                 <TableCell className="align-top">
-                  {log.actor}
+                  <div className="flex items-center gap-2.5">
+                    <CompanyAvatarMark
+                      name={log.actor}
+                    />
+                    {log.actor}
+                  </div>
                 </TableCell>
                 <TableCell className="align-top">
                   {
@@ -344,10 +411,11 @@ export function AuditLogTable({
                 </TableCell>
                 <TableCell className="align-top text-sm text-muted-foreground">
                   <div className="space-y-3">
-                    <p>
-                      {details ??
-                        t("shared.states.noExtraDetails")}
-                    </p>
+                    <SummaryPreview
+                      metadata={
+                        log.metadata
+                      }
+                    />
                     <AuditLogDetailsSidePanel
                       actionLabel={
                         AUDIT_ACTION_LABELS[
@@ -358,6 +426,11 @@ export function AuditLogTable({
                       createdAt={formatDate(
                         log.createdAt
                       )}
+                      clinicLabel={
+                        isPlatformView
+                          ? clinicLabel
+                          : null
+                      }
                       entityId={log.entityId}
                       entityLabel={
                         log.entityLabel ??

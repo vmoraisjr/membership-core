@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 type Props = {
   initialData?: {
@@ -117,7 +118,7 @@ export function PlatformPlanForm({
         <span className="field-label">
           Disponibilidade
         </span>
-        <select
+        <Select
           name="active"
           defaultValue={
             initialData
@@ -126,7 +127,6 @@ export function PlatformPlanForm({
                 : "false"
               : "true"
           }
-          className="field-select"
         >
           <option value="true">
             Ativo para novas vendas
@@ -134,7 +134,7 @@ export function PlatformPlanForm({
           <option value="false">
             Inativo no catálogo
           </option>
-        </select>
+        </Select>
         <span className="field-help">
           Controla se o plano pode ser aplicado em novas contas.
         </span>

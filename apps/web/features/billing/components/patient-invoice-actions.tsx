@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { getTranslations } from "@/i18n/messages";
 
 import { cancelPatientInvoiceAction } from "../actions/cancel-patient-invoice";
@@ -100,14 +101,14 @@ export function PatientInvoiceActions({
 
   return (
     <div className="grid justify-items-end gap-2">
-      <select
+      <Select
         value={paymentMethod}
         onChange={(event) =>
           setPaymentMethod(
             event.target.value as PaymentMethod
           )
         }
-        className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+        className="h-8 px-2.5"
         disabled={isPending}
       >
         {Object.values(
@@ -122,7 +123,7 @@ export function PatientInvoiceActions({
             )}
           </option>
         ))}
-      </select>
+      </Select>
 
       <div className="flex flex-wrap justify-end gap-2">
         <ConfirmDialog

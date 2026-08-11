@@ -191,8 +191,12 @@ export function SubscriptionRowActions({
           plans={plans}
           trigger={
             <Button
-              size="icon"
-              variant="outline"
+              size="icon-sm"
+              variant="ghost"
+              title={t("shared.actions.edit")}
+              aria-label={t(
+                "shared.actions.edit"
+              )}
             >
               <Pencil className="size-4" />
             </Button>
@@ -218,8 +222,14 @@ export function SubscriptionRowActions({
             )}
             trigger={
               <Button
-                size="icon"
-                variant="outline"
+                size="icon-sm"
+                variant="ghost"
+                title={t(
+                  "subscriptions.rowActions.pauseAction"
+                )}
+                aria-label={t(
+                  "subscriptions.rowActions.pauseAction"
+                )}
               >
                 <Pause className="size-4" />
               </Button>
@@ -240,8 +250,14 @@ export function SubscriptionRowActions({
             )}
             trigger={
               <Button
-                size="icon"
-                variant="outline"
+                size="icon-sm"
+                variant="ghost"
+                title={t(
+                  "subscriptions.rowActions.expireAction"
+                )}
+                aria-label={t(
+                  "subscriptions.rowActions.expireAction"
+                )}
               >
                 <Clock3 className="size-4" />
               </Button>
@@ -267,8 +283,14 @@ export function SubscriptionRowActions({
           )}
           trigger={
             <Button
-              size="icon"
-              variant="outline"
+              size="icon-sm"
+              variant="ghost"
+              title={t(
+                "subscriptions.rowActions.resumeAction"
+              )}
+              aria-label={t(
+                "subscriptions.rowActions.resumeAction"
+              )}
             >
               <Play className="size-4" />
             </Button>
@@ -295,8 +317,14 @@ export function SubscriptionRowActions({
           )}
           trigger={
             <Button
-              size="icon"
-              variant="outline"
+              size="icon-sm"
+              variant="ghost"
+              title={t(
+                "subscriptions.rowActions.renewAction"
+              )}
+              aria-label={t(
+                "subscriptions.rowActions.renewAction"
+              )}
             >
               <RefreshCw className="size-4" />
             </Button>
@@ -321,8 +349,15 @@ export function SubscriptionRowActions({
           )}
           trigger={
             <Button
-              size="icon"
-              variant="destructive"
+              size="icon-sm"
+              variant="ghost"
+              className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
+              title={t(
+                "subscriptions.rowActions.cancelAction"
+              )}
+              aria-label={t(
+                "subscriptions.rowActions.cancelAction"
+              )}
             >
               <XCircle className="size-4" />
             </Button>

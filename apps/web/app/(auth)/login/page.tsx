@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
+import { SheepLockup } from "@/components/branding/sheep-mark";
 import {
   ensureDefaultAppUsers,
   getCurrentAppUser,
@@ -11,9 +11,6 @@ import {
 import { getRoleLabel } from "@/features/auth/constants/roles";
 import { LoginForm } from "@/features/auth/components/login-form";
 import { getTranslations } from "@/i18n/messages";
-import {
-  SHEEP_LOCKUP_PATH,
-} from "@/lib/branding";
 
 type Props = {
   searchParams?: Promise<{
@@ -26,18 +23,40 @@ type Props = {
 function getMessage(
   t: ReturnType<typeof getTranslations>,
   error?: string,
-  status?: string
+  status?: string,
+  next?: string
 ) {
   if (error === "invalid_credentials") {
-    return t("auth.login.invalidCredentials");
+    return {
+      text: t("auth.login.invalidCredentials"),
+      tone: "danger" as const,
+    };
   }
 
   if (status === "password_reset") {
-    return t("auth.login.passwordUpdated");
+    return {
+      text: t("auth.login.passwordUpdated"),
+      tone: "success" as const,
+    };
+  }
+
+  if (next) {
+    return {
+      text: t("auth.login.sessionExpired"),
+      tone: "neutral" as const,
+    };
   }
 
   return null;
 }
+
+const MESSAGE_TONE_CLASS = {
+  neutral: "border-border/60 bg-muted/40 text-foreground",
+  success:
+    "border-transparent bg-[color:var(--color-success-soft)] text-[color:var(--color-success)]",
+  danger:
+    "border-transparent bg-[color:var(--color-danger-soft)] text-[color:var(--color-danger)]",
+};
 
 export default async function LoginPage({
   searchParams,
@@ -62,17 +81,18 @@ export default async function LoginPage({
     getDefaultAuthPassword();
   const bootstrapEnabled =
     isDefaultAuthBootstrapEnabled();
-  const message = getMessage(
-    t,
-    params.error,
-    params.status
-  );
   const next =
     params.next?.startsWith(
       "/dashboard"
     )
       ? params.next
       : "/dashboard";
+  const message = getMessage(
+    t,
+    params.error,
+    params.status,
+    params.next
+  );
   const showSeededAccess =
     process.env.NODE_ENV !==
       "production" &&
@@ -92,31 +112,23 @@ export default async function LoginPage({
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_top,rgba(47,111,237,0.12),transparent_68%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-primary)_16%,transparent),transparent_68%)]" />
 
-      <section className="relative grid w-full max-w-[64rem] overflow-hidden rounded-[2rem] border border-white/70 bg-[rgba(255,255,255,0.9)] shadow-[var(--shadow-lg)] backdrop-blur-xl lg:grid-cols-[1.08fr_0.92fr]">
+      <section className="relative grid w-full max-w-[64rem] overflow-hidden rounded-[1.25rem] border border-white/70 bg-[rgba(255,255,255,0.9)] shadow-[var(--shadow-lg)] backdrop-blur-xl lg:grid-cols-[1.08fr_0.92fr]">
         <div className="border-b border-border/60 bg-white px-6 py-8 sm:px-8 sm:py-10 lg:flex lg:min-h-[72vh] lg:flex-col lg:justify-center lg:border-r lg:border-b-0 lg:px-10 lg:py-12">
           <div className="flex min-h-[20vh] items-center justify-center">
-            <Image
-              src={SHEEP_LOCKUP_PATH}
-              alt="Sheep"
-              width={320}
-              height={86}
-              priority
-              className="h-auto  w-auto max-w-[18rem] object-contain sm:max-w-[20rem] lg:max-w-[22rem]"
+            <SheepLockup
+              iconClassName="h-16 w-16 sm:h-20 sm:w-20"
+              wordmarkClassName="text-3xl sm:text-4xl"
             />
           </div>
 
-          {/* <p className="mt-5 text-center text-sm leading-6 text-muted-foreground lg:mt-6">
-            {t("auth.login.brandSubtitle")}
-          </p> */}
-          
           <div className="mt-8 max-w-xl space-y-4 lg:mx-auto">
             <h1 className="text-balance text-center text-[1.2rem] leading-tight font-semibold tracking-[-0.03em] text-foreground sm:text-[1.95rem] lg:text-[2.15rem]">
               {t("auth.login.headline")}
             </h1>
             <p className="max-w-lg text-pretty text-center text-sm leading-7 text-muted-foreground sm:text-[0.97rem]">
-              {t("auth.login.subtitle")}h
+              {t("auth.login.subtitle")}
             </p>
           </div>
 
@@ -145,8 +157,11 @@ export default async function LoginPage({
             </div>
 
             {message ? (
-              <p className="mt-5 rounded-2xl border border-border/60 bg-muted/40 px-4 py-3 text-sm">
-                {message}
+              <p
+                role={message.tone === "danger" ? "alert" : "status"}
+                className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${MESSAGE_TONE_CLASS[message.tone]}`}
+              >
+                {message.text}
               </p>
             ) : null}
 

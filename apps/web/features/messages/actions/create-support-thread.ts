@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { safeRevalidatePath } from "@/lib/revalidation";
 import { getCurrentWorkspace } from "@/features/auth/services/get-current-workspace";
+import { assertPermission } from "@/features/rbac/services/assert-permission";
 import {
   createAuditLogSafely,
   getCurrentAuditActor,
@@ -29,6 +30,11 @@ function isCategory(
 export async function createSupportThreadAction(
   formData: FormData
 ) {
+  await assertPermission(
+    "messages",
+    "manage"
+  );
+
   const workspace =
     await getCurrentWorkspace();
   const actor =

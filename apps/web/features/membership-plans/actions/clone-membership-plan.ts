@@ -52,7 +52,7 @@ export async function cloneMembershipPlan(
         await tx.membershipPlan.create({
           data: {
             clinicId: clinic.id,
-            name: `${plan.name} Copy`,
+            name: `${plan.name} (cópia)`,
             description:
               plan.description,
             monthlyPrice:

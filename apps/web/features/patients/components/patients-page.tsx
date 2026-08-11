@@ -89,6 +89,13 @@ export async function PatientsPage() {
       <PageHeader
         title={t("patients.title")}
         description={t("patients.description")}
+        meta={
+          <span className="workspace-kicker">
+            {t("patients.table.totalLabel", {
+              count: patients.length,
+            })}
+          </span>
+        }
         action={
           canManagePatients ? (
             <PatientDialog

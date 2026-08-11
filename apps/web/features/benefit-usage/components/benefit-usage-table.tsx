@@ -7,8 +7,14 @@ import { toast } from "sonner";
 
 import { cancelBenefitUsageAction } from "../actions/cancel-benefit-usage";
 
+import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { StatusIndicator } from "@/components/ui/status-indicator";
 import {
   Table,
   TableBody,
@@ -17,6 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "@/i18n/provider";
+import { formatDate } from "@/lib/formatters";
 
 type BenefitUsageHistoryItem = {
   id: string;
@@ -49,12 +57,43 @@ type Props = {
   canCancelBenefitUsage?: boolean;
 };
 
+const PERIOD_OPTIONS = [
+  { value: "all", labelKey: "shared.filters.allPeriods" },
+  { value: "30", labelKey: "shared.filters.last30Days" },
+  { value: "90", labelKey: "shared.filters.last90Days" },
+] as const;
+
+type PeriodFilter =
+  (typeof PERIOD_OPTIONS)[number]["value"];
+
+function isWithinPeriod(
+  usedAt: Date,
+  period: PeriodFilter
+) {
+  if (period === "all") {
+    return true;
+  }
+
+  const days = period === "30" ? 30 : 90;
+  const cutoff = new Date(
+    Date.now() -
+      days * 24 * 60 * 60 * 1000
+  );
+
+  return new Date(usedAt) >= cutoff;
+}
+
 export function BenefitUsageTable({
   usages,
   canCancelBenefitUsage = false,
 }: Props) {
+  const t = useTranslations();
   const [search, setSearch] =
     useState("");
+  const [statusFilter, setStatusFilter] =
+    useState("all");
+  const [periodFilter, setPeriodFilter] =
+    useState<PeriodFilter>("all");
   const [isPending, startTransition] =
     useTransition();
 
@@ -63,6 +102,31 @@ export function BenefitUsageTable({
 
   const visibleUsages = usages.filter(
     (usage) => {
+      if (
+        statusFilter === "active" &&
+        usage.status !==
+          BenefitUsageStatus.ACTIVE
+      ) {
+        return false;
+      }
+
+      if (
+        statusFilter === "canceled" &&
+        usage.status !==
+          BenefitUsageStatus.CANCELED
+      ) {
+        return false;
+      }
+
+      if (
+        !isWithinPeriod(
+          usage.usedAt,
+          periodFilter
+        )
+      ) {
+        return false;
+      }
+
       if (
         normalizedSearch.length === 0
       ) {
@@ -84,25 +148,36 @@ export function BenefitUsageTable({
     }
   );
 
-  async function handleCancelUsage(
-    usageId: string
+  const hasAnyFilterApplied =
+    statusFilter !== "all" ||
+    periodFilter !== "all" ||
+    normalizedSearch.length > 0;
+
+  function handleCancelUsage(
+    usageId: string,
+    reason: string
   ) {
     startTransition(async () => {
       try {
         const formData =
           new FormData();
         formData.set("usageId", usageId);
+        formData.set("reason", reason);
         await cancelBenefitUsageAction(
           formData
         );
         toast.success(
-          "Benefit usage canceled."
+          t(
+            "benefitUsage.table.cancelSuccess"
+          )
         );
       } catch (error) {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Failed to cancel benefit usage."
+            : t(
+                "benefitUsage.table.cancelError"
+              )
         );
       }
     });
@@ -110,47 +185,116 @@ export function BenefitUsageTable({
 
   return (
     <DataTableContainer
-      title="Benefit Usage History"
-      description="Track every consumption event by patient and benefit."
-    >
-      <div className="border-b p-6">
-        <div className="grid gap-2 sm:max-w-80">
-          <label className="text-sm text-muted-foreground">
-            Search history
-          </label>
-          <input
-            value={search}
-            onChange={(event) =>
-              setSearch(
-                event.target.value
-              )
-            }
-            placeholder="Search patient, benefit, or staff"
-            className="h-10 rounded-md border px-3"
-          />
-        </div>
-      </div>
+      title={t("benefitUsage.table.title")}
+      description={t(
+        "benefitUsage.table.description"
+      )}
+      toolbar={
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {t(
+                "shared.filters.statusFilter"
+              )}
+            </label>
+            <Select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value
+                )
+              }
+            >
+              <option value="all">
+                {t("shared.filters.all")}
+              </option>
+              <option value="active">
+                {t("shared.states.active")}
+              </option>
+              <option value="canceled">
+                {t(
+                  "shared.states.canceled"
+                )}
+              </option>
+            </Select>
+          </div>
 
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {t(
+                "shared.filters.periodFilter"
+              )}
+            </label>
+            <Select
+              value={periodFilter}
+              onChange={(event) =>
+                setPeriodFilter(
+                  event.target
+                    .value as PeriodFilter
+                )
+              }
+            >
+              {PERIOD_OPTIONS.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {t(option.labelKey)}
+                  </option>
+                )
+              )}
+            </Select>
+          </div>
+
+          <div className="grid gap-2 sm:col-span-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {t(
+                "benefitUsage.table.searchLabel"
+              )}
+            </label>
+            <Input
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value
+                )
+              }
+              placeholder={t(
+                "benefitUsage.table.searchLabel"
+              )}
+            />
+          </div>
+        </div>
+      }
+    >
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>
-              Patient
+              {t("patients.table.patient")}
             </TableHead>
             <TableHead>
-              Benefit
+              {t("shared.labels.benefit")}
             </TableHead>
             <TableHead>
-              Date
+              {t(
+                "benefitUsage.table.operator"
+              )}
             </TableHead>
             <TableHead>
-              Quantity
+              {t("shared.labels.date")}
             </TableHead>
             <TableHead>
-              Status
+              {t(
+                "shared.labels.quantity"
+              )}
             </TableHead>
             <TableHead>
-              Actions
+              {t("shared.labels.status")}
+            </TableHead>
+            <TableHead>
+              {t("shared.labels.actions")}
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -158,56 +302,120 @@ export function BenefitUsageTable({
         <TableBody>
           {visibleUsages.map((usage) => (
             <TableRow key={usage.id}>
-              <TableCell>
-                {
-                  usage.subscription
-                    .patient.fullName
-                }
+              <TableCell className="align-top">
+                <div className="flex items-center gap-2.5">
+                  <CompanyAvatarMark
+                    name={
+                      usage.subscription
+                        .patient.fullName
+                    }
+                    seed={
+                      usage.subscription
+                        .patientId
+                    }
+                  />
+                  {
+                    usage.subscription
+                      .patient.fullName
+                  }
+                </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="align-top">
                 {
                   usage.membershipBenefit
                     .title
                 }
               </TableCell>
-              <TableCell>
-                {new Date(
-                  usage.usedAt
-                ).toLocaleString()}
+              <TableCell className="align-top">
+                {usage.usedBy}
               </TableCell>
-              <TableCell>
+              <TableCell className="align-top">
+                {formatDate(usage.usedAt)}
+              </TableCell>
+              <TableCell className="align-top">
                 {usage.quantity}
               </TableCell>
-              <TableCell>
-                {usage.status ===
-                BenefitUsageStatus.CANCELED
-                  ? `Canceled${usage.canceledAt ? ` on ${new Date(
-                      usage.canceledAt
-                    ).toLocaleString()}` : ""}`
-                  : "Active"}
+              <TableCell className="align-top">
+                <StatusIndicator
+                  tone={
+                    usage.status ===
+                    BenefitUsageStatus.CANCELED
+                      ? "danger"
+                      : "success"
+                  }
+                  label={
+                    usage.status ===
+                    BenefitUsageStatus.CANCELED
+                      ? t(
+                          "benefitUsage.table.canceledOn",
+                          {
+                            date: usage.canceledAt
+                              ? formatDate(
+                                  usage.canceledAt
+                                )
+                              : "",
+                          }
+                        )
+                      : t(
+                          "shared.states.active"
+                        )
+                  }
+                />
               </TableCell>
-              <TableCell>
+              <TableCell className="align-top">
                 {canCancelBenefitUsage &&
                 usage.status ===
                   BenefitUsageStatus.ACTIVE ? (
-                  <button
-                    type="button"
-                    onClick={() =>
+                  <ConfirmDialog
+                    title={t(
+                      "benefitUsage.table.cancelTitle"
+                    )}
+                    description={t(
+                      "benefitUsage.table.cancelDescription"
+                    )}
+                    actionLabel={t(
+                      "benefitUsage.table.cancelAction"
+                    )}
+                    detailsLabel={t(
+                      "benefitUsage.table.cancelReasonLabel"
+                    )}
+                    detailsPlaceholder={t(
+                      "benefitUsage.table.cancelReasonPlaceholder"
+                    )}
+                    detailsRequired
+                    detailsInput="textarea"
+                    onConfirm={({
+                      detailsValue,
+                    }) =>
                       handleCancelUsage(
-                        usage.id
+                        usage.id,
+                        detailsValue
                       )
                     }
-                    disabled={isPending}
-                    className="rounded-md border px-3 py-1.5 text-sm"
-                  >
-                    Cancel usage
-                  </button>
+                    trigger={
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={
+                          isPending
+                        }
+                      >
+                        {t(
+                          "benefitUsage.table.cancelUsage"
+                        )}
+                      </Button>
+                    }
+                  />
                 ) : (
                   <span className="text-xs text-muted-foreground">
                     {usage.status ===
                     BenefitUsageStatus.CANCELED
-                      ? "Historical record"
-                      : "No actions"}
+                      ? t(
+                          "shared.states.historicalRecord"
+                        )
+                      : t(
+                          "shared.states.noActions"
+                        )}
                   </span>
                 )}
               </TableCell>
@@ -218,12 +426,20 @@ export function BenefitUsageTable({
             0 && (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="p-0"
               >
                 <EmptyState
-                  title="No usage history found"
-                  description="No benefit consumption matches the current filters."
+                  title={t(
+                    hasAnyFilterApplied
+                      ? "benefitUsage.table.noResultsTitle"
+                      : "benefitUsage.table.emptyTitle"
+                  )}
+                  description={t(
+                    hasAnyFilterApplied
+                      ? "benefitUsage.table.noResultsDescription"
+                      : "benefitUsage.table.emptyDescription"
+                  )}
                 />
               </TableCell>
             </TableRow>

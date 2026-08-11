@@ -33,6 +33,17 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -41,8 +52,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { useTranslations } from "@/i18n/provider";
+import {
+  formatBrazilianCpf,
+  formatBrazilianPhone,
+  formatBrazilianState,
+  formatBrazilianZipCode,
+} from "@/lib/br-formats";
 import { normalizeDigits } from "../services/patient-family-utils";
 
 type Props = {
@@ -96,6 +115,10 @@ export function PatientDialog({
 }: Props) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
+  const [
+    discardConfirmOpen,
+    setDiscardConfirmOpen,
+  ] = useState(false);
   const [editingEnabled, setEditingEnabled] =
     useState(mode === "create");
 
@@ -116,6 +139,7 @@ export function PatientDialog({
     },
   });
   const errors = form.formState.errors;
+  const isDirty = form.formState.isDirty;
   const kind = useWatch({
     control: form.control,
     name: "kind",
@@ -293,21 +317,45 @@ export function PatientDialog({
     );
   }
 
+  const errorMessages = Object.values(
+    errors
+  )
+    .map((error) =>
+      typeof error?.message === "string"
+        ? error.message
+        : null
+    )
+    .filter(
+      (message): message is string =>
+        Boolean(message)
+    );
+
+  function handleOpenChange(
+    nextOpen: boolean
+  ) {
+    if (!nextOpen && isDirty) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+
+    setOpen(nextOpen);
+
+    if (nextOpen) {
+      setEditingEnabled(mode === "create");
+      form.reset(getInitialFormValues());
+    }
+  }
+
+  function confirmDiscard() {
+    setDiscardConfirmOpen(false);
+    setOpen(false);
+    form.reset(getInitialFormValues());
+  }
+
   return (
     <Dialog
       open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
-
-        if (nextOpen) {
-          setEditingEnabled(
-            mode === "create"
-          );
-          form.reset(
-            getInitialFormValues()
-          );
-        }
-      }}
+      onOpenChange={handleOpenChange}
     >
       <DialogTrigger asChild>
         {trigger ?? (
@@ -332,266 +380,350 @@ export function PatientDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form className="form-shell-body grid grid-cols-2 gap-4">
-          <div className="col-span-2 form-section border-dashed px-4 py-3 text-sm text-muted-foreground">
+        <form className="form-shell-body grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {errorMessages.length > 0 ? (
+            <div
+              role="alert"
+              className="col-span-1 space-y-1 rounded-xl border border-transparent bg-[color:var(--color-danger-soft)] p-4 text-sm text-[color:var(--color-danger)] sm:col-span-2"
+            >
+              <p className="font-medium">
+                Revise os campos abaixo antes de continuar:
+              </p>
+              <ul className="list-disc space-y-0.5 pl-5">
+                {errorMessages.map(
+                  (message, index) => (
+                    <li key={index}>
+                      {message}
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="col-span-1 form-section border-dashed px-4 py-3 text-sm text-muted-foreground sm:col-span-2">
             Se o cliente for menor de idade ou dependente, será necessário cadastrar primeiro o responsável antes da etapa completa de vínculo familiar.
           </div>
 
-          <div className="col-span-2 form-section">
-            <div>
-              <h3 className="form-section-title">
-                Identidade do cliente
-              </h3>
-              <p className="form-section-description">
-                Defina o tipo de vínculo, dados principais e responsável quando aplicável.
-              </p>
+          <FormSection
+            className="col-span-1 sm:col-span-2"
+            title="Identificação"
+            description="Tipo de vínculo, nome, documento e nascimento do cliente."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="field-stack">
+                <label className="field-label">
+                  Tipo do cliente
+                </label>
+                <Select
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.kind
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("kind")}
+                >
+                  <option value={PatientKind.TITULAR}>
+                    Titular
+                  </option>
+                  <option value={PatientKind.DEPENDENT}>
+                    Dependente
+                  </option>
+                </Select>
+                {errors.kind ? (
+                  <p className="field-error">
+                    {errors.kind.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  {t("shared.labels.fullName")}
+                </label>
+                <Input
+                  placeholder={t(
+                    "shared.labels.fullName"
+                  )}
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.fullName
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register(
+                    "fullName"
+                  )}
+                />
+                {errors.fullName ? (
+                  <p className="field-error">
+                    {errors.fullName.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  {t("shared.labels.document")}
+                </label>
+                <Input
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.document
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register(
+                    "document"
+                  )}
+                  onChange={(event) =>
+                    form.setValue(
+                      "document",
+                      formatBrazilianCpf(
+                        event.target.value
+                      ),
+                      {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      }
+                    )
+                  }
+                />
+                {errors.document ? (
+                  <p className="field-error">
+                    {errors.document.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="field-stack">
+                <label className="field-label">
+                  {t("shared.labels.birthDate")}
+                </label>
+                <Input
+                  type="date"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.birthDate
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register(
+                    "birthDate"
+                  )}
+                />
+                {errors.birthDate ? (
+                  <p className="field-error">
+                    {errors.birthDate.message}
+                  </p>
+                ) : null}
+              </div>
             </div>
-          </div>
+          </FormSection>
 
-          <div className="col-span-2 field-stack">
-            <label className="field-label">
-              Tipo do cliente
-            </label>
-            <select
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.kind
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("kind")}
-              className="field-select"
-            >
-              <option value={PatientKind.TITULAR}>
-                Titular
-              </option>
-              <option value={PatientKind.DEPENDENT}>
-                Dependente
-              </option>
-            </select>
-            {errors.kind ? (
-              <p className="field-error">
-                {errors.kind.message}
-              </p>
-            ) : null}
-          </div>
+          <FormSection
+            className="col-span-1 sm:col-span-2"
+            title="Contato"
+            description="Como a empresa deve entrar em contato com o cliente."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="field-stack">
+                <label className="field-label">
+                  {t("shared.labels.email")}
+                </label>
+                <Input
+                  placeholder={t("shared.labels.email")}
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.email
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("email")}
+                />
+                {errors.email ? (
+                  <p className="field-error">
+                    {errors.email.message}
+                  </p>
+                ) : null}
+              </div>
 
-          <div className="field-stack">
-            <label className="field-label">
-              {t("shared.labels.fullName")}
-            </label>
-            <Input
-              placeholder={t(
-                "shared.labels.fullName"
-              )}
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.fullName
-                  ? "true"
-                  : "false"
-              }
-              {...form.register(
-                "fullName"
-              )}
-            />
-            {errors.fullName ? (
-              <p className="field-error">
-                {errors.fullName.message}
-              </p>
-            ) : null}
-          </div>
+              <div className="field-stack">
+                <label className="field-label">
+                  {t("shared.labels.phone")}
+                </label>
+                <Input
+                  placeholder="(00) 00000-0000"
+                  inputMode="numeric"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.phone
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("phone")}
+                  onChange={(event) =>
+                    form.setValue(
+                      "phone",
+                      formatBrazilianPhone(
+                        event.target.value
+                      ),
+                      {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      }
+                    )
+                  }
+                />
+                {errors.phone ? (
+                  <p className="field-error">
+                    {errors.phone.message}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </FormSection>
 
-          <div className="field-stack">
-            <label className="field-label">
-              {t("shared.labels.email")}
-            </label>
-            <Input
-              placeholder={t("shared.labels.email")}
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.email
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("email")}
-            />
-            {errors.email ? (
-              <p className="field-error">
-                {errors.email.message}
-              </p>
-            ) : null}
-          </div>
+          <FormSection
+            className="col-span-1 sm:col-span-2"
+            title="Endereço"
+            description="Localização usada para correspondência e emissão de cobranças."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="field-stack">
+                <label className="field-label">
+                  {t("shared.labels.zipCode")}
+                </label>
+                <Input
+                  placeholder="00000-000"
+                  inputMode="numeric"
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.zipCode
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register(
+                    "zipCode"
+                  )}
+                  onChange={(event) =>
+                    form.setValue(
+                      "zipCode",
+                      formatBrazilianZipCode(
+                        event.target.value
+                      ),
+                      {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      }
+                    )
+                  }
+                />
+                {errors.zipCode ? (
+                  <p className="field-error">
+                    {errors.zipCode.message}
+                  </p>
+                ) : null}
+              </div>
 
-          <div className="field-stack">
-            <label className="field-label">
-              {t("shared.labels.phone")}
-            </label>
-            <Input
-              placeholder={t("shared.labels.phone")}
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.phone
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("phone")}
-            />
-            {errors.phone ? (
-              <p className="field-error">
-                {errors.phone.message}
-              </p>
-            ) : null}
-          </div>
+              <div className="field-stack">
+                <label className="field-label">
+                  {t("shared.labels.city")}
+                </label>
+                <Input
+                  placeholder={t("shared.labels.city")}
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.city
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("city")}
+                />
+                {errors.city ? (
+                  <p className="field-error">
+                    {errors.city.message}
+                  </p>
+                ) : null}
+              </div>
 
-          <div className="field-stack">
-            <label className="field-label">
-              {t("shared.labels.birthDate")}
-            </label>
-            <Input
-              type="date"
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.birthDate
-                  ? "true"
-                  : "false"
-              }
-              {...form.register(
-                "birthDate"
-              )}
-            />
-            {errors.birthDate ? (
-              <p className="field-error">
-                {errors.birthDate.message}
-              </p>
-            ) : null}
-          </div>
+              <div className="field-stack">
+                <label className="field-label">
+                  {t("shared.labels.state")}
+                </label>
+                <Input
+                  placeholder="UF"
+                  disabled={!editingEnabled}
+                  maxLength={2}
+                  aria-invalid={
+                    errors.state
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register("state")}
+                  onChange={(event) =>
+                    form.setValue(
+                      "state",
+                      formatBrazilianState(
+                        event.target.value
+                      ),
+                      {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      }
+                    )
+                  }
+                />
+                {errors.state ? (
+                  <p className="field-error">
+                    {errors.state.message}
+                  </p>
+                ) : null}
+              </div>
 
-          <div className="field-stack">
-            <label className="field-label">
-              {t("shared.labels.document")}
-            </label>
-            <Input
-              placeholder={t(
-                "shared.labels.document"
-              )}
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.document
-                  ? "true"
-                  : "false"
-              }
-              {...form.register(
-                "document"
-              )}
-            />
-            {errors.document ? (
-              <p className="field-error">
-                {errors.document.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              {t("shared.labels.zipCode")}
-            </label>
-            <Input
-              placeholder={t(
-                "shared.labels.zipCode"
-              )}
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.zipCode
-                  ? "true"
-                  : "false"
-              }
-              {...form.register(
-                "zipCode"
-              )}
-            />
-            {errors.zipCode ? (
-              <p className="field-error">
-                {errors.zipCode.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              {t("shared.labels.city")}
-            </label>
-            <Input
-              placeholder={t("shared.labels.city")}
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.city
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("city")}
-            />
-            {errors.city ? (
-              <p className="field-error">
-                {errors.city.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="field-stack">
-            <label className="field-label">
-              {t("shared.labels.state")}
-            </label>
-            <Input
-              placeholder={t("shared.labels.state")}
-              disabled={!editingEnabled}
-              maxLength={2}
-              aria-invalid={
-                errors.state
-                  ? "true"
-                  : "false"
-              }
-              {...form.register("state")}
-            />
-            {errors.state ? (
-              <p className="field-error">
-                {errors.state.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="col-span-2 field-stack">
-            <label className="field-label">
-              {t("shared.labels.address")}
-            </label>
-            <Input
-              placeholder={t("shared.labels.address")}
-              disabled={!editingEnabled}
-              aria-invalid={
-                errors.address
-                  ? "true"
-                  : "false"
-              }
-              {...form.register(
-                "address"
-              )}
-            />
-            {errors.address ? (
-              <p className="field-error">
-                {errors.address.message}
-              </p>
-            ) : null}
-          </div>
+              <div className="field-stack sm:col-span-2">
+                <label className="field-label">
+                  {t("shared.labels.address")}
+                </label>
+                <Input
+                  placeholder={t("shared.labels.address")}
+                  disabled={!editingEnabled}
+                  aria-invalid={
+                    errors.address
+                      ? "true"
+                      : "false"
+                  }
+                  {...form.register(
+                    "address"
+                  )}
+                />
+                {errors.address ? (
+                  <p className="field-error">
+                    {errors.address.message}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </FormSection>
 
           {kind ===
           PatientKind.DEPENDENT ? (
-            <div className="col-span-2 form-section bg-surface-subtle">
-              <div className="grid gap-4 md:grid-cols-2">
+            <FormSection
+              className="col-span-1 sm:col-span-2 bg-surface-subtle"
+              title="Complementares"
+              description="Vínculo de dependência: o responsável precisa já estar cadastrado como titular."
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="field-stack">
                   <label className="field-label">
                     Documento do responsável
                   </label>
                   <Input
-                    placeholder="CPF do responsável"
+                    placeholder="000.000.000-00"
+                    inputMode="numeric"
                     disabled={!editingEnabled}
                     aria-invalid={
                       errors.responsibleDocument
@@ -601,6 +733,18 @@ export function PatientDialog({
                     {...form.register(
                       "responsibleDocument"
                     )}
+                    onChange={(event) =>
+                      form.setValue(
+                        "responsibleDocument",
+                        formatBrazilianCpf(
+                          event.target.value
+                        ),
+                        {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        }
+                      )
+                    }
                   />
                   {errors.responsibleDocument ? (
                     <p className="field-error">
@@ -629,7 +773,7 @@ export function PatientDialog({
                   </p>
                 </div>
               </div>
-            </div>
+            </FormSection>
           ) : null}
 
           <div className="col-span-2">
@@ -661,8 +805,19 @@ export function PatientDialog({
                           <Button
                             type="button"
                             className="w-full"
+                            disabled={
+                              form.formState
+                                .isSubmitting
+                            }
                           >
-                            {t("shared.actions.saveChanges")}
+                            {form.formState
+                              .isSubmitting
+                              ? t(
+                                  "shared.actions.processing"
+                                )
+                              : t(
+                                  "shared.actions.saveChanges"
+                                )}
                           </Button>
                         }
                         onConfirm={() =>
@@ -757,8 +912,19 @@ export function PatientDialog({
                   <Button
                     type="button"
                     className="w-full"
+                    disabled={
+                      form.formState
+                        .isSubmitting
+                    }
                   >
-                    {t("patients.dialog.createAction")}
+                    {form.formState
+                      .isSubmitting
+                      ? t(
+                          "shared.actions.processing"
+                        )
+                      : t(
+                          "patients.dialog.createAction"
+                        )}
                   </Button>
                 }
                 onConfirm={() =>
@@ -772,6 +938,32 @@ export function PatientDialog({
           </div>
         </form>
       </DialogContent>
+
+      <AlertDialog
+        open={discardConfirmOpen}
+        onOpenChange={setDiscardConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Descartar alterações?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Há alterações não salvas neste formulário. Se você fechar agora, elas serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {t("shared.actions.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDiscard}
+            >
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

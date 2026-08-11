@@ -35,8 +35,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { useTranslations } from "@/i18n/provider";
+import { formatCurrency } from "@/lib/formatters";
 
 type Props = {
   mode?: "create" | "edit";
@@ -49,6 +52,8 @@ type Props = {
   plans: Array<{
     id: string;
     name: string;
+    monthlyPrice?: number | null;
+    activeBenefitsCount?: number;
   }>;
 
   initialData?: {
@@ -124,8 +129,18 @@ export function SubscriptionDialog({
     name: "startedAt",
   });
 
+  const membershipPlanId = useWatch({
+    control: form.control,
+    name: "membershipPlanId",
+  });
+
   const selectedPatient = patients.find(
     (p) => p.id === patientId
+  );
+
+  const selectedPlan = plans.find(
+    (plan) =>
+      plan.id === membershipPlanId
   );
 
   const getInitialFormValues =
@@ -271,92 +286,133 @@ export function SubscriptionDialog({
         </DialogHeader>
 
         <form className="flex flex-col gap-4">
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              {t("subscriptions.dialog.patient")}
-            </label>
-            {defaultPatientId ? (
-              <div className="rounded-md border px-3 py-2 bg-muted text-sm">
-                {selectedPatient?.fullName}
-              </div>
-            ) : (
-              <select
-                disabled={!editingEnabled}
-                {...form.register(
-                  "patientId"
-                )}
-                className="h-10 rounded-md border px-3"
-              >
-                <option value="">
-                  {t("subscriptions.dialog.selectPatient")}
-                </option>
-
-                {filteredPatients.map(
-                  (patient) => (
-                    <option
-                      key={patient.id}
-                      value={patient.id}
-                    >
-                      {patient.fullName}
+          <FormSection title="Identificação">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t("subscriptions.dialog.patient")}
+                </label>
+                {defaultPatientId ? (
+                  <div className="rounded-md border px-3 py-2 bg-muted text-sm">
+                    {selectedPatient?.fullName}
+                  </div>
+                ) : (
+                  <Select
+                    disabled={!editingEnabled}
+                    {...form.register(
+                      "patientId"
+                    )}
+                  >
+                    <option value="">
+                      {t("subscriptions.dialog.selectPatient")}
                     </option>
-                  )
+
+                    {filteredPatients.map(
+                      (patient) => (
+                        <option
+                          key={patient.id}
+                          value={patient.id}
+                        >
+                          {patient.fullName}
+                        </option>
+                      )
+                    )}
+                  </Select>
                 )}
-              </select>
-            )}
-          </div>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              {t("subscriptions.dialog.membershipPlan")}
-            </label>
-            <select
-              disabled={!editingEnabled}
-              {...form.register(
-                "membershipPlanId"
-              )}
-              className="h-10 rounded-md border px-3"
-            >
-              <option value="">
-                {t("subscriptions.dialog.selectPlan")}
-              </option>
-
-              {plans.map((plan) => (
-                <option
-                  key={plan.id}
-                  value={plan.id}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t("subscriptions.dialog.membershipPlan")}
+                </label>
+                <Select
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "membershipPlanId"
+                  )}
                 >
-                  {plan.name}
-                </option>
-              ))}
-            </select>
-          </div>
+                  <option value="">
+                    {t("subscriptions.dialog.selectPlan")}
+                  </option>
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              {t("shared.labels.startDate")}
-            </label>
-            <Input
-              type="date"
-              disabled={!editingEnabled}
-              {...form.register(
-                "startedAt"
-              )}
-            />
-          </div>
+                  {plans.map((plan) => (
+                    <option
+                      key={plan.id}
+                      value={plan.id}
+                    >
+                      {plan.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+          </FormSection>
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              {t("subscriptions.dialog.expirationDate")}
-            </label>
-            <Input
-              type="date"
-              {...form.register(
-                "expiresAt"
+          <FormSection title="Datas">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t("shared.labels.startDate")}
+                </label>
+                <Input
+                  type="date"
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "startedAt"
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t("subscriptions.dialog.expirationDate")}
+                </label>
+                <Input
+                  type="date"
+                  {...form.register(
+                    "expiresAt"
+                  )}
+                  readOnly
+                  className="cursor-not-allowed bg-muted"
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          {selectedPlan ? (
+            <FormSection
+              title={t(
+                "subscriptions.summary.title"
               )}
-              readOnly
-              className="cursor-not-allowed bg-muted"
-            />
-          </div>
+            >
+              <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                <div className="detail-field">
+                  <p className="detail-field-label">
+                    {t(
+                      "subscriptions.summary.monthlyPrice"
+                    )}
+                  </p>
+                  <p className="detail-field-value">
+                    {formatCurrency(
+                      selectedPlan.monthlyPrice ??
+                        0
+                    )}
+                  </p>
+                </div>
+                <div className="detail-field">
+                  <p className="detail-field-label">
+                    {t(
+                      "subscriptions.summary.activeBenefits"
+                    )}
+                  </p>
+                  <p className="detail-field-value">
+                    {selectedPlan.activeBenefitsCount ??
+                      "—"}
+                  </p>
+                </div>
+              </div>
+            </FormSection>
+          ) : null}
 
           {mode === "edit" ? (
             <div className="flex flex-col gap-3 sm:flex-row">

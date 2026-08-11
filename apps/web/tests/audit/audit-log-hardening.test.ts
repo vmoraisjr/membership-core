@@ -629,6 +629,10 @@ async function main() {
           "usageId",
           usage.id
         );
+        cancelFormData.set(
+          "reason",
+          "Audit regression test cancellation"
+        );
 
         await cancelBenefitUsageAction(
           cancelFormData
@@ -662,6 +666,8 @@ async function main() {
             subscription.id,
           membershipBenefitId:
             benefit.id,
+          reason:
+            "Audit regression test cancellation",
         });
       }
     );

@@ -620,6 +620,10 @@ async function main() {
           "usageId",
           usages[0]!.id
         );
+        cancelFormData.set(
+          "reason",
+          "Regression test cancellation"
+        );
 
         await cancelBenefitUsageAction(
           cancelFormData

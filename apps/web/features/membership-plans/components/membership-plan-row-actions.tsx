@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Copy,
+  Eye,
   Pencil,
   Plus,
   RotateCcw,
@@ -8,16 +10,19 @@ import {
   XCircle,
 } from "lucide-react";
 
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
+import { cloneMembershipPlan } from "../actions/clone-membership-plan";
 import { deactivateMembershipPlan } from "../actions/deactivate-membership-plan";
 import { reactivateMembershipPlan } from "../actions/reactivate-membership-plan";
 import { deleteMembershipPlanPermanently } from "../actions/delete-membership-plan-permanently";
 import { MembershipBenefitDialog } from "@/features/membership-benefits/components/membership-benefit-dialog";
+import { useTranslations } from "@/i18n/provider";
 
 import { MembershipPlanDialog } from "./membership-plan-dialog";
 
@@ -30,6 +35,8 @@ type Props = {
     description: string | null;
 
     monthlyPrice: number;
+
+    annualPrice?: number | null;
 
     active: boolean;
   };
@@ -50,13 +57,7 @@ export function MembershipPlanRowActions({
   canDeletePlansPermanently = true,
   canManageBenefits = true,
 }: Props) {
-  if (!canManagePlans) {
-    return (
-      <span className="text-xs text-muted-foreground">
-        Read only
-      </span>
-    );
-  }
+  const t = useTranslations();
 
   async function handleDeactivate({
     typedValue,
@@ -71,13 +72,17 @@ export function MembershipPlanRowActions({
       );
 
       toast.success(
-        "Plan deactivated and related records updated."
+        t(
+          "plans.rowActions.deactivateSuccess"
+        )
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to deactivate plan."
+          : t(
+              "plans.rowActions.deactivateError"
+            )
       );
     }
   }
@@ -89,13 +94,17 @@ export function MembershipPlanRowActions({
       );
 
       toast.success(
-        "Plan reactivated."
+        t(
+          "plans.rowActions.reactivateSuccess"
+        )
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to reactivate plan."
+          : t(
+              "plans.rowActions.reactivateError"
+            )
       );
     }
   }
@@ -107,19 +116,66 @@ export function MembershipPlanRowActions({
       );
 
       toast.success(
-        "Plan permanently deleted."
+        t("plans.rowActions.deleteSuccess")
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to permanently delete plan."
+          : t(
+              "plans.rowActions.deleteError"
+            )
       );
     }
   }
 
+  async function handleClone() {
+    try {
+      await cloneMembershipPlan(plan.id);
+      toast.success(
+        t("plans.rowActions.cloneSuccess")
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t(
+              "plans.rowActions.cloneError"
+            )
+      );
+    }
+  }
+
+  const viewButton = (
+    <Button
+      size="icon-sm"
+      variant="ghost"
+      asChild
+      title={t("shared.actions.view")}
+    >
+      <Link
+        href={`/dashboard/plans/${plan.id}`}
+      >
+        <Eye className="size-4" />
+      </Link>
+    </Button>
+  );
+
+  if (!canManagePlans) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {viewButton}
+        <span className="text-xs text-muted-foreground">
+          {t("shared.states.readOnly")}
+        </span>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
+      {viewButton}
+
       {plan.active ? (
         <>
           <MembershipPlanDialog
@@ -132,16 +188,39 @@ export function MembershipPlanRowActions({
               monthlyPrice: Number(
                 plan.monthlyPrice
               ),
+              annualPrice:
+                plan.annualPrice ?? null,
+              active: plan.active,
             }}
             trigger={
               <Button
-                size="icon"
-                variant="outline"
+                size="icon-sm"
+                variant="ghost"
+                title={t("shared.actions.edit")}
+                aria-label={t(
+                  "shared.actions.edit"
+                )}
               >
                 <Pencil className="size-4" />
               </Button>
             }
           />
+
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            title={t(
+              "plans.rowActions.clone"
+            )}
+            aria-label={t(
+              "plans.rowActions.clone"
+            )}
+            onClick={() =>
+              void handleClone()
+            }
+          >
+            <Copy className="size-4" />
+          </Button>
 
           {canManageBenefits ? (
             <MembershipBenefitDialog
@@ -151,8 +230,14 @@ export function MembershipPlanRowActions({
               }
               trigger={
                 <Button
-                  size="icon"
-                  variant="outline"
+                  size="icon-sm"
+                  variant="ghost"
+                  title={t(
+                    "benefits.dialog.createTitle"
+                  )}
+                  aria-label={t(
+                    "benefits.dialog.createTitle"
+                  )}
                 >
                   <Plus className="size-4" />
                 </Button>
@@ -161,17 +246,32 @@ export function MembershipPlanRowActions({
           ) : null}
 
           <ConfirmDialog
-            title="Deactivate membership plan?"
-            description="Deactivating this plan also deactivates related benefits and cancels active subscriptions."
+            title={t(
+              "plans.rowActions.deactivateTitle"
+            )}
+            description={t(
+              "plans.rowActions.deactivateDescription"
+            )}
             confirmValue={plan.name}
-            confirmLabel="Type the plan name exactly"
+            confirmLabel={t(
+              "plans.rowActions.confirmName"
+            )}
             confirmPlaceholder={plan.name}
-            actionLabel="Deactivate plan"
+            actionLabel={t(
+              "plans.rowActions.deactivateAction"
+            )}
             onConfirm={handleDeactivate}
             trigger={
               <Button
-                size="icon"
-                variant="destructive"
+                size="icon-sm"
+                variant="ghost"
+                className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
+                title={t(
+                  "plans.rowActions.deactivateAction"
+                )}
+                aria-label={t(
+                  "plans.rowActions.deactivateAction"
+                )}
               >
                 <XCircle className="size-4" />
               </Button>
@@ -181,16 +281,28 @@ export function MembershipPlanRowActions({
       ) : (
         <>
           <ConfirmDialog
-            title="Reactivate membership plan?"
-            description="The plan will become available again for benefits and new subscriptions."
+            title={t(
+              "plans.rowActions.reactivateTitle"
+            )}
+            description={t(
+              "plans.rowActions.reactivateDescription"
+            )}
             onConfirm={() =>
               handleReactivate()
             }
-            actionLabel="Reactivate plan"
+            actionLabel={t(
+              "plans.rowActions.reactivateAction"
+            )}
             trigger={
               <Button
-                size="icon"
-                variant="outline"
+                size="icon-sm"
+                variant="ghost"
+                title={t(
+                  "plans.rowActions.reactivateAction"
+                )}
+                aria-label={t(
+                  "plans.rowActions.reactivateAction"
+                )}
               >
                 <RotateCcw className="size-4" />
               </Button>
@@ -199,16 +311,29 @@ export function MembershipPlanRowActions({
 
           {canDeletePlansPermanently ? (
             <ConfirmDialog
-              title="Delete plan permanently?"
-              description="This permanently removes the inactive plan record. This action cannot be undone."
+              title={t(
+                "plans.rowActions.deleteTitle"
+              )}
+              description={t(
+                "plans.rowActions.deleteDescription"
+              )}
               onConfirm={() =>
                 handleDelete()
               }
-              actionLabel="Delete permanently"
+              actionLabel={t(
+                "shared.actions.deletePermanently"
+              )}
               trigger={
                 <Button
-                  size="icon"
-                  variant="destructive"
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
+                  title={t(
+                    "shared.actions.deletePermanently"
+                  )}
+                  aria-label={t(
+                    "shared.actions.deletePermanently"
+                  )}
                 >
                   <Trash2 className="size-4" />
                 </Button>

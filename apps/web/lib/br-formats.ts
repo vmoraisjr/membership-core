@@ -29,6 +29,29 @@ export function formatBrazilianCnpj(
     );
 }
 
+export function formatBrazilianCpf(
+  value: string
+) {
+  const digits = normalizeDigits(value).slice(
+    0,
+    11
+  );
+
+  return digits
+    .replace(
+      /^(\d{3})(\d)/,
+      "$1.$2"
+    )
+    .replace(
+      /^(\d{3})\.(\d{3})(\d)/,
+      "$1.$2.$3"
+    )
+    .replace(
+      /\.(\d{3})(\d)/,
+      ".$1-$2"
+    );
+}
+
 export function formatBrazilianPhone(
   value: string
 ) {

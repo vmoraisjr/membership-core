@@ -5,6 +5,7 @@ import {
   AUDIT_ENTITY_LABELS,
   getAuditLogs,
 } from "@/features/audit-log/services/get-audit-logs";
+import { humanizeAuditMetadata } from "@/features/audit-log/utils/humanize-metadata";
 
 function escapeCsvValue(
   value: string | null | undefined
@@ -14,21 +15,25 @@ function escapeCsvValue(
 }
 
 function formatMetadata(
-  metadata: unknown
+  metadata: Parameters<
+    typeof humanizeAuditMetadata
+  >[0]
 ) {
-  if (!metadata || typeof metadata !== "object") {
-    return "";
-  }
+  const { changes, fields } =
+    humanizeAuditMetadata(metadata);
 
-  if (Array.isArray(metadata)) {
-    return metadata.join(", ");
-  }
+  const changeParts = changes.map(
+    (change) =>
+      `${change.label}: ${change.before} -> ${change.after}`
+  );
+  const fieldParts = fields.map(
+    (field) =>
+      `${field.label}: ${field.value}`
+  );
 
-  return Object.entries(
-    metadata as Record<string, unknown>
-  )
-    .map(([key, value]) => `${key}: ${String(value)}`)
-    .join(" | ");
+  return [...changeParts, ...fieldParts].join(
+    " | "
+  );
 }
 
 export async function GET(
@@ -43,6 +48,9 @@ export async function GET(
         undefined,
       entity:
         searchParams.get("entity") ??
+        undefined,
+      action:
+        searchParams.get("action") ??
         undefined,
       date:
         searchParams.get("date") ??

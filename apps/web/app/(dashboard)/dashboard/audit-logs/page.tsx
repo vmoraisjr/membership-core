@@ -4,6 +4,7 @@ type PageProps = {
   searchParams: Promise<{
     actor?: string;
     entity?: string;
+    action?: string;
     date?: string;
     clinicId?: string;
   }>;
@@ -22,6 +23,8 @@ export default async function Page({
           resolvedSearchParams.actor,
         entity:
           resolvedSearchParams.entity,
+        action:
+          resolvedSearchParams.action,
         date: resolvedSearchParams.date,
         clinicId:
           resolvedSearchParams.clinicId,

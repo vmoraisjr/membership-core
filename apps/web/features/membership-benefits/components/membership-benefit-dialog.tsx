@@ -41,24 +41,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { useTranslations } from "@/i18n/provider";
 
-function getBenefitTypeLabel(
-  type: BenefitType
-) {
-  switch (type) {
-    case BenefitType.FREE:
-      return "Livre";
-    case BenefitType.PERCENTAGE_DISCOUNT:
-      return "Desconto percentual";
-    case BenefitType.FIXED_DISCOUNT:
-      return "Desconto fixo";
-    case BenefitType.LIMITED:
-      return "Uso controlado";
-    default:
-      return type;
-  }
-}
+const BENEFIT_TYPE_KEYS = Object.values(
+  BenefitType
+);
 
 type MembershipBenefitDialogInitialData = {
   id: string;
@@ -94,6 +84,7 @@ export function MembershipBenefitDialog({
   defaultMembershipPlanId,
   trigger,
 }: Props) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [editingEnabled, setEditingEnabled] =
     useState(mode === "create");
@@ -206,6 +197,20 @@ export function MembershipBenefitDialog({
     control: form.control,
     name: "usagePolicy",
   });
+  const title = useWatch({
+    control: form.control,
+    name: "title",
+  });
+  const membershipPlanId = useWatch({
+    control: form.control,
+    name: "membershipPlanId",
+  });
+
+  const selectedPlanName =
+    plans.find(
+      (plan) =>
+        plan.id === membershipPlanId
+    )?.name ?? "—";
 
   async function saveBenefit(
     values: MembershipBenefitSchema
@@ -221,7 +226,7 @@ export function MembershipBenefitDialog({
         );
 
         toast.success(
-          "Benefício atualizado."
+          t("benefits.dialog.saveSuccess")
         );
       } else {
         await createMembershipBenefit(
@@ -229,7 +234,9 @@ export function MembershipBenefitDialog({
         );
 
         toast.success(
-          "Benefício criado."
+          t(
+            "benefits.dialog.createSuccess"
+          )
         );
       }
 
@@ -238,7 +245,7 @@ export function MembershipBenefitDialog({
       setOpen(false);
     } catch {
       toast.error(
-        "Não foi possível salvar o benefício."
+        t("benefits.dialog.saveError")
       );
     }
   }
@@ -262,7 +269,7 @@ export function MembershipBenefitDialog({
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
-            Novo benefício
+            {t("benefits.new")}
           </Button>
         )}
       </DialogTrigger>
@@ -271,8 +278,12 @@ export function MembershipBenefitDialog({
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"
-              ? "Editar benefício"
-              : "Criar benefício"}
+              ? t(
+                  "benefits.dialog.editTitle"
+                )
+              : t(
+                  "benefits.dialog.createTitle"
+                )}
           </DialogTitle>
         </DialogHeader>
 
@@ -286,230 +297,314 @@ export function MembershipBenefitDialog({
             )}
           />
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              Plano
-            </label>
-            <select
-              disabled={!editingEnabled}
-              {...form.register(
-                "membershipPlanId"
-              )}
-              className="h-10 rounded-md border px-3"
-            >
-              <option value="">
-                Selecione um plano
-              </option>
-
-              {plans.map((plan) => (
-                <option
-                  key={plan.id}
-                  value={plan.id}
-                >
-                  {plan.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              Tipo do benefício
-            </label>
-            <select
-              disabled={!editingEnabled}
-              {...form.register("type")}
-              className="h-10 rounded-md border px-3"
-            >
-              {Object.values(
-                BenefitType
-              ).map((type) => (
-                <option
-                  key={type}
-                  value={type}
-                >
-                  {getBenefitTypeLabel(
-                    type
+          <FormSection
+            title="Identificação"
+            description="Plano, tipo e nome do benefício."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t(
+                    "benefits.dialog.membershipPlan"
                   )}
-                </option>
-              ))}
-            </select>
-          </div>
+                </label>
+                <Select
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "membershipPlanId"
+                  )}
+                >
+                  <option value="">
+                    {t(
+                      "subscriptions.dialog.selectPlan"
+                    )}
+                  </option>
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              Título do benefício
-            </label>
-            <Input
-              placeholder="Título do benefício"
-              disabled={!editingEnabled}
-              {...form.register("title")}
-            />
-          </div>
+                  {plans.map((plan) => (
+                    <option
+                      key={plan.id}
+                      value={plan.id}
+                    >
+                      {plan.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              Descrição
-            </label>
-            <Input
-              placeholder="Descrição"
-              disabled={!editingEnabled}
-              {...form.register(
-                "description"
-              )}
-            />
-          </div>
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t(
+                    "benefits.dialog.benefitType"
+                  )}
+                </label>
+                <Select
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "type"
+                  )}
+                >
+                  {BENEFIT_TYPE_KEYS.map(
+                    (benefitType) => (
+                      <option
+                        key={benefitType}
+                        value={benefitType}
+                      >
+                        {t(
+                          `benefits.dialog.types.${benefitType}`
+                        )}
+                      </option>
+                    )
+                  )}
+                </Select>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm text-muted-foreground">
+                  {t(
+                    "benefits.dialog.benefitTitle"
+                  )}
+                </label>
+                <Input
+                  placeholder={t(
+                    "benefits.dialog.benefitTitle"
+                  )}
+                  disabled={!editingEnabled}
+                  {...form.register("title")}
+                />
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-sm text-muted-foreground">
+                  {t(
+                    "shared.labels.description"
+                  )}
+                </label>
+                <Input
+                  placeholder={t(
+                    "shared.labels.description"
+                  )}
+                  disabled={!editingEnabled}
+                  {...form.register(
+                    "description"
+                  )}
+                />
+              </div>
+            </div>
+          </FormSection>
 
           {type ===
-            BenefitType.PERCENTAGE_DISCOUNT && (
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">
-                Percentual de desconto
-              </label>
-              <Input
-                type="number"
-                placeholder="Percentual de desconto"
-                disabled={!editingEnabled}
-                {...form.register(
-                  "discountPercentage",
-                  {
-                    valueAsNumber: true,
-                  }
-                )}
-              />
-            </div>
-          )}
-
-          {type ===
-            BenefitType.FIXED_DISCOUNT && (
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">
-                Valor do desconto
-              </label>
-              <Input
-                type="number"
-                placeholder="Valor do desconto"
-                disabled={!editingEnabled}
-                {...form.register(
-                  "discountAmount",
-                  {
-                    valueAsNumber: true,
-                  }
-                )}
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              Política de uso
-            </label>
-            <select
-              {...form.register(
-                "usagePolicy"
+            BenefitType.PERCENTAGE_DISCOUNT ||
+          type ===
+            BenefitType.FIXED_DISCOUNT ? (
+            <FormSection
+              title="Valor"
+              description="Percentual ou valor fixo aplicado ao usar o benefício."
+            >
+              {type ===
+              BenefitType.PERCENTAGE_DISCOUNT ? (
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">
+                    {t(
+                      "benefits.dialog.discountPercentage"
+                    )}
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder={t(
+                      "benefits.dialog.discountPercentage"
+                    )}
+                    disabled={
+                      !editingEnabled
+                    }
+                    {...form.register(
+                      "discountPercentage",
+                      {
+                        valueAsNumber: true,
+                      }
+                    )}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">
+                    {t(
+                      "benefits.dialog.discountAmount"
+                    )}
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder={t(
+                      "benefits.dialog.discountAmount"
+                    )}
+                    disabled={
+                      !editingEnabled
+                    }
+                    {...form.register(
+                      "discountAmount",
+                      {
+                        valueAsNumber: true,
+                      }
+                    )}
+                  />
+                </div>
               )}
-              value={usagePolicy}
-              onChange={(event) => {
-                const value = event.target
-                  .value as MembershipBenefitSchema["usagePolicy"];
+            </FormSection>
+          ) : null}
 
-                form.setValue(
-                  "usagePolicy",
-                  value
-                );
+          <FormSection
+            title={t(
+              "benefits.dialog.monthlyUsageMode"
+            )}
+            description="Defina se o benefício tem limite de uso e com que frequência ele renova."
+          >
+            <div className="space-y-4">
+              <Select
+                {...form.register(
+                  "usagePolicy"
+                )}
+                value={usagePolicy}
+                onChange={(event) => {
+                  const value = event.target
+                    .value as MembershipBenefitSchema["usagePolicy"];
 
-                if (value === "MONTHLY") {
+                  form.setValue(
+                    "usagePolicy",
+                    value
+                  );
+
+                  if (value === "MONTHLY") {
+                    form.setValue(
+                      "usageLimit",
+                      1
+                    );
+                    form.setValue(
+                      "resetPeriod",
+                      ResetPeriod.MONTHLY
+                    );
+                    return;
+                  }
+
+                  if (value === "TOTAL") {
+                    form.setValue(
+                      "usageLimit",
+                      1
+                    );
+                    form.setValue(
+                      "resetPeriod",
+                      ""
+                    );
+                    return;
+                  }
+
                   form.setValue(
                     "usageLimit",
-                    1
-                  );
-                  form.setValue(
-                    "resetPeriod",
-                    ResetPeriod.MONTHLY
-                  );
-                  return;
-                }
-
-                if (value === "TOTAL") {
-                  form.setValue(
-                    "usageLimit",
-                    1
+                    undefined
                   );
                   form.setValue(
                     "resetPeriod",
                     ""
                   );
-                  return;
-                }
-
-                form.setValue(
-                  "usageLimit",
-                  undefined
-                );
-                form.setValue(
-                  "resetPeriod",
-                  ""
-                );
-              }}
-              className="h-10 rounded-md border px-3"
-              disabled={!editingEnabled}
-            >
-              <option value="UNLIMITED">
-                Sem limite
-              </option>
-              <option value="MONTHLY">
-                Mensal
-              </option>
-              <option value="TOTAL">
-                Por uso total
-              </option>
-            </select>
-          </div>
-
-          {usagePolicy !==
-          "UNLIMITED" ? (
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">
-                {usagePolicy ===
-                "MONTHLY"
-                  ? "Quantidade de usos por mês"
-                  : "Quantidade total de usos"}
-              </label>
-              <Input
-                type="number"
-                min={1}
-                placeholder={
-                  usagePolicy === "MONTHLY"
-                    ? "Informe quantos usos por mês"
-                    : "Informe quantos usos no total"
-                }
+                }}
                 disabled={!editingEnabled}
-                {...form.register(
-                  "usageLimit",
-                  {
-                    valueAsNumber: true,
-                  }
-                )}
-              />
-            </div>
-          ) : null}
+              >
+                <option value="UNLIMITED">
+                  {t(
+                    "benefits.dialog.unlimitedMonthlyUsage"
+                  )}
+                </option>
+                <option value="MONTHLY">
+                  {t(
+                    "benefits.dialog.limitedMonthlyUsage"
+                  )}
+                </option>
+                <option value="TOTAL">
+                  {t(
+                    "benefits.table.monthlyLimit"
+                  )}
+                </option>
+              </Select>
 
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">
-              Renovação do controle
-            </label>
-            <Input
-              value={
-                usagePolicy === "MONTHLY"
-                  ? "Mensal"
-                  : usagePolicy ===
-                      "TOTAL"
-                    ? "Sem renovação automática"
-                    : "Não se aplica"
-              }
-              readOnly
-            />
-          </div>
+              {usagePolicy !==
+              "UNLIMITED" ? (
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">
+                    {t(
+                      "benefits.dialog.monthlyUsageLimit"
+                    )}
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    disabled={
+                      !editingEnabled
+                    }
+                    {...form.register(
+                      "usageLimit",
+                      {
+                        valueAsNumber: true,
+                      }
+                    )}
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    "benefits.dialog.notUsageBased"
+                  )}
+                </p>
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection
+            title={t(
+              "benefits.dialog.summaryTitle"
+            )}
+          >
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
+              <div className="detail-field">
+                <p className="detail-field-label">
+                  {t(
+                    "shared.labels.plan"
+                  )}
+                </p>
+                <p className="detail-field-value">
+                  {selectedPlanName}
+                </p>
+              </div>
+              <div className="detail-field">
+                <p className="detail-field-label">
+                  {t(
+                    "benefits.dialog.benefitTitle"
+                  )}
+                </p>
+                <p className="detail-field-value">
+                  {title || "—"}
+                </p>
+              </div>
+              <div className="detail-field">
+                <p className="detail-field-label">
+                  {t(
+                    "benefits.dialog.renewalMode"
+                  )}
+                </p>
+                <p className="detail-field-value">
+                  {usagePolicy === "MONTHLY"
+                    ? t(
+                        "benefits.dialog.renewalMonthly"
+                      )
+                    : usagePolicy ===
+                        "TOTAL"
+                      ? t(
+                          "benefits.dialog.renewalNone"
+                        )
+                      : t(
+                          "benefits.dialog.renewalNotApplicable"
+                        )}
+                </p>
+              </div>
+            </div>
+          </FormSection>
 
           {mode === "edit" ? (
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -527,15 +622,23 @@ export function MembershipBenefitDialog({
               ) : (
                 <>
                   <ConfirmDialog
-                    title="Salvar alterações do benefício?"
-                    description="Isso atualiza a configuração do benefício para o plano selecionado."
-                    actionLabel="Salvar alterações"
+                    title={t(
+                      "benefits.dialog.confirmEditTitle"
+                    )}
+                    description={t(
+                      "benefits.dialog.confirmEditDescription"
+                    )}
+                    actionLabel={t(
+                      "shared.actions.saveChanges"
+                    )}
                     trigger={
                       <Button
                         type="button"
                         className="w-full"
                       >
-                        Salvar alterações
+                        {t(
+                          "shared.actions.saveChanges"
+                        )}
                       </Button>
                     }
                     onConfirm={() =>
@@ -564,12 +667,20 @@ export function MembershipBenefitDialog({
             </div>
           ) : (
             <ConfirmDialog
-              title="Criar benefício?"
-              description="Isso cria um novo benefício para o plano selecionado."
-              actionLabel="Criar benefício"
+              title={t(
+                "benefits.dialog.confirmCreateTitle"
+              )}
+              description={t(
+                "benefits.dialog.confirmCreateDescription"
+              )}
+              actionLabel={t(
+                "benefits.dialog.createAction"
+              )}
               trigger={
                 <Button type="button">
-                  Criar benefício
+                  {t(
+                    "benefits.dialog.createAction"
+                  )}
                 </Button>
               }
               onConfirm={() =>
