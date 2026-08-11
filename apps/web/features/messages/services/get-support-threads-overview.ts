@@ -39,6 +39,18 @@ function isThreadStatus(
   );
 }
 
+const STATUS_PRIORITY: Record<
+  SupportThreadStatus,
+  number
+> = {
+  [SupportThreadStatus.OPEN]: 0,
+  [SupportThreadStatus.IN_PROGRESS]: 1,
+  [SupportThreadStatus.WAITING_PLATFORM]: 2,
+  [SupportThreadStatus.WAITING_CLINIC]: 3,
+  [SupportThreadStatus.RESOLVED]: 4,
+  [SupportThreadStatus.CLOSED]: 5,
+};
+
 export async function getSupportThreadsOverview(
   filters: Filters = {}
 ) {
@@ -114,18 +126,26 @@ export async function getSupportThreadsOverview(
         : Promise.resolve([]),
     ]);
 
+  const prioritizedThreads = [
+    ...threads,
+  ].sort(
+    (a, b) =>
+      STATUS_PRIORITY[a.status] -
+      STATUS_PRIORITY[b.status]
+  );
+
   const selectedThread =
     filters.threadId
-      ? threads.find(
+      ? prioritizedThreads.find(
           (thread) =>
             thread.id ===
             filters.threadId
         ) ?? null
-      : threads[0] ?? null;
+      : prioritizedThreads[0] ?? null;
 
   return {
     workspace,
-    threads,
+    threads: prioritizedThreads,
     selectedThread,
     clinics: clinics.map(
       (clinic) => ({

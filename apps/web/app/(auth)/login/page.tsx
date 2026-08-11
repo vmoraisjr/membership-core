@@ -111,47 +111,47 @@ export default async function LoginPage({
   ];
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-primary)_16%,transparent),transparent_68%)]" />
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-6 sm:px-6">
+      <div className="auth-wash pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-primary)_16%,transparent),transparent_68%)]" />
 
       <section className="relative grid w-full max-w-[64rem] overflow-hidden rounded-[1.25rem] border border-white/70 bg-[rgba(255,255,255,0.9)] shadow-[var(--shadow-lg)] backdrop-blur-xl lg:grid-cols-[1.08fr_0.92fr]">
-        <div className="border-b border-border/60 bg-white px-6 py-8 sm:px-8 sm:py-10 lg:flex lg:min-h-[72vh] lg:flex-col lg:justify-center lg:border-r lg:border-b-0 lg:px-10 lg:py-12">
-          <div className="flex min-h-[20vh] items-center justify-center">
+        <div className="border-b border-border/60 bg-white px-6 py-6 sm:px-8 sm:py-8 lg:flex lg:flex-col lg:justify-center lg:border-r lg:border-b-0 lg:px-8 lg:py-8">
+          <div className="flex items-center justify-center">
             <SheepLockup
-              iconClassName="h-16 w-16 sm:h-20 sm:w-20"
-              wordmarkClassName="text-3xl sm:text-4xl"
+              iconClassName="h-9 w-9"
+              wordmarkClassName="text-lg"
             />
           </div>
 
-          <div className="mt-8 max-w-xl space-y-4 lg:mx-auto">
-            <h1 className="text-balance text-center text-[1.2rem] leading-tight font-semibold tracking-[-0.03em] text-foreground sm:text-[1.95rem] lg:text-[2.15rem]">
+          <div className="mt-5 max-w-xl space-y-1.5 lg:mx-auto">
+            <h1 className="text-balance text-center text-[1.05rem] leading-snug font-semibold tracking-[-0.02em] text-foreground sm:text-[1.3rem]">
               {t("auth.login.headline")}
             </h1>
-            <p className="max-w-lg text-pretty text-center text-sm leading-7 text-muted-foreground sm:text-[0.97rem]">
+            <p className="max-w-lg text-pretty text-center text-xs leading-5 text-muted-foreground sm:text-sm">
               {t("auth.login.subtitle")}
             </p>
           </div>
 
-          <ul className="mt-8 space-y-4 lg:mx-auto lg:max-w-lg">
+          <ul className="mt-4 space-y-2 lg:mx-auto lg:max-w-lg">
             {benefits.map((benefit) => (
               <li
                 key={benefit}
-                className="flex items-center gap-3 text-sm font-medium text-foreground sm:text-[0.96rem]"
+                className="flex items-center gap-2.5 text-xs font-medium text-foreground sm:text-sm"
               >
-                <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                <CheckCircle2 className="size-3.5 shrink-0 text-primary" />
                 <span>{benefit}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="bg-[rgba(244,247,251,0.94)] px-6 py-6 sm:px-8 sm:py-8 lg:flex lg:flex-col lg:justify-between lg:px-10 lg:py-10">
+        <div className="bg-[rgba(244,247,251,0.94)] px-6 py-5 sm:px-8 sm:py-6 lg:flex lg:flex-col lg:justify-center lg:px-8 lg:py-6">
           <div>
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-foreground">
                 {t("auth.login.enterTitle")}
               </h2>
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-xs leading-5 text-muted-foreground">
                 {t("auth.login.enterDescription")}
               </p>
             </div>
@@ -159,28 +159,28 @@ export default async function LoginPage({
             {message ? (
               <p
                 role={message.tone === "danger" ? "alert" : "status"}
-                className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${MESSAGE_TONE_CLASS[message.tone]}`}
+                className={`mt-3 rounded-xl border px-3.5 py-2.5 text-xs ${MESSAGE_TONE_CLASS[message.tone]}`}
               >
                 {message.text}
               </p>
             ) : null}
 
-            <div className="mt-6">
+            <div className="mt-4">
               <LoginForm next={next} />
             </div>
 
             {showSeededAccess ? (
-              <details className="mt-6 rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm">
+              <details className="mt-4 rounded-xl border border-dashed border-border/70 bg-muted/20 p-3 text-xs">
                 <summary className="cursor-pointer list-none font-medium text-foreground marker:hidden">
                   {t("auth.login.seededAccessTitle")}
                 </summary>
-                <p className="mt-3 text-muted-foreground">
+                <p className="mt-2 text-muted-foreground">
                   {t(
                     "auth.login.seededAccessDescription"
                   )}{" "}
                   <code>{defaultPassword}</code>
                 </p>
-                <ul className="mt-3 space-y-1.5 text-muted-foreground">
+                <ul className="mt-2 space-y-1 text-muted-foreground">
                   {users.map((user) => (
                     <li key={user.id}>
                       {user.email} -{" "}
@@ -194,7 +194,7 @@ export default async function LoginPage({
             ) : null}
           </div>
 
-          <p className="mt-8 text-right text-xs text-muted-foreground lg:mt-8">
+          <p className="mt-4 text-right text-[11px] text-muted-foreground">
             {t("auth.login.footer")}
           </p>
         </div>

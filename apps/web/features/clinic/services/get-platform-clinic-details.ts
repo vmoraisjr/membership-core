@@ -8,8 +8,15 @@ import prisma from "@/lib/prisma";
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
 import { ensureClinicModules } from "@/features/modules/services/module-access";
 
+type AuditFilters = {
+  actor?: string;
+  from?: string;
+  to?: string;
+};
+
 export async function getPlatformClinicDetails(
-  clinicId: string
+  clinicId: string,
+  auditFilters: AuditFilters = {}
 ) {
   const currentUser =
     await requireCurrentAppUser();
@@ -96,6 +103,36 @@ export async function getPlatformClinicDetails(
             AuditEntity.MODULE,
           ],
         },
+        ...(auditFilters.actor
+          ? {
+              actor: {
+                contains:
+                  auditFilters.actor,
+                mode: "insensitive" as const,
+              },
+            }
+          : {}),
+        ...(auditFilters.from ||
+        auditFilters.to
+          ? {
+              createdAt: {
+                ...(auditFilters.from
+                  ? {
+                      gte: new Date(
+                        auditFilters.from
+                      ),
+                    }
+                  : {}),
+                ...(auditFilters.to
+                  ? {
+                      lte: new Date(
+                        `${auditFilters.to}T23:59:59.999`
+                      ),
+                    }
+                  : {}),
+              },
+            }
+          : {}),
       },
       orderBy: {
         createdAt: "desc",

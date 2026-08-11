@@ -19,7 +19,6 @@ import { AttentionList } from "@/components/dashboard/attention-list";
 import { MetricDelta } from "@/components/dashboard/metric-delta";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { MetricGrid } from "@/components/dashboard/metric-grid";
-import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { Button } from "@/components/ui/button";
 import { DashboardPage } from "@/components/layout/dashboard-page";
@@ -96,62 +95,49 @@ export async function DashboardHomePage() {
     "subscriptions",
     "manage"
   );
-  const canManageBilling = hasPermission(
-    role,
-    "billing",
-    "manage"
-  );
 
   return (
     <DashboardPage>
-      <PageHeader
-        eyebrow={
-          metrics.scope === "clinic"
-            ? "Workspace da empresa"
-            : "Controle global Sheep"
-        }
-        title={greetingTitle}
-        description={
-          metrics.scope === "clinic"
-            ? t(
-                "dashboard.clinicDescription",
-                {
-                  clinicName:
-                    metrics.clinicName,
-                }
-              )
-            : t(
-                "dashboard.platformDescription"
-              )
-        }
-        action={
-          metrics.scope === "clinic" &&
-          canCreateSubscription ? (
-            <Button asChild>
-              <Link href="/dashboard/subscriptions">
-                <PlusCircle className="size-4" />
-                {t(
-                  "dashboard.primaryAction.clinic"
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-primary-ink)]">
+            {metrics.scope === "clinic"
+              ? "Workspace da empresa"
+              : "Controle global Sheep"}
+          </p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            {greetingTitle}
+          </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {metrics.scope === "clinic"
+              ? t(
+                  "dashboard.clinicDescription",
+                  {
+                    clinicName:
+                      metrics.clinicName,
+                  }
+                )
+              : t(
+                  "dashboard.platformDescription"
                 )}
-              </Link>
-            </Button>
-          ) : metrics.platformMetrics &&
-            canManageBilling ? (
-            <Button asChild variant="outline">
-              <Link href="/dashboard/billing/payments?status=OVERDUE">
-                {t(
-                  "dashboard.primaryAction.platform"
-                )}
-              </Link>
-            </Button>
-          ) : undefined
-        }
-        meta={
-          <span className="workspace-kicker">
+          </p>
+          <p className="text-xs text-muted-foreground">
             {todayLabel}
-          </span>
-        }
-      />
+          </p>
+        </div>
+
+        {metrics.scope === "clinic" &&
+        canCreateSubscription ? (
+          <Button asChild size="sm">
+            <Link href="/dashboard/subscriptions">
+              <PlusCircle className="size-4" />
+              {t(
+                "dashboard.primaryAction.clinic"
+              )}
+            </Link>
+          </Button>
+        ) : null}
+      </div>
 
       {metrics.scope === "clinic" ? (
         <>
@@ -552,6 +538,7 @@ export async function DashboardHomePage() {
           <SectionCard
             title="Panorama da plataforma"
             description="Sinais de saúde comercial e cobertura da operação SaaS."
+            contentClassName="p-4"
           >
             <MetricGrid columns="four">
               <MetricCard
@@ -688,99 +675,6 @@ export async function DashboardHomePage() {
             />
           </SectionCard>
 
-          <div className="page-section-grid xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-            <SectionCard
-              title="Atalhos da plataforma"
-              description="Acesse rapidamente a operação global das contas clientes e a governança da plataforma."
-            >
-              <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-2">
-              {[
-                {
-                  href: "/dashboard/clinics",
-                  title: "Empresas clientes",
-                  description:
-                    "Gerencie status, plano, identidade e detalhes operacionais.",
-                  icon: Building2,
-                },
-                {
-                  href: "/dashboard/billing/subscriptions",
-                  title: "Assinaturas SaaS",
-                  description:
-                    "Acompanhe aplicação de planos, status de contas e vencimentos.",
-                  icon: CreditCard,
-                },
-                {
-                  href: "/dashboard/billing/payments",
-                  title: "Pagamentos SaaS",
-                  description:
-                    "Monitore faturas, atrasos e recebimentos das empresas clientes.",
-                  icon: ReceiptText,
-                },
-                {
-                  href: "/dashboard/messages",
-                  title: "Chamados",
-                  description:
-                    "Centralize solicitações, incidentes e conversas com as empresas clientes.",
-                  icon: MessageSquareMore,
-                },
-                {
-                  href: "/dashboard/users",
-                  title: "Usuários da plataforma",
-                  description:
-                    "Gerencie apenas a equipe interna da plataforma, sem misturar usuários de clínica.",
-                  icon: ShieldCheck,
-                },
-                {
-                  href: "/dashboard/audit-logs",
-                  title: "Auditoria",
-                  description:
-                    "Acompanhe eventos administrativos globais e ações críticas nas clínicas.",
-                  icon: ClipboardList,
-                },
-              ].map((shortcut) => (
-                <ActionCard
-                  key={shortcut.href}
-                  href={shortcut.href}
-                  title={shortcut.title}
-                  description={shortcut.description}
-                  icon={shortcut.icon}
-                />
-              ))}
-              </div>
-            </SectionCard>
-
-            <SectionCard
-              title="Cobertura por módulo"
-              description="Mostra onde a plataforma já está habilitada para operação em clientes ativos."
-            >
-              <div className="space-y-3 p-5">
-                {metrics.platformMetrics.activeModuleCounts.map(
-                  (module) => (
-                    <div
-                      key={module.key}
-                      className="surface-subtle p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {module.name}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {module.isV1Active
-                              ? "Liberado para a operação atual."
-                              : "Reservado para fases futuras."}
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold text-foreground">
-                          {module.enabledClinicCount}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            </SectionCard>
-          </div>
         </>
       ) : null}
     </DashboardPage>

@@ -31,22 +31,22 @@ export function AuthCard({
   footer,
 }: Props) {
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 sm:px-6">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-primary)_16%,transparent),transparent_68%)]" />
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-6 sm:px-6">
+      <div className="auth-wash pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-primary)_16%,transparent),transparent_68%)]" />
 
-      <section className="relative w-full max-w-md overflow-hidden rounded-[1.25rem] border border-white/70 bg-[rgba(255,255,255,0.9)] px-6 py-8 shadow-[var(--shadow-lg)] backdrop-blur-xl sm:px-8 sm:py-10">
+      <section className="relative w-full max-w-md overflow-hidden rounded-[1.25rem] border border-white/70 bg-[rgba(255,255,255,0.9)] px-6 py-6 shadow-[var(--shadow-lg)] backdrop-blur-xl sm:px-7 sm:py-7">
         <div className="flex justify-center">
           <SheepLockup
-            iconClassName="h-11 w-11"
-            wordmarkClassName="text-xl"
+            iconClassName="h-9 w-9"
+            wordmarkClassName="text-lg"
           />
         </div>
 
-        <div className="mt-8 space-y-2 text-center">
-          <h1 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+        <div className="mt-4 space-y-1 text-center">
+          <h1 className="text-lg font-semibold tracking-[-0.01em] text-foreground">
             {title}
           </h1>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="text-xs leading-5 text-muted-foreground">
             {description}
           </p>
         </div>
@@ -55,7 +55,7 @@ export function AuthCard({
           <div
             role={messageTone === "danger" ? "alert" : "status"}
             className={cn(
-              "mt-5 rounded-2xl border px-4 py-3 text-sm",
+              "mt-3 rounded-xl border px-3.5 py-2.5 text-xs",
               MESSAGE_TONE_CLASS[messageTone]
             )}
           >
@@ -63,10 +63,10 @@ export function AuthCard({
           </div>
         ) : null}
 
-        <div className="mt-6">{children}</div>
+        <div className="mt-4">{children}</div>
 
         {footer ? (
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-4 text-center text-xs text-muted-foreground">
             {footer}
           </div>
         ) : null}

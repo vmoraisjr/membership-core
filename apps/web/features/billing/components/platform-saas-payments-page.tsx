@@ -7,6 +7,7 @@ import {
 import { PaymentStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -484,6 +485,7 @@ export async function PlatformSaasPaymentsPage({
                           invoice.status ===
                             PaymentStatus.OVERDUE) && (
                           <form
+                            id={`invoice-paid-${invoice.id}`}
                             action={platformMarkClinicInvoicePaidAction}
                           >
                             <input
@@ -491,25 +493,30 @@ export async function PlatformSaasPaymentsPage({
                               name="invoiceId"
                               value={invoice.id}
                             />
-                            <Button
-                              type="submit"
-                              size="icon-sm"
+                            <ConfirmSubmitButton
+                              formId={`invoice-paid-${invoice.id}`}
+                              title={`${t("billing.actions.markPaid")}?`}
+                              description="Isso marca a fatura como paga. Confirme para aplicar."
+                              actionLabel={t(
+                                "billing.actions.markPaid"
+                              )}
+                              label=""
+                              icon={
+                                <CheckCheck className="size-4" />
+                              }
                               variant="outline"
-                              title={t(
+                              size="icon-sm"
+                              tooltip={t(
                                 "billing.actions.markPaid"
                               )}
-                              aria-label={t(
-                                "billing.actions.markPaid"
-                              )}
-                            >
-                              <CheckCheck className="size-4" />
-                            </Button>
+                            />
                           </form>
                         )}
 
                         {invoice.status ===
                         PaymentStatus.PENDING ? (
                           <form
+                            id={`invoice-overdue-${invoice.id}`}
                             action={platformMarkClinicInvoiceOverdueAction}
                           >
                             <input
@@ -517,19 +524,23 @@ export async function PlatformSaasPaymentsPage({
                               name="invoiceId"
                               value={invoice.id}
                             />
-                            <Button
-                              type="submit"
-                              size="icon-sm"
+                            <ConfirmSubmitButton
+                              formId={`invoice-overdue-${invoice.id}`}
+                              title={`${t("billing.actions.markOverdue")}?`}
+                              description="Isso marca a fatura como atrasada. Confirme para aplicar."
+                              actionLabel={t(
+                                "billing.actions.markOverdue"
+                              )}
+                              label=""
+                              icon={
+                                <AlertTriangle className="size-4" />
+                              }
                               variant="outline"
-                              title={t(
+                              size="icon-sm"
+                              tooltip={t(
                                 "billing.actions.markOverdue"
                               )}
-                              aria-label={t(
-                                "billing.actions.markOverdue"
-                              )}
-                            >
-                              <AlertTriangle className="size-4" />
-                            </Button>
+                            />
                           </form>
                         ) : null}
                       </div>

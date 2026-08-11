@@ -133,6 +133,8 @@ export function ClinicRowActions({
           asChild
           size="icon-sm"
           variant="ghost"
+          title="Abrir workspace completo"
+          aria-label="Abrir workspace completo"
         >
           <Link
             href={`/dashboard/clinics/${clinic.id}`}
@@ -150,6 +152,8 @@ export function ClinicRowActions({
           <Button
             size="icon-sm"
             variant="ghost"
+            title="Editar"
+            aria-label="Editar"
           >
             <Pencil className="size-4" />
           </Button>

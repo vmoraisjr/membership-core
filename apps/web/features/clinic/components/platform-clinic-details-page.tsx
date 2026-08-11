@@ -6,12 +6,15 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import { ModuleStatus } from "@prisma/client";
+import { ModuleKey, ModuleStatus } from "@prisma/client";
 
+import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import {
   Table,
@@ -38,6 +41,8 @@ import {
   getUserStatusTone,
 } from "@/features/users/utils/user-display";
 import { isModuleV1Active } from "@/features/modules/services/module-policy";
+import { getModuleKeyLabel } from "@/features/modules/utils/module-labels";
+import { platformSetClinicModuleStatusAction } from "@/features/modules/actions/platform-set-clinic-module-status";
 
 import {
   getClinicSubscriptionStatusTone,
@@ -48,11 +53,17 @@ import { getPlatformClinicDetails } from "../services/get-platform-clinic-detail
 type Props = {
   clinicId: string;
   activeTab?: string;
+  auditFilters?: {
+    actor?: string;
+    from?: string;
+    to?: string;
+  };
 };
 
 export async function PlatformClinicDetailsPage({
   clinicId,
   activeTab = "overview",
+  auditFilters = {},
 }: Props) {
   const t = getTranslations();
   const {
@@ -61,7 +72,8 @@ export async function PlatformClinicDetailsPage({
     auditLogs,
     clinicModules,
   } = await getPlatformClinicDetails(
-    clinicId
+    clinicId,
+    auditFilters
   );
 
   function formatDate(
@@ -84,14 +96,6 @@ export async function PlatformClinicDetailsPage({
       label: "Visão geral",
     },
     {
-      id: "subscription",
-      label: "Assinatura SaaS",
-    },
-    {
-      id: "payments",
-      label: "Pagamentos",
-    },
-    {
       id: "users",
       label: "Usuários",
     },
@@ -103,10 +107,6 @@ export async function PlatformClinicDetailsPage({
       id: "audit",
       label: "Auditoria",
     },
-    {
-      id: "identity",
-      label: "Identidade",
-    },
   ] as const;
 
   function tabHref(tab: string) {
@@ -115,6 +115,14 @@ export async function PlatformClinicDetailsPage({
 
   const latestSubscription =
     clinic.clinicSubscriptions[0] ?? null;
+  const latestInvoice =
+    latestSubscription?.invoices[0] ??
+    null;
+  const hasAuditFilters = Boolean(
+    auditFilters.actor ||
+      auditFilters.from ||
+      auditFilters.to
+  );
 
   return (
     <DashboardPage>
@@ -133,15 +141,15 @@ export async function PlatformClinicDetailsPage({
         }
       />
 
-      <div className="grid gap-3 rounded-2xl border bg-background/90 p-3 md:grid-cols-3 xl:grid-cols-7">
+      <div className="flex flex-wrap gap-1.5 border-b border-border/60 pb-2">
         {tabs.map((tab) => (
           <Link
             key={tab.id}
             href={tabHref(tab.id)}
-            className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               activeTab === tab.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-[color:var(--color-surface-subtle)] text-foreground hover:bg-muted"
+                ? "bg-[color:var(--color-primary-soft)] text-[color:var(--color-primary-ink)]"
+                : "text-muted-foreground hover:bg-[color:var(--color-surface-subtle)] hover:text-foreground"
             }`}
           >
             {tab.label}
@@ -149,112 +157,181 @@ export async function PlatformClinicDetailsPage({
         ))}
       </div>
 
-      {(activeTab === "overview" ||
-        activeTab === "identity") && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="Plano atual"
-            value={metrics.platformPlan}
-            hint={`Status atual: ${t(`billing.status.${metrics.platformStatus}`)}`}
-            icon={<CreditCard className="size-5" />}
-          />
-          <MetricCard
-            label="Próximo vencimento"
-            value={formatDate(
-              metrics.nextDueDate
-            )}
-            hint="Baseado na cobrança SaaS mais recente."
-            icon={<WalletCards className="size-5" />}
-          />
-          <MetricCard
-            label="Pacientes"
-            value={String(metrics.patients)}
-            hint={`${metrics.plans} plano(s) local(is) em operação.`}
-            icon={<Building2 className="size-5" />}
-          />
-          <MetricCard
-            label="Equipe local"
-            value={String(metrics.users)}
-            hint={`Pagamento mais recente: ${t(`billing.status.${metrics.latestPaymentStatus}`)}`}
-            icon={<ShieldCheck className="size-5" />}
-          />
-        </div>
-      )}
-
-      {(activeTab === "overview" ||
-        activeTab === "identity") && (
-        <SectionCard
-          title="Identidade da conta"
-          description="Dados cadastrais e posicionamento principal desta empresa cliente."
-        >
-          <div className="grid gap-4 p-5 md:grid-cols-2">
-            <div className="detail-field">
-              <p className="detail-field-label">
-                Razão social
-              </p>
-              <p className="detail-field-value">
-                {clinic.name}
-              </p>
-            </div>
-            <div className="detail-field">
-              <p className="detail-field-label">
-                Nome de exibição
-              </p>
-              <p className="detail-field-value">
-                {clinic.brandName ??
-                  "Não definido"}
-              </p>
-            </div>
-            <div className="detail-field">
-              <p className="detail-field-label">
-                Documento
-              </p>
-              <p className="detail-field-value">
-                {formatBrazilianCnpj(
-                  clinic.document
-                )}
-              </p>
-            </div>
-            <div className="detail-field">
-              <p className="detail-field-label">
-                Slug
-              </p>
-              <p className="detail-field-value">
-                {clinic.slug}
-              </p>
-            </div>
-            <div className="detail-field">
-              <p className="detail-field-label">
-                E-mail principal
-              </p>
-              <p className="detail-field-value">
-                {clinic.email}
-              </p>
-            </div>
-            <div className="detail-field">
-              <p className="detail-field-label">
-                Telefone
-              </p>
-              <p className="detail-field-value">
-                {formatBrazilianPhone(
-                  clinic.phone
-                )}
-              </p>
-            </div>
-            <div className="detail-field md:col-span-2">
-              <p className="detail-field-label">
-                Endereço
-              </p>
-              <p className="detail-field-value">
-                {clinic.address}, {clinic.city} - {formatBrazilianState(clinic.state)}, {formatBrazilianZipCode(clinic.zipCode)}
-              </p>
-            </div>
+      {activeTab === "overview" ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="Plano atual"
+              value={metrics.platformPlan}
+              hint={`Status atual: ${t(`billing.status.${metrics.platformStatus}`)}`}
+              icon={<CreditCard className="size-5" />}
+            />
+            <MetricCard
+              label="Próximo vencimento"
+              value={formatDate(
+                metrics.nextDueDate
+              )}
+              hint="Baseado na cobrança SaaS mais recente."
+              icon={<WalletCards className="size-5" />}
+            />
+            <MetricCard
+              label="Pacientes"
+              value={String(metrics.patients)}
+              hint={`${metrics.plans} plano(s) local(is) em operação.`}
+              icon={<Building2 className="size-5" />}
+            />
+            <MetricCard
+              label="Equipe local"
+              value={String(metrics.users)}
+              hint={`Pagamento mais recente: ${t(`billing.status.${metrics.latestPaymentStatus}`)}`}
+              icon={<ShieldCheck className="size-5" />}
+            />
           </div>
-        </SectionCard>
-      )}
 
-      {(activeTab === "overview" ||
-        activeTab === "users") && (
+          <SectionCard
+            title="Identidade da conta"
+            description="Dados cadastrais principais desta empresa cliente."
+          >
+            <div className="grid gap-4 p-4 text-sm sm:grid-cols-2">
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Razão social
+                </p>
+                <p className="mt-0.5 text-foreground">
+                  {clinic.name}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Nome de exibição
+                </p>
+                <p className="mt-0.5 text-foreground">
+                  {clinic.brandName ??
+                    "Não definido"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Documento
+                </p>
+                <p className="mt-0.5 text-foreground">
+                  {formatBrazilianCnpj(
+                    clinic.document
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Slug
+                </p>
+                <p className="mt-0.5 text-foreground">
+                  {clinic.slug}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Telefone
+                </p>
+                <p className="mt-0.5 text-foreground">
+                  {formatBrazilianPhone(
+                    clinic.phone
+                  )}
+                </p>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs text-muted-foreground">
+                  Endereço
+                </p>
+                <p className="mt-0.5 text-foreground">
+                  {clinic.address}, {clinic.city} - {formatBrazilianState(clinic.state)}, {formatBrazilianZipCode(clinic.zipCode)}
+                </p>
+              </div>
+            </div>
+          </SectionCard>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <SectionCard
+              title="Assinatura SaaS"
+              description="Plano e status comercial vigente."
+            >
+              <div className="flex flex-col gap-3 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {metrics.platformPlan}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Expira:{" "}
+                      {formatDate(
+                        latestSubscription?.expiresAt
+                      )}
+                    </p>
+                  </div>
+                  <StatusIndicator
+                    tone={getClinicSubscriptionStatusTone(
+                      metrics.platformStatus
+                    )}
+                    label={t(
+                      `billing.status.${metrics.platformStatus}`
+                    )}
+                  />
+                </div>
+                <Link
+                  href={`/dashboard/billing/subscriptions?clinicId=${clinicId}`}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Gerenciar assinatura SaaS →
+                </Link>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Pagamentos"
+              description="Última cobrança registrada."
+            >
+              <div className="flex flex-col gap-3 p-4">
+                {latestInvoice ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {formatCurrency(
+                          latestInvoice.amount
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Vencimento:{" "}
+                        {formatDate(
+                          latestInvoice.dueDate
+                        )}
+                      </p>
+                    </div>
+                    <StatusIndicator
+                      tone={getPaymentStatusTone(
+                        latestInvoice.status
+                      )}
+                      label={t(
+                        `billing.status.${latestInvoice.status}`
+                      )}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma cobrança registrada.
+                  </p>
+                )}
+                <Link
+                  href={`/dashboard/billing/payments?clinicId=${clinicId}`}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Ver pagamentos →
+                </Link>
+              </div>
+            </SectionCard>
+          </div>
+        </>
+      ) : null}
+
+      {activeTab === "users" ? (
         <SectionCard
           title="Master da empresa"
           description="Acompanhe o usuário principal e eventos de credencial."
@@ -321,10 +398,9 @@ export async function PlatformClinicDetailsPage({
             </TableBody>
           </Table>
         </SectionCard>
-      )}
+      ) : null}
 
-      {(activeTab === "overview" ||
-        activeTab === "modules") && (
+      {activeTab === "modules" ? (
         <SectionCard
           title={t(
             "clinics.details.modulesTitle"
@@ -349,6 +425,11 @@ export async function PlatformClinicDetailsPage({
                 <TableHead>
                   {t(
                     "clinics.details.moduleV1Column"
+                  )}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t(
+                    "shared.labels.actions"
                   )}
                 </TableHead>
               </TableRow>
@@ -402,207 +483,201 @@ export async function PlatformClinicDetailsPage({
                             "clinics.details.moduleFuture"
                           )}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {clinicModule.module
+                        .key ===
+                      ModuleKey.MEMBERSHIP ? (
+                        <span className="text-xs text-muted-foreground">
+                          {t(
+                            "modules.coreModule"
+                          )}
+                        </span>
+                      ) : !isModuleV1Active(
+                          clinicModule.module
+                            .key
+                        ) ? (
+                        <span className="text-xs text-muted-foreground">
+                          {t("modules.v2Only")}
+                        </span>
+                      ) : clinicModule.status ===
+                        ModuleStatus.ENABLED ? (
+                        <form
+                          action={
+                            platformSetClinicModuleStatusAction
+                          }
+                          id={`disable-module-${clinicModule.id}`}
+                          className="inline-flex"
+                        >
+                          <input
+                            type="hidden"
+                            name="clinicId"
+                            value={clinicId}
+                          />
+                          <input
+                            type="hidden"
+                            name="moduleKey"
+                            value={
+                              clinicModule
+                                .module.key
+                            }
+                          />
+                          <input
+                            type="hidden"
+                            name="nextStatus"
+                            value={
+                              ModuleStatus.DISABLED
+                            }
+                          />
+                          <ConfirmSubmitButton
+                            formId={`disable-module-${clinicModule.id}`}
+                            title={t(
+                              "modules.disableTitle"
+                            )}
+                            description={t(
+                              "modules.disableDescription",
+                              {
+                                name: getModuleKeyLabel(
+                                  clinicModule
+                                    .module
+                                    .key
+                                ),
+                              }
+                            )}
+                            actionLabel={t(
+                              "modules.disableAction"
+                            )}
+                            label={t(
+                              "shared.actions.disable"
+                            )}
+                          />
+                        </form>
+                      ) : (
+                        <form
+                          action={
+                            platformSetClinicModuleStatusAction
+                          }
+                          id={`enable-module-${clinicModule.id}`}
+                          className="inline-flex"
+                        >
+                          <input
+                            type="hidden"
+                            name="clinicId"
+                            value={clinicId}
+                          />
+                          <input
+                            type="hidden"
+                            name="moduleKey"
+                            value={
+                              clinicModule
+                                .module.key
+                            }
+                          />
+                          <input
+                            type="hidden"
+                            name="nextStatus"
+                            value={
+                              ModuleStatus.ENABLED
+                            }
+                          />
+                          <ConfirmSubmitButton
+                            formId={`enable-module-${clinicModule.id}`}
+                            title={t(
+                              "modules.enableTitle"
+                            )}
+                            description={t(
+                              "modules.enableDescription",
+                              {
+                                name: getModuleKeyLabel(
+                                  clinicModule
+                                    .module
+                                    .key
+                                ),
+                              }
+                            )}
+                            actionLabel={t(
+                              "modules.enableAction"
+                            )}
+                            label={t(
+                              "shared.actions.enable"
+                            )}
+                          />
+                        </form>
+                      )}
+                    </TableCell>
                   </TableRow>
                 )
               )}
             </TableBody>
           </Table>
         </SectionCard>
-      )}
+      ) : null}
 
-      {(activeTab === "overview" ||
-        activeTab === "subscription") && (
-        <SectionCard
-          title="Assinatura SaaS"
-          description="Plano, vigência e status comercial da conta cliente."
-        >
-          <div className="grid gap-4 p-5">
-            <div className="surface-subtle p-4">
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="font-semibold">
-                    {latestSubscription
-                      ?.clinicBillingPlan.name ??
-                      "Sem plano"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Início:{" "}
-                    {formatDate(
-                      latestSubscription?.startedAt
-                    )}{" "}
-                    · Expira:{" "}
-                    {formatDate(
-                      latestSubscription?.expiresAt
-                    )}
-                  </p>
-                </div>
-                <StatusIndicator
-                  tone={getClinicSubscriptionStatusTone(
-                    metrics.platformStatus
-                  )}
-                  label={t(
-                    `billing.status.${metrics.platformStatus}`
-                  )}
-                />
-              </div>
-            </div>
-          </div>
-        </SectionCard>
-      )}
-
-      {(activeTab === "overview" ||
-        activeTab === "payments") && (
-        <SectionCard
-          title="Pagamentos"
-          description="Histórico recente de faturas e registros de pagamento ligados à assinatura SaaS."
-        >
-          <div className="space-y-4 p-5">
-            {clinic.clinicSubscriptions.map(
-              (subscription) => (
-                <div
-                  key={subscription.id}
-                  className="surface-subtle p-4"
-                >
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="font-semibold">
-                        {
-                          subscription
-                            .clinicBillingPlan
-                            .name
-                        }
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Início:{" "}
-                        {formatDate(
-                          subscription.startedAt
-                        )}{" "}
-                        · Expira:{" "}
-                        {formatDate(
-                          subscription.expiresAt
-                        )}
-                      </p>
-                    </div>
-                    <StatusIndicator
-                      tone={getClinicSubscriptionStatusTone(
-                        subscription.status
-                      )}
-                      label={t(
-                        `billing.status.${subscription.status}`
-                      )}
-                    />
-                  </div>
-
-                  <div className="mt-4">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>
-                            {t(
-                              "shared.labels.description"
-                            )}
-                          </TableHead>
-                          <TableHead>
-                            {t(
-                              "shared.labels.amount"
-                            )}
-                          </TableHead>
-                          <TableHead>
-                            {t(
-                              "shared.labels.dueDate"
-                            )}
-                          </TableHead>
-                          <TableHead>
-                            {t(
-                              "shared.labels.status"
-                            )}
-                          </TableHead>
-                          <TableHead>
-                            {t(
-                              "shared.labels.paymentHistory"
-                            )}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {subscription.invoices.map(
-                          (invoice) => (
-                            <TableRow
-                              key={invoice.id}
-                            >
-                              <TableCell>
-                                {invoice.description ??
-                                  invoice.id}
-                              </TableCell>
-                              <TableCell>
-                                {formatCurrency(
-                                  invoice.amount
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {formatDate(
-                                  invoice.dueDate
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <StatusIndicator
-                                  tone={getPaymentStatusTone(
-                                    invoice.status
-                                  )}
-                                  label={t(
-                                    `billing.status.${invoice.status}`
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {invoice.payments
-                                  .length === 0 ? (
-                                  <span className="text-xs text-muted-foreground">
-                                    {t(
-                                      "clinics.details.noPaymentRecorded"
-                                    )}
-                                  </span>
-                                ) : (
-                                  <div className="space-y-1 text-xs">
-                                    {invoice.payments.map(
-                                      (payment) => (
-                                        <div
-                                          key={
-                                            payment.id
-                                          }
-                                        >
-                                          {t(
-                                            `billing.status.${payment.status}`
-                                          )}
-                                          {" · "}
-                                          {formatDate(
-                                            payment.paidAt
-                                          )}
-                                        </div>
-                                      )
-                                    )}
-                                  </div>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          )
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        </SectionCard>
-      )}
-
-      {(activeTab === "overview" ||
-        activeTab === "audit") && (
+      {activeTab === "audit" ? (
         <SectionCard
           title="Timeline administrativa"
           description="Eventos recentes de assinatura, pagamentos, módulos e credenciais."
         >
+          <form
+            method="get"
+            className="flex flex-wrap items-end gap-3 border-b border-border/60 p-4"
+          >
+            <input
+              type="hidden"
+              name="tab"
+              value="audit"
+            />
+            <label className="grid gap-1 text-xs">
+              <span className="font-medium text-foreground">
+                Usuário
+              </span>
+              <Input
+                name="auditActor"
+                defaultValue={
+                  auditFilters.actor ?? ""
+                }
+                placeholder="Nome do ator"
+                className="h-8 w-44 text-sm"
+              />
+            </label>
+            <label className="grid gap-1 text-xs">
+              <span className="font-medium text-foreground">
+                De
+              </span>
+              <Input
+                type="date"
+                name="auditFrom"
+                defaultValue={
+                  auditFilters.from ?? ""
+                }
+                className="h-8 text-sm"
+              />
+            </label>
+            <label className="grid gap-1 text-xs">
+              <span className="font-medium text-foreground">
+                Até
+              </span>
+              <Input
+                type="date"
+                name="auditTo"
+                defaultValue={
+                  auditFilters.to ?? ""
+                }
+                className="h-8 text-sm"
+              />
+            </label>
+            <Button type="submit" size="sm">
+              Filtrar
+            </Button>
+            {hasAuditFilters ? (
+              <Link
+                href={tabHref("audit")}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Limpar
+              </Link>
+            ) : null}
+          </form>
+
           <div className="divide-y divide-border/60">
             {auditLogs.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground">
@@ -648,7 +723,7 @@ export async function PlatformClinicDetailsPage({
             )}
           </div>
         </SectionCard>
-      )}
+      ) : null}
     </DashboardPage>
   );
 }

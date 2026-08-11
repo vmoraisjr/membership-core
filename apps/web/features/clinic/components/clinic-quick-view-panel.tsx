@@ -76,19 +76,17 @@ export function ClinicQuickViewPanel({
           </SidePanelDescription>
         </SidePanelHeader>
 
-        <SidePanelBody>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="surface-subtle p-4">
-              <div className="mb-3 flex items-center gap-2 text-muted-foreground">
-                <Building2 className="size-4" />
-                <span className="text-sm font-medium">
-                  Conta
-                </span>
+        <SidePanelBody className="space-y-5 p-5">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Building2 className="size-3.5" />
+                <span>Conta</span>
               </div>
-              <p className="font-semibold">
+              <p className="mt-1 text-sm font-medium text-foreground">
                 {clinic.name}
               </p>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Criada em{" "}
                 {formatDate(
                   clinic.createdAt
@@ -96,94 +94,83 @@ export function ClinicQuickViewPanel({
               </p>
             </div>
 
-            <div className="surface-subtle p-4">
-              <div className="mb-3 flex items-center gap-2 text-muted-foreground">
-                <Users className="size-4" />
-                <span className="text-sm font-medium">
-                  Operação
-                </span>
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users className="size-3.5" />
+                <span>Operação</span>
               </div>
-              <p className="font-semibold">
+              <p className="mt-1 text-sm font-medium text-foreground">
                 {clinic._count.patients} clientes
               </p>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {clinic._count.membershipPlans} plano(s) local(is)
               </p>
             </div>
 
-            <div className="surface-subtle p-4">
-              <div className="mb-3 flex items-center gap-2 text-muted-foreground">
-                <CreditCard className="size-4" />
-                <span className="text-sm font-medium">
-                  SaaS
-                </span>
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CreditCard className="size-3.5" />
+                <span>SaaS</span>
               </div>
-              <p className="font-semibold">
+              <p className="mt-1 text-sm font-medium text-foreground">
                 {currentSubscription
                   ?.clinicBillingPlan.name ??
                   "Sem plano"}
               </p>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Status:{" "}
                 {currentSubscription?.status ??
                   "Não definido"}
               </p>
             </div>
+          </div>
 
-            <div className="form-section md:col-span-2">
-              <p className="form-section-title">
-                Contato principal
+          <div className="grid gap-4 border-t border-border/60 pt-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs text-muted-foreground">
+                E-mail
               </p>
-              <div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
-                <div>
-                  <p className="font-medium text-foreground">
-                    E-mail
-                  </p>
-                  <p>{clinic.email}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    Telefone
-                  </p>
-                  <p>
-                    {formatBrazilianPhone(
-                      clinic.phone
-                    )}
-                  </p>
-                </div>
+              <p className="mt-0.5 text-sm text-foreground">
+                {clinic.email}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">
+                Telefone
+              </p>
+              <p className="mt-0.5 text-sm text-foreground">
+                {formatBrazilianPhone(
+                  clinic.phone
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-border/60 pt-4">
+            <div className="flex items-start gap-2 text-sm text-foreground">
+              <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+              <div>
+                <p>
+                  {clinic.city},{" "}
+                  {formatBrazilianState(
+                    clinic.state
+                  )}
+                </p>
+                <p className="text-muted-foreground">
+                  {clinic.address}
+                </p>
               </div>
             </div>
+          </div>
 
-            <div className="form-section">
-              <p className="form-section-title">
-                Localização
-              </p>
-              <div className="flex gap-2 text-sm text-muted-foreground">
-                <MapPin className="mt-0.5 size-4 shrink-0" />
-                <div>
-                  <p>
-                    {clinic.city},{" "}
-                    {formatBrazilianState(
-                      clinic.state
-                    )}
-                  </p>
-                  <p>{clinic.address}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="md:col-span-3">
-              <Button
-                asChild
-                variant="outline"
+          <div className="border-t border-border/60 pt-4">
+            <Button asChild size="sm">
+              <Link
+                href={`/dashboard/clinics/${clinic.id}`}
               >
-                <Link
-                  href={`/dashboard/clinics/${clinic.id}`}
-                >
-                  Abrir workspace completo
-                </Link>
-              </Button>
-            </div>
+                Abrir workspace completo
+              </Link>
+            </Button>
           </div>
         </SidePanelBody>
       </SidePanelContent>

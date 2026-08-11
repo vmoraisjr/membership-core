@@ -1,5 +1,4 @@
 import {
-  ArrowRightLeft,
   Ban,
   CircleCheckBig,
   Filter,
@@ -14,6 +13,7 @@ import { ClinicSubscriptionStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
+import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
 import { DataTableContainer } from "@/components/dashboard/data-table-container";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { MetricCard } from "@/components/dashboard/metric-card";
@@ -39,13 +39,13 @@ import { formatCurrency } from "@/lib/formatters";
 import { getClinicSubscriptionStatusTone } from "@/features/clinic/utils/clinic-status";
 
 import {
-  platformAssignClinicBillingPlanAction,
   platformUpdateClinicSubscriptionStatusAction,
 } from "../actions/platform-manage-clinic-subscription";
 import {
   canTransitionClinicSubscriptionStatus,
   getPlatformClinicBillingOverview,
 } from "../services/billing-foundation";
+import { PlatformPlanChangeDialog } from "./platform-plan-change-dialog";
 import { SaasSubscriptionDetailsPanel } from "./saas-subscription-details-panel";
 
 type Props = {
@@ -187,30 +187,39 @@ export async function PlatformSaasSubscriptionsPage({
     variant:
       | "outline"
       | "destructive";
+    confirmDescription: string;
   }> = [
     {
       status: ClinicSubscriptionStatus.ACTIVE,
       labelKey: "billing.actions.markActive",
       icon: CircleCheckBig,
       variant: "outline",
+      confirmDescription:
+        "Marca a assinatura como ativa e cobrando normalmente.",
     },
     {
       status: ClinicSubscriptionStatus.TRIAL,
       labelKey: "billing.actions.sendToTrial",
       icon: FlaskConical,
       variant: "outline",
+      confirmDescription:
+        "Coloca a conta em período de teste: a clínica usa a plataforma normalmente, mas fica sem cobrança recorrente até ser marcada como ativa.",
     },
     {
       status: ClinicSubscriptionStatus.SUSPENDED,
       labelKey: "billing.actions.suspend",
       icon: PauseCircle,
       variant: "outline",
+      confirmDescription:
+        "Suspende o acesso da clínica sem cancelar a assinatura — pode ser reativada depois.",
     },
     {
       status: ClinicSubscriptionStatus.CANCELED,
       labelKey: "billing.actions.cancelSubscription",
       icon: Ban,
       variant: "destructive",
+      confirmDescription:
+        "Cancela a assinatura da clínica. Essa ação não tem confirmação automática de reversão — reative manualmente se for engano.",
     },
   ];
   const activeCount =
@@ -549,51 +558,32 @@ export async function PlatformSaasSubscriptionsPage({
                         </div>
                       </TableCell>
 
-                      <TableCell className="min-w-[18rem] align-top">
-                        <form
-                          action={platformAssignClinicBillingPlanAction}
-                          className="grid gap-2"
-                        >
-                          <input
-                            type="hidden"
-                            name="subscriptionId"
-                            value={subscription.id}
-                          />
-                          <Select
-                            name="clinicBillingPlanId"
-                            defaultValue={
+                      <TableCell className="min-w-[14rem] align-top">
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-foreground">
+                            {
+                              subscription
+                                .clinicBillingPlan
+                                .name
+                            }
+                          </p>
+                          <PlatformPlanChangeDialog
+                            subscriptionId={
+                              subscription.id
+                            }
+                            currentPlanId={
                               subscription.clinicBillingPlanId
                             }
-                            className="h-10"
-                          >
-                            {overview.allPlans.map(
-                              (plan) => (
-                                <option
-                                  key={plan.id}
-                                  value={plan.id}
-                                >
-                                  {plan.name}
-                                </option>
-                              )
-                            )}
-                          </Select>
-                          <p className="text-xs text-muted-foreground">
-                            {t(
-                              "billing.subscriptionsPage.table.changePlanHint"
-                            )}
-                          </p>
-                          <Button
-                            type="submit"
-                            variant="outline"
-                            size="sm"
-                            className="justify-start"
-                          >
-                            <ArrowRightLeft className="size-4" />
-                            {t(
-                              "billing.subscriptionsPage.table.changePlan"
-                            )}
-                          </Button>
-                        </form>
+                            currentPlanName={
+                              subscription
+                                .clinicBillingPlan
+                                .name
+                            }
+                            plans={
+                              overview.allPlans
+                            }
+                          />
+                        </div>
                       </TableCell>
 
                       <TableCell className="align-top">
@@ -713,18 +703,26 @@ export async function PlatformSaasSubscriptionsPage({
                                 )
                             )
                             .map((action) => {
-                              const Icon =
-                                action.icon;
                               const label = t(
                                 action.labelKey
                               );
+                              const formId = `subscription-status-${subscription.id}-${action.status}`;
+                              const clinicLabel =
+                                subscription
+                                  .clinic
+                                  .brandName ??
+                                subscription
+                                  .clinic
+                                  .name;
 
                               return (
                                 <form
                                   key={
                                     action.status
                                   }
+                                  id={formId}
                                   action={platformUpdateClinicSubscriptionStatusAction}
+                                  className="inline-flex"
                                 >
                                   <input
                                     type="hidden"
@@ -747,19 +745,23 @@ export async function PlatformSaasSubscriptionsPage({
                                       action.status
                                     }
                                   />
-                                  <Button
-                                    type="submit"
-                                    size="icon-sm"
+                                  <ConfirmSubmitButton
+                                    formId={formId}
+                                    title={`${label} — ${clinicLabel}?`}
+                                    description={
+                                      action.confirmDescription
+                                    }
+                                    actionLabel={label}
+                                    label=""
+                                    icon={
+                                      <action.icon className="size-4" />
+                                    }
                                     variant={
                                       action.variant
                                     }
-                                    title={label}
-                                    aria-label={
-                                      label
-                                    }
-                                  >
-                                    <Icon className="size-4" />
-                                  </Button>
+                                    size="icon-sm"
+                                    tooltip={label}
+                                  />
                                 </form>
                               );
                             })}

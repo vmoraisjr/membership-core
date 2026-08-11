@@ -1195,6 +1195,7 @@
       "CLOSED": "Fechado"
     },
     "newThread": {
+      "trigger": "Novo chamado",
       "title": "Novo chamado",
       "description": "Abra um novo tema de atendimento com mensagem inicial.",
       "clinicLabel": "Empresa",

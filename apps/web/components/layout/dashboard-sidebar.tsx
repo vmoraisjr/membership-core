@@ -32,7 +32,6 @@ import {
 import { usePathname } from "next/navigation";
 
 import type { AppRole } from "@/features/auth/constants/roles";
-import { getRoleLabel } from "@/features/auth/constants/roles";
 import { hasPermission, type AppResource } from "@/features/rbac/permissions";
 import { useTranslations } from "@/i18n/provider";
 import type { WorkspaceBrand } from "@/lib/branding";
@@ -244,7 +243,6 @@ function getVisibleItems({
 
 type NavContentProps = {
   role: AppRole;
-  currentUser: CurrentUser;
   hasClinicAssignment: boolean;
   hasOperationalAccess: boolean;
   workspaceBrand: WorkspaceBrand;
@@ -254,7 +252,6 @@ type NavContentProps = {
 
 function SidebarNavContent({
   role,
-  currentUser,
   hasClinicAssignment,
   hasOperationalAccess,
   workspaceBrand,
@@ -375,37 +372,12 @@ function SidebarNavContent({
           );
         })}
       </nav>
-
-      <div
-        className={cn(
-          "mt-auto rounded-2xl border border-sidebar-border bg-background/70 p-3",
-          collapsed && "flex justify-center border-transparent bg-transparent p-0"
-        )}
-        title={`${currentUser.name} · ${getRoleLabel(role)} · ${workspaceBrand.displayName}`}
-      >
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-primary-soft)] text-xs font-semibold text-primary">
-            {currentUser.name.slice(0, 2).toUpperCase()}
-          </span>
-          {!collapsed ? (
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">
-                {currentUser.name}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {getRoleLabel(role)} · {workspaceBrand.displayName}
-              </p>
-            </div>
-          ) : null}
-        </div>
-      </div>
     </div>
   );
 }
 
 export function DashboardSidebar({
   role,
-  currentUser,
   hasClinicAssignment,
   hasOperationalAccess,
   workspaceBrand,
@@ -422,7 +394,6 @@ export function DashboardSidebar({
         <div className="app-shell-sidebar-sticky">
           <SidebarNavContent
             role={role}
-            currentUser={currentUser}
             hasClinicAssignment={hasClinicAssignment}
             hasOperationalAccess={hasOperationalAccess}
             workspaceBrand={workspaceBrand}
@@ -464,7 +435,6 @@ export function DashboardSidebar({
           </SidePanelDescription>
           <SidebarNavContent
             role={role}
-            currentUser={currentUser}
             hasClinicAssignment={hasClinicAssignment}
             hasOperationalAccess={hasOperationalAccess}
             workspaceBrand={workspaceBrand}

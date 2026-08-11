@@ -81,9 +81,10 @@ function SidePanelContent({
               variant="ghost"
               className="absolute right-4 top-4 z-10"
               size="icon-sm"
+              title="Fechar painel"
+              aria-label="Fechar painel"
             >
               <XIcon />
-              <span className="sr-only">Fechar painel</span>
             </Button>
           </DialogPrimitive.Close>
         ) : null}

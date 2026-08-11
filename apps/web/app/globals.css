@@ -257,7 +257,7 @@ body {
   }
 
   .app-shell-sidebar-sticky {
-    @apply relative lg:sticky lg:top-0 lg:h-screen;
+    @apply relative z-30 lg:sticky lg:top-0 lg:h-screen;
   }
 
   .app-shell-main {
@@ -285,19 +285,19 @@ body {
   }
 
   .surface-subtle {
-    @apply rounded-[1rem] border border-border/70 bg-[color:var(--color-surface-subtle)];
+    @apply rounded-[0.75rem] border border-border/70 bg-[color:var(--color-surface-subtle)];
   }
 
   .detail-field {
-    @apply rounded-[1rem] border border-border/70 bg-background/85 p-4;
+    @apply rounded-[0.75rem] border border-border/70 bg-background/85 p-3.5;
   }
 
   .detail-field-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground;
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground;
   }
 
   .detail-field-value {
-    @apply mt-2 text-sm font-medium leading-6 text-foreground;
+    @apply mt-1.5 text-sm font-medium leading-6 text-foreground;
   }
 
   .workspace-header {
@@ -366,7 +366,7 @@ body {
   }
 
   .workspace-section-header {
-    @apply border-b border-border/70 px-5 py-5 md:px-6;
+    @apply border-b border-border/70 px-4 py-4 md:px-5;
   }
 
   .workspace-section-title {
@@ -380,11 +380,11 @@ body {
   }
 
   .workspace-toolbar {
-    @apply border-b border-border/70 px-5 py-4 md:px-6;
+    @apply border-b border-border/70 px-4 py-3 md:px-5;
   }
 
   .attention-card {
-    @apply rounded-[1rem] border border-border/70 bg-background/88 p-4 shadow-[var(--shadow-xs)] transition-all duration-150;
+    @apply rounded-[0.75rem] border border-border/70 bg-background/88 p-3.5 shadow-[var(--shadow-xs)] transition-all duration-150;
   }
 
   .attention-card-title {
@@ -428,11 +428,11 @@ body {
   }
 
   .form-shell-body {
-    @apply p-5 md:p-6;
+    @apply p-4 md:p-5;
   }
 
   .form-section {
-    @apply space-y-4 rounded-[1rem] border border-border/70 bg-[color:var(--color-surface-subtle)] p-4 md:p-5;
+    @apply space-y-3 rounded-[0.75rem] border border-border/70 bg-[color:var(--color-surface-subtle)] p-3.5 md:p-4;
   }
 
   .form-section-title {
@@ -452,7 +452,7 @@ body {
   }
 
   .metric-tile-inner {
-    @apply flex items-start justify-between gap-3 px-3.5 py-3.5 md:px-4;
+    @apply flex items-start justify-between gap-2.5 px-3 py-3 md:px-3.5;
   }
 
   .cn-toast {
@@ -484,6 +484,33 @@ body {
     }
   }
 
+  .auth-wash {
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+    mask-image: linear-gradient(to bottom, black, transparent);
+  }
+
+  .auth-loading-mark {
+    animation: auth-mark-pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes auth-mark-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow: 0 3px 10px -2px rgba(14, 169, 104, 0.5);
+    }
+    50% {
+      transform: scale(1.08);
+      box-shadow: 0 6px 18px -2px rgba(6, 182, 212, 0.55);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-loading-mark {
+      animation: none;
+    }
+  }
+
   .sidebar-item {
     @apply flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all duration-150;
   }
@@ -503,5 +530,18 @@ body {
 
   .workspace-kicker {
     @apply rounded-full border border-border/70 bg-background/85 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .chat-bubble {
+    @apply max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-[var(--shadow-sm)];
+  }
+
+  .chat-bubble-own {
+    @apply ml-auto rounded-tr-sm text-primary-foreground;
+    background: var(--gradient-brand);
+  }
+
+  .chat-bubble-other {
+    @apply mr-auto rounded-tl-sm border border-border/70 bg-[color:var(--color-surface-subtle)] text-foreground;
   }
 }

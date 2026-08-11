@@ -1,11 +1,21 @@
 import Link from "next/link";
 
+import { cn } from "@/lib/utils";
+
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { StatusIndicator } from "@/components/ui/status-indicator";
@@ -105,121 +115,6 @@ export async function SupportThreadsPage({
 
       <div className="page-section-grid xl:grid-cols-[360px_minmax(0,1fr)]">
         <div className="space-y-6">
-          {canManageThreads ? (
-            <SectionCard
-              title={t(
-                "support.newThread.title"
-              )}
-              description={t(
-                "support.newThread.description"
-              )}
-            >
-              <form
-                action={
-                  createSupportThreadAction
-                }
-                className="grid gap-4 p-5"
-              >
-                {isPlatformView ? (
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium">
-                      {t(
-                        "support.newThread.clinicLabel"
-                      )}
-                    </span>
-                    <Select
-                      name="clinicId"
-                      required
-                      defaultValue=""
-                    >
-                      <option value="">
-                        {t(
-                          "support.newThread.clinicPlaceholder"
-                        )}
-                      </option>
-                      {overview.clinics.map(
-                        (clinic) => (
-                          <option
-                            key={
-                              clinic.id
-                            }
-                            value={
-                              clinic.id
-                            }
-                          >
-                            {clinic.name}
-                          </option>
-                        )
-                      )}
-                    </Select>
-                  </label>
-                ) : null}
-
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">
-                    {t(
-                      "support.newThread.subjectLabel"
-                    )}
-                  </span>
-                  <Input
-                    name="subject"
-                    required
-                    placeholder={t(
-                      "support.newThread.subjectPlaceholder"
-                    )}
-                  />
-                </label>
-
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">
-                    {t(
-                      "support.newThread.categoryLabel"
-                    )}
-                  </span>
-                  <Select
-                    name="category"
-                    defaultValue="REQUEST"
-                  >
-                    {overview.categoryOptions.map(
-                      (category) => (
-                        <option
-                          key={category}
-                          value={category}
-                        >
-                          {t(
-                            `support.category.${category}`
-                          )}
-                        </option>
-                      )
-                    )}
-                  </Select>
-                </label>
-
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">
-                    {t(
-                      "support.newThread.bodyLabel"
-                    )}
-                  </span>
-                  <Textarea
-                    name="body"
-                    required
-                    rows={5}
-                    placeholder={t(
-                      "support.newThread.bodyPlaceholder"
-                    )}
-                  />
-                </label>
-
-                <Button type="submit">
-                  {t(
-                    "support.newThread.submit"
-                  )}
-                </Button>
-              </form>
-            </SectionCard>
-          ) : null}
-
           <SectionCard
             title={t(
               "support.list.title"
@@ -227,6 +122,148 @@ export async function SupportThreadsPage({
             description={t(
               "support.list.description"
             )}
+            action={
+              canManageThreads ? (
+                <Dialog>
+                  <DialogTrigger
+                    asChild
+                  >
+                    <Button size="sm">
+                      {t(
+                        "support.newThread.trigger"
+                      )}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {t(
+                          "support.newThread.title"
+                        )}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {t(
+                          "support.newThread.description"
+                        )}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form
+                      action={
+                        createSupportThreadAction
+                      }
+                      className="grid gap-4"
+                    >
+                      {isPlatformView ? (
+                        <label className="grid gap-2 text-sm">
+                          <span className="font-medium">
+                            {t(
+                              "support.newThread.clinicLabel"
+                            )}
+                          </span>
+                          <Select
+                            name="clinicId"
+                            required
+                            defaultValue=""
+                          >
+                            <option value="">
+                              {t(
+                                "support.newThread.clinicPlaceholder"
+                              )}
+                            </option>
+                            {overview.clinics.map(
+                              (
+                                clinic
+                              ) => (
+                                <option
+                                  key={
+                                    clinic.id
+                                  }
+                                  value={
+                                    clinic.id
+                                  }
+                                >
+                                  {
+                                    clinic.name
+                                  }
+                                </option>
+                              )
+                            )}
+                          </Select>
+                        </label>
+                      ) : null}
+
+                      <label className="grid gap-2 text-sm">
+                        <span className="font-medium">
+                          {t(
+                            "support.newThread.subjectLabel"
+                          )}
+                        </span>
+                        <Input
+                          name="subject"
+                          required
+                          placeholder={t(
+                            "support.newThread.subjectPlaceholder"
+                          )}
+                        />
+                      </label>
+
+                      <label className="grid gap-2 text-sm">
+                        <span className="font-medium">
+                          {t(
+                            "support.newThread.categoryLabel"
+                          )}
+                        </span>
+                        <Select
+                          name="category"
+                          defaultValue="REQUEST"
+                        >
+                          {overview.categoryOptions.map(
+                            (
+                              category
+                            ) => (
+                              <option
+                                key={
+                                  category
+                                }
+                                value={
+                                  category
+                                }
+                              >
+                                {t(
+                                  `support.category.${category}`
+                                )}
+                              </option>
+                            )
+                          )}
+                        </Select>
+                      </label>
+
+                      <label className="grid gap-2 text-sm">
+                        <span className="font-medium">
+                          {t(
+                            "support.newThread.bodyLabel"
+                          )}
+                        </span>
+                        <Textarea
+                          name="body"
+                          required
+                          rows={5}
+                          placeholder={t(
+                            "support.newThread.bodyPlaceholder"
+                          )}
+                        />
+                      </label>
+
+                      <Button type="submit">
+                        {t(
+                          "support.newThread.submit"
+                        )}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              ) : null
+            }
           >
             <form
               method="get"
@@ -340,7 +377,7 @@ export async function SupportThreadsPage({
               </Button>
             </form>
 
-            <div className="divide-y">
+            <div className="divide-y max-h-[520px] overflow-y-auto">
               {overview.threads.length ===
               0 ? (
                 <EmptyState
@@ -420,10 +457,11 @@ export async function SupportThreadsPage({
           description={t(
             "support.conversation.description"
           )}
+          contentClassName="p-0"
         >
           {overview.selectedThread ? (
-            <div className="space-y-6 p-5">
-              <div className="flex flex-col gap-3 border-b pb-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex h-[640px] flex-col">
+              <div className="flex flex-col gap-3 border-b p-5 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-1">
                   <h2 className="text-lg font-semibold">
                     {
@@ -475,7 +513,7 @@ export async function SupportThreadsPage({
                           .selectedThread
                           .status
                       }
-                      className="h-10"
+                      className="h-9"
                     >
                       {overview.statusOptions.map(
                         (status) => (
@@ -494,6 +532,7 @@ export async function SupportThreadsPage({
                     </Select>
                     <Button
                       type="submit"
+                      size="sm"
                       variant="outline"
                     >
                       {t(
@@ -515,20 +554,45 @@ export async function SupportThreadsPage({
                 )}
               </div>
 
-              <div className="space-y-3">
+              <div className="flex-1 space-y-4 overflow-y-auto p-5">
                 {overview.selectedThread.messages.map(
-                  (message) => (
-                    <div
-                      key={message.id}
-                      className="surface-subtle p-4"
-                    >
-                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                        <p className="font-medium">
+                  (message) => {
+                    const isOwnMessage =
+                      isPlatformView
+                        ? message.authorScope ===
+                          "PLATFORM"
+                        : message.authorScope !==
+                          "PLATFORM";
+
+                    return (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "flex flex-col gap-1",
+                          isOwnMessage
+                            ? "items-end"
+                            : "items-start"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "chat-bubble",
+                            isOwnMessage
+                              ? "chat-bubble-own"
+                              : "chat-bubble-other"
+                          )}
+                        >
+                          <p className="whitespace-pre-wrap">
+                            {
+                              message.body
+                            }
+                          </p>
+                        </div>
+                        <p className="px-1 text-xs text-muted-foreground">
                           {
                             message.authorName
                           }
-                        </p>
-                        <p className="text-xs text-muted-foreground">
+                          {" · "}
                           {message.authorScope ===
                           "PLATFORM"
                             ? t(
@@ -543,11 +607,8 @@ export async function SupportThreadsPage({
                           )}
                         </p>
                       </div>
-                      <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
-                        {message.body}
-                      </p>
-                    </div>
-                  )
+                    );
+                  }
                 )}
               </div>
 
@@ -556,7 +617,7 @@ export async function SupportThreadsPage({
                   action={
                     addSupportMessageAction
                   }
-                  className="grid gap-3 border-t pt-4"
+                  className="flex items-end gap-3 border-t p-4"
                 >
                   <input
                     type="hidden"
@@ -566,21 +627,20 @@ export async function SupportThreadsPage({
                         .selectedThread.id
                     }
                   />
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium">
-                      {t(
-                        "support.conversation.replyLabel"
-                      )}
-                    </span>
-                    <Textarea
-                      name="body"
-                      required
-                      rows={5}
-                      placeholder={t(
-                        "support.conversation.replyPlaceholder"
-                      )}
-                    />
+                  <label className="sr-only">
+                    {t(
+                      "support.conversation.replyLabel"
+                    )}
                   </label>
+                  <Textarea
+                    name="body"
+                    required
+                    rows={2}
+                    placeholder={t(
+                      "support.conversation.replyPlaceholder"
+                    )}
+                    className="min-h-0 flex-1 resize-none"
+                  />
                   <Button type="submit">
                     {t(
                       "support.conversation.replySubmit"

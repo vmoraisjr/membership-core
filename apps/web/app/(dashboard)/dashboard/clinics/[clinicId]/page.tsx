@@ -6,6 +6,9 @@ type Props = {
   }>;
   searchParams: Promise<{
     tab?: string;
+    auditActor?: string;
+    auditFrom?: string;
+    auditTo?: string;
   }>;
 };
 
@@ -14,12 +17,22 @@ export default async function ClinicDetailsRoute({
   searchParams,
 }: Props) {
   const { clinicId } = await params;
-  const { tab } = await searchParams;
+  const {
+    tab,
+    auditActor,
+    auditFrom,
+    auditTo,
+  } = await searchParams;
 
   return (
     <PlatformClinicDetailsPage
       clinicId={clinicId}
       activeTab={tab}
+      auditFilters={{
+        actor: auditActor,
+        from: auditFrom,
+        to: auditTo,
+      }}
     />
   );
 }

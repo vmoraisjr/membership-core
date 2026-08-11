@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   useRef,
@@ -8,12 +7,12 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 
+import { SheepIcon } from "@/components/branding/sheep-mark";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useTranslations } from "@/i18n/provider";
-import { SHEEP_SYMBOL_BLUE_PATH } from "@/lib/branding";
 
 import { loginAction } from "../actions/login";
 
@@ -28,7 +27,6 @@ function SubmitButton() {
   return (
     <Button
       type="submit"
-      size="lg"
       className="w-full"
       disabled={pending}
     >
@@ -75,7 +73,7 @@ export function LoginForm({
         ref={formRef}
         action={loginAction}
         onSubmit={handleSubmit}
-        className="space-y-5"
+        className="space-y-3"
       >
         <input
           type="hidden"
@@ -86,6 +84,7 @@ export function LoginForm({
         <Field
           htmlFor="email"
           label={t("auth.login.emailLabel")}
+          className="gap-1.5"
         >
           <Input
             id="email"
@@ -93,12 +92,14 @@ export function LoginForm({
             type="email"
             required
             autoComplete="email"
+            className="h-9 text-sm"
           />
         </Field>
 
         <Field
           htmlFor="password"
           label={t("auth.login.passwordLabel")}
+          className="gap-1.5"
         >
           <PasswordInput
             id="password"
@@ -112,20 +113,21 @@ export function LoginForm({
             showLabel={t(
               "auth.login.showPassword"
             )}
+            className="h-9 text-sm"
           />
         </Field>
 
         <SubmitButton />
 
-        <div className="space-y-3 text-center">
+        <div className="space-y-2 text-center">
           <Link
             href="/forgot-password"
-            className="text-sm font-medium text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline"
+            className="text-xs font-medium text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline"
           >
             {t("auth.login.forgotPassword")}
           </Link>
 
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p className="text-[11px] leading-4 text-muted-foreground">
             {t("auth.login.supportText")}
           </p>
         </div>
@@ -134,15 +136,7 @@ export function LoginForm({
       {isSubmitting ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/98 backdrop-blur-sm transition-opacity duration-300 motion-reduce:transition-none">
           <div className="flex flex-col items-center gap-4 px-6 text-center">
-            <Image
-              src={SHEEP_SYMBOL_BLUE_PATH}
-              alt=""
-              aria-hidden="true"
-              width={96}
-              height={96}
-              priority
-              className="size-20 object-contain motion-safe:animate-spin motion-reduce:animate-none"
-            />
+            <SheepIcon className="size-14 auth-loading-mark" />
             <p
               aria-live="polite"
               className="text-sm font-medium text-foreground"

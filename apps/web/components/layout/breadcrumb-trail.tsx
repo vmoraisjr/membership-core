@@ -78,13 +78,16 @@ export function BreadcrumbTrail() {
           className="flex items-center gap-2"
         >
           {crumb.isCurrent ? (
-            <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 font-medium text-foreground">
+            <span
+              aria-current="page"
+              className="px-0.5 font-medium text-foreground"
+            >
               {crumb.label}
             </span>
           ) : (
             <Link
               href={crumb.href}
-              className="rounded-full px-2.5 py-1 transition hover:bg-background hover:text-foreground"
+              className="rounded-md px-0.5 transition-colors hover:text-foreground"
             >
               {crumb.label}
             </Link>

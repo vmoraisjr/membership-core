@@ -800,7 +800,7 @@ export function ClinicDialog({
                                 !current
                             )
                           }
-                          className="absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center text-muted-foreground"
+                          className="absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                         >
                           {clinicMasterPasswordVisible ? (
                             <EyeOff className="size-4" />
