@@ -13,6 +13,10 @@ import { formatCurrency } from "@/lib/formatters";
 
 import { PatientPaymentsTable } from "./patient-payments-table";
 import { getBillingOverview } from "../services/billing-foundation";
+import {
+  legendSection,
+  PATIENT_INVOICE_STATUS_LEGEND,
+} from "@/lib/legend-content";
 
 export async function PatientPaymentsPage() {
   const t = getTranslations();
@@ -154,6 +158,29 @@ export async function PatientPaymentsPage() {
         description={t(
           "billing.sections.patientInvoices.description"
         )}
+        helpLegend={[
+          legendSection(
+            "Status da cobrança",
+            PATIENT_INVOICE_STATUS_LEGEND
+          ),
+          legendSection("Ações da linha", [
+            {
+              label: "Marcar como pago",
+              description:
+                "Confirma manualmente o pagamento desta cobrança.",
+            },
+            {
+              label: "Marcar em atraso",
+              description:
+                "Sinaliza que a cobrança pendente venceu sem pagamento.",
+            },
+            {
+              label: "Cancelar cobrança",
+              description:
+                "Cancela a fatura — deixa de contar como pendência.",
+            },
+          ]),
+        ]}
       >
         <PatientPaymentsTable
           invoices={
@@ -162,6 +189,8 @@ export async function PatientPaymentsPage() {
           canManageBilling={
             canManageBilling
           }
+          linkToPatient
+          syncFiltersToUrl
         />
       </SectionCard>
     </DashboardPage>

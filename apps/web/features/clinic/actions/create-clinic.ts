@@ -161,6 +161,10 @@ export async function createClinic(
   safeRevalidatePath("/dashboard/billing");
   safeRevalidatePath("/dashboard/contracts");
   safeRevalidatePath("/dashboard/modules");
+  safeRevalidatePath("/dashboard/empresas");
+  safeRevalidatePath(
+    "/dashboard/planos-comerciais"
+  );
 
   return {
     clinicId: result.clinic.id,

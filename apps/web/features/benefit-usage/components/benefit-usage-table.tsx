@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { BenefitUsageStatus } from "@prisma/client";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { cancelBenefitUsageAction } from "../actions/cancel-benefit-usage";
@@ -25,6 +27,11 @@ import {
 } from "@/components/ui/table";
 import { useTranslations } from "@/i18n/provider";
 import { formatDate } from "@/lib/formatters";
+import { atendimentosUrl, clienteUrl } from "@/lib/company-routes";
+import {
+  legendSection,
+  BENEFIT_USAGE_STATUS_LEGEND,
+} from "@/lib/legend-content";
 
 type BenefitUsageHistoryItem = {
   id: string;
@@ -55,6 +62,7 @@ type BenefitUsageHistoryItem = {
 type Props = {
   usages: BenefitUsageHistoryItem[];
   canCancelBenefitUsage?: boolean;
+  linkToPatient?: boolean;
 };
 
 const PERIOD_OPTIONS = [
@@ -86,19 +94,87 @@ function isWithinPeriod(
 export function BenefitUsageTable({
   usages,
   canCancelBenefitUsage = false,
+  linkToPatient = false,
 }: Props) {
   const t = useTranslations();
-  const [search, setSearch] =
-    useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [search, setSearch] = useState(
+    () =>
+      (linkToPatient &&
+        searchParams.get("query")) ||
+      ""
+  );
   const [statusFilter, setStatusFilter] =
-    useState("all");
+    useState(
+      () =>
+        (linkToPatient &&
+          searchParams.get("status")) ||
+        "all"
+    );
   const [periodFilter, setPeriodFilter] =
-    useState<PeriodFilter>("all");
+    useState<PeriodFilter>(() => {
+      const fromUrl =
+        linkToPatient &&
+        searchParams.get("period");
+      return fromUrl &&
+        PERIOD_OPTIONS.some(
+          (option) => option.value === fromUrl
+        )
+        ? (fromUrl as PeriodFilter)
+        : "all";
+    });
   const [isPending, startTransition] =
     useTransition();
 
   const normalizedSearch =
     search.trim().toLowerCase();
+
+  const currentAtendimentosUrl = useMemo(
+    () =>
+      atendimentosUrl({
+        query:
+          search.trim().length > 0
+            ? search
+            : undefined,
+        status:
+          statusFilter !== "all"
+            ? statusFilter
+            : undefined,
+        period:
+          periodFilter !== "all"
+            ? periodFilter
+            : undefined,
+      }),
+    [search, statusFilter, periodFilter]
+  );
+
+  const didMount = useRef(false);
+
+  useEffect(() => {
+    if (!linkToPatient) {
+      return;
+    }
+
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
+
+    const handle = setTimeout(() => {
+      router.replace(
+        currentAtendimentosUrl,
+        { scroll: false }
+      );
+    }, 300);
+
+    return () => clearTimeout(handle);
+  }, [
+    linkToPatient,
+    currentAtendimentosUrl,
+    router,
+  ]);
 
   const visibleUsages = usages.filter(
     (usage) => {
@@ -189,6 +265,19 @@ export function BenefitUsageTable({
       description={t(
         "benefitUsage.table.description"
       )}
+      helpLegend={[
+        legendSection(
+          "Status de uso",
+          BENEFIT_USAGE_STATUS_LEGEND
+        ),
+        legendSection("Ações", [
+          {
+            label: "Cancelar uso",
+            description:
+              "Anula um uso registrado por engano — só OWNER e ADMIN podem cancelar.",
+          },
+        ]),
+      ]}
       toolbar={
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="grid gap-2">
@@ -314,10 +403,28 @@ export function BenefitUsageTable({
                         .patientId
                     }
                   />
-                  {
+                  {linkToPatient ? (
+                    <Link
+                      href={clienteUrl(
+                        usage.subscription
+                          .patient.id,
+                        {
+                          tab: "benefits",
+                          returnTo:
+                            currentAtendimentosUrl,
+                        }
+                      )}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {
+                        usage.subscription
+                          .patient.fullName
+                      }
+                    </Link>
+                  ) : (
                     usage.subscription
                       .patient.fullName
-                  }
+                  )}
                 </div>
               </TableCell>
               <TableCell className="align-top">

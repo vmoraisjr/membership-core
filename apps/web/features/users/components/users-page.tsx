@@ -1,6 +1,7 @@
 import { ClinicAssignmentRequired } from "@/components/dashboard/clinic-assignment-required";
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { resolveCurrentWorkspace } from "@/features/auth/services/get-current-workspace";
+import { MyCompanyTabs } from "@/features/clinic/components/my-company-tabs";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
@@ -121,6 +122,11 @@ export async function UsersPage({
         eyebrow="Administração da empresa"
         title={t("users.title")}
         description="Gerencie apenas os usuários locais da empresa atual."
+      />
+
+      <MyCompanyTabs
+        activeTab="team"
+        role={role}
       />
 
       <UsersOverviewPanel

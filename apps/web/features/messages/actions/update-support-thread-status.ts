@@ -8,13 +8,17 @@ import {
 import { redirect } from "next/navigation";
 
 import prisma from "@/lib/prisma";
-import { safeRevalidatePath } from "@/lib/revalidation";
 import { getCurrentWorkspace } from "@/features/auth/services/get-current-workspace";
 import { assertPermission } from "@/features/rbac/services/assert-permission";
 import {
   createAuditLogSafely,
   getCurrentAuditActor,
 } from "@/features/audit-log/services/create-audit-log";
+import {
+  resolveSupportReturnTo,
+  revalidateSupportPaths,
+  withThreadId,
+} from "../utils/support-navigation";
 
 function isStatus(
   value: string
@@ -106,10 +110,18 @@ export async function updateSupportThreadStatusAction(
     }
   );
 
-  safeRevalidatePath(
-    "/dashboard/messages"
+  revalidateSupportPaths(
+    thread.clinicId
   );
   redirect(
-    `/dashboard/messages?threadId=${thread.id}`
+    withThreadId(
+      resolveSupportReturnTo(
+        formData,
+        workspace.type === "platform"
+          ? "/dashboard/chamados"
+          : "/dashboard/messages"
+      ),
+      thread.id
+    )
   );
 }

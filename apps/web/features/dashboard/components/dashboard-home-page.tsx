@@ -6,9 +6,7 @@ import {
   Building2,
   ClipboardList,
   CreditCard,
-  HeartPulse,
   MessageSquareMore,
-  PlusCircle,
   ReceiptText,
   ShieldCheck,
   Users,
@@ -19,6 +17,7 @@ import { AttentionList } from "@/components/dashboard/attention-list";
 import { MetricDelta } from "@/components/dashboard/metric-delta";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { MetricGrid } from "@/components/dashboard/metric-grid";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { Button } from "@/components/ui/button";
 import { DashboardPage } from "@/components/layout/dashboard-page";
@@ -28,6 +27,12 @@ import { hasPermission } from "@/features/rbac/permissions";
 import { SubscriptionStatusBadge } from "@/features/subscriptions/components/subscription-status-badge";
 import { getTranslations } from "@/i18n/messages";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import {
+  administracaoUrl,
+  chamadosUrl,
+  empresasUrl,
+} from "@/lib/owner-routes";
+import { cobrancasUrl, clientesUrl } from "@/lib/company-routes";
 
 import { getDashboardMetrics } from "../services/get-dashboard-metrics";
 
@@ -90,58 +95,50 @@ export async function DashboardHomePage() {
       year: "numeric",
     }
   ).format(new Date());
-  const canCreateSubscription = hasPermission(
+  const canManagePatients = hasPermission(
     role,
-    "subscriptions",
+    "patients",
     "manage"
+  );
+  const canViewBilling = hasPermission(
+    role,
+    "billing",
+    "view"
   );
 
   return (
     <DashboardPage>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-primary-ink)]">
-            {metrics.scope === "clinic"
-              ? "Workspace da empresa"
-              : "Controle global Sheep"}
-          </p>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            {greetingTitle}
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            {metrics.scope === "clinic"
-              ? t(
-                  "dashboard.clinicDescription",
-                  {
-                    clinicName:
-                      metrics.clinicName,
-                  }
-                )
-              : t(
-                  "dashboard.platformDescription"
-                )}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {todayLabel}
-          </p>
-        </div>
-
-        {metrics.scope === "clinic" &&
-        canCreateSubscription ? (
-          <Button asChild size="sm">
-            <Link href="/dashboard/subscriptions">
-              <PlusCircle className="size-4" />
-              {t(
-                "dashboard.primaryAction.clinic"
-              )}
-            </Link>
-          </Button>
-        ) : null}
-      </div>
+      <PageHeader
+        eyebrow={
+          metrics.scope === "clinic"
+            ? "Workspace da empresa"
+            : "Controle global Sheep"
+        }
+        title={greetingTitle}
+        description={
+          metrics.scope === "clinic"
+            ? t("dashboard.clinicDescription", {
+                clinicName: metrics.clinicName,
+              })
+            : t("dashboard.platformDescription")
+        }
+        meta={<span>{todayLabel}</span>}
+        action={
+          metrics.scope === "clinic" &&
+          canManagePatients ? (
+            <Button asChild size="sm">
+              <Link href={clientesUrl()}>
+                <Users className="size-4" />
+                Novo cliente
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {metrics.scope === "clinic" ? (
         <>
-          <MetricGrid columns="six">
+          <MetricGrid columns="four">
             <MetricCard
               label={t(
                 "dashboard.metrics.activePatients.label"
@@ -228,59 +225,39 @@ export async function DashboardHomePage() {
               }
             />
 
-            <MetricCard
-              label={t(
-                "dashboard.metrics.benefitsConsumed.label"
-              )}
-              value={metrics.benefitsConsumed.toString()}
-              hint={t(
-                "dashboard.metrics.benefitsConsumed.hint"
-              )}
-              icon={
-                <HeartPulse className="size-5" />
-              }
-              tone="info"
-            />
-
-            <MetricCard
-              label={t(
-                "dashboard.metrics.activePlans.label"
-              )}
-              value={metrics.activePlansCount.toString()}
-              hint={t(
-                "dashboard.metrics.activePlans.hint"
-              )}
-              icon={<CreditCard className="size-5" />}
-            />
           </MetricGrid>
 
           <SectionCard
             title="O que merece atenção agora"
-            description="Ações rápidas e leituras operacionais para reduzir esforço no dia a dia."
+            description="Comece pela tarefa que precisa de atenção agora."
           >
             <div className="grid gap-4 p-5 md:grid-cols-3">
               {[
-                {
-                  href: "/dashboard/patients",
-                  title: "Cadastrar cliente",
-                  description:
-                    "Abra novos cadastros sem sair do fluxo operacional.",
-                  icon: Users,
-                },
-                {
-                  href: "/dashboard/subscriptions",
-                  title: "Criar assinatura",
-                  description:
-                    "Ative novas receitas recorrentes a partir dos planos vigentes.",
-                  icon: CreditCard,
-                },
-                {
-                  href: "/dashboard/payments",
-                  title: "Cobranças pendentes",
-                  description:
-                    "Priorize pagamentos, atrasos e regularizações da empresa.",
-                  icon: ReceiptText,
-                },
+                ...(canManagePatients
+                  ? [
+                      {
+                        href: clientesUrl(),
+                        title: "Cadastrar cliente",
+                        description:
+                          "Cadastre o cliente e siga para a assinatura no mesmo contexto.",
+                        icon: Users,
+                      },
+                    ]
+                  : []),
+                ...(canViewBilling
+                  ? [
+                      {
+                        href: cobrancasUrl({
+                          status: "OVERDUE",
+                        }),
+                        title:
+                          "Cobranças pendentes",
+                        description:
+                          "Priorize atrasos e regularizações financeiras.",
+                        icon: ReceiptText,
+                      },
+                    ]
+                  : []),
               ].map((shortcut) => (
                 <ActionCard
                   key={shortcut.href}
@@ -628,7 +605,7 @@ export async function DashboardHomePage() {
                   description:
                     "Acompanhe tenants que ainda precisam converter para receita recorrente.",
                   icon: Building2,
-                  href: "/dashboard/billing/subscriptions?status=TRIAL",
+                  href: empresasUrl(),
                   tone: "info",
                 },
                 {
@@ -638,7 +615,7 @@ export async function DashboardHomePage() {
                   description:
                     "Priorize contas com risco operacional e financeiro.",
                   icon: AlertTriangle,
-                  href: "/dashboard/billing/payments?status=OVERDUE",
+                  href: empresasUrl(),
                   tone: "warning",
                 },
                 {
@@ -648,7 +625,9 @@ export async function DashboardHomePage() {
                   description:
                     "Centralize incidentes, solicitações e respostas pendentes.",
                   icon: MessageSquareMore,
-                  href: "/dashboard/messages?status=WAITING_PLATFORM",
+                  href: chamadosUrl({
+                    status: "WAITING_PLATFORM",
+                  }),
                   tone: "warning",
                 },
                 {
@@ -658,7 +637,9 @@ export async function DashboardHomePage() {
                   description:
                     "Monitore acessos internos ainda não ativados.",
                   icon: ShieldCheck,
-                  href: "/dashboard/users",
+                  href: administracaoUrl({
+                    tab: "team",
+                  }),
                   tone: "info",
                 },
                 {
@@ -668,7 +649,9 @@ export async function DashboardHomePage() {
                   description:
                     "Acompanhe exclusões e desativações registradas nos últimos sete dias.",
                   icon: ClipboardList,
-                  href: "/dashboard/audit-logs",
+                  href: administracaoUrl({
+                    tab: "audit",
+                  }),
                   tone: "danger",
                 },
               ]}

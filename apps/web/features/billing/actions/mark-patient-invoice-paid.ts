@@ -168,4 +168,6 @@ export async function markPatientInvoicePaidAction(
     "/dashboard/payments"
   );
   safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/dashboard/cobrancas");
+  safeRevalidatePath("/dashboard/clientes");
 }

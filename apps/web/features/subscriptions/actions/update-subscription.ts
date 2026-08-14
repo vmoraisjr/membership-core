@@ -160,4 +160,6 @@ export async function updateSubscription(
   revalidatePath(
     "/dashboard/subscriptions"
   );
+  revalidatePath("/dashboard/clientes");
+  revalidatePath("/dashboard/planos");
 }

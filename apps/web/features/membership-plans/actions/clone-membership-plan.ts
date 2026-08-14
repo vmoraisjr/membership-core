@@ -108,4 +108,5 @@ export async function cloneMembershipPlan(
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/plans");
   revalidatePath("/dashboard/benefits");
+  revalidatePath("/dashboard/planos");
 }

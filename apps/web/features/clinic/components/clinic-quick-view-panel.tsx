@@ -23,6 +23,7 @@ import {
   formatBrazilianState,
 } from "@/lib/br-formats";
 import { formatDate } from "@/lib/formatters";
+import { empresaUrl } from "@/lib/owner-routes";
 
 type Props = {
   clinic: {
@@ -166,7 +167,7 @@ export function ClinicQuickViewPanel({
           <div className="border-t border-border/60 pt-4">
             <Button asChild size="sm">
               <Link
-                href={`/dashboard/clinics/${clinic.id}`}
+                href={empresaUrl(clinic.id)}
               >
                 Abrir workspace completo
               </Link>

@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { getFeedbackErrorMessage } from "@/lib/feedback";
+import { empresaUrl } from "@/lib/owner-routes";
 
 import { deactivateClinic } from "../actions/deactivate-clinic";
 import { reactivateClinic } from "../actions/reactivate-clinic";
@@ -137,7 +138,7 @@ export function ClinicRowActions({
           aria-label="Abrir workspace completo"
         >
           <Link
-            href={`/dashboard/clinics/${clinic.id}`}
+            href={empresaUrl(clinic.id)}
           >
             <ExternalLink className="size-4" />
           </Link>

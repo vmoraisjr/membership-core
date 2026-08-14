@@ -7,6 +7,8 @@ type Props = {
   description?: string;
   children?: ReactNode;
   className?: string;
+  /** Lighter, borderless-fill variant for screens that don't need a heavy boxed section. */
+  subtle?: boolean;
 };
 
 export function FormSection({
@@ -14,9 +16,17 @@ export function FormSection({
   description,
   children,
   className,
+  subtle = false,
 }: Props) {
   return (
-    <div className={cn("form-section", className)}>
+    <div
+      className={cn(
+        subtle
+          ? "space-y-3 rounded-lg border border-border/40 bg-transparent p-3.5 md:p-4"
+          : "form-section",
+        className
+      )}
+    >
       {title || description ? (
         <div>
           {title ? (

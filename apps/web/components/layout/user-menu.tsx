@@ -38,9 +38,6 @@ export function UserMenu({ role, currentUser }: Props) {
           <span className="text-xs font-medium text-foreground">
             {currentUser.name}
           </span>
-          <span className="text-xs text-muted-foreground">
-            · {getRoleLabel(role)}
-          </span>
           <ChevronDown className="size-3.5 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
@@ -49,6 +46,9 @@ export function UserMenu({ role, currentUser }: Props) {
         <DropdownMenuLabel className="font-normal">
           <p className="text-sm font-medium text-foreground">
             {currentUser.name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {getRoleLabel(role)}
           </p>
           <p className="truncate text-xs text-muted-foreground">
             {currentUser.email}

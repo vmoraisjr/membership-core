@@ -12,8 +12,11 @@ import {
   formatBrazilianState,
   formatBrazilianZipCode,
 } from "@/lib/br-formats";
+import { minhaEmpresaUrl } from "@/lib/company-routes";
 
 import { CompanyBrandingForm } from "./company-branding-form";
+import { CompanySubscriptionTab } from "./company-subscription-tab";
+import { MyCompanyTabs } from "./my-company-tabs";
 import { getCurrentClinicProfile } from "../services/get-current-clinic-profile";
 
 function formatDate(
@@ -26,7 +29,15 @@ function formatDate(
   return new Date(value).toLocaleDateString();
 }
 
-export async function CompanyProfilePage() {
+type Props = {
+  activeTab?: "profile" | "subscription";
+  checkoutReturn?: "success" | "canceled";
+};
+
+export async function CompanyProfilePage({
+  activeTab = "profile",
+  checkoutReturn,
+}: Props = {}) {
   const role =
     await getCurrentUserRole();
 
@@ -72,6 +83,19 @@ export async function CompanyProfilePage() {
         }
       />
 
+      <MyCompanyTabs
+        activeTab={activeTab}
+        role={role}
+      />
+
+      {activeTab === "subscription" ? (
+        <CompanySubscriptionTab
+          checkoutReturn={checkoutReturn}
+        />
+      ) : null}
+
+      {activeTab === "profile" ? (
+      <>
       <div className="page-section-grid xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <SectionCard
           title="Identidade da empresa"
@@ -97,7 +121,10 @@ export async function CompanyProfilePage() {
               demais obrigações legais.
             </p>
             <Link
-              href="/dashboard/messages"
+              href={minhaEmpresaUrl({
+                tab: "support",
+                category: "REGISTRATION",
+              })}
               className="inline-flex h-10 items-center rounded-xl border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-[color:var(--color-surface-subtle)]"
             >
               Abrir chamado cadastral
@@ -219,18 +246,20 @@ export async function CompanyProfilePage() {
                 {latestSubscription?.status ??
                   "Não definido"}
               </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Próximo vencimento:{" "}
-                {formatDate(
-                  latestSubscription
-                    ?.invoices[0]
-                    ?.dueDate
-                )}
-              </p>
+              <Link
+                href={minhaEmpresaUrl({
+                  tab: "subscription",
+                })}
+                className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
+              >
+                Ver assinatura e cobrança →
+              </Link>
             </div>
           </div>
         </SectionCard>
       </div>
+      </>
+      ) : null}
     </DashboardPage>
   );
 }

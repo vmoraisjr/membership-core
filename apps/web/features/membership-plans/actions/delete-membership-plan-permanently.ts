@@ -98,4 +98,6 @@ export async function deleteMembershipPlanPermanently(
   revalidatePath("/dashboard/plans");
   revalidatePath("/dashboard/benefits");
   revalidatePath("/dashboard/subscriptions");
+  revalidatePath("/dashboard/planos");
+  revalidatePath("/dashboard/clientes");
 }

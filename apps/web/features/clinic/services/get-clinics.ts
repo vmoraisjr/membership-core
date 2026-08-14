@@ -65,6 +65,23 @@ function clinicIncludeArgs() {
   };
 }
 
+export async function getClinicBillingPlanOptions() {
+  const plans =
+    await prisma.clinicBillingPlan.findMany(
+      {
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      }
+    );
+
+  return plans;
+}
+
 export async function getClinics() {
   const currentUser =
     await requireCurrentAppUser();

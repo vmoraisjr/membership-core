@@ -148,9 +148,6 @@ export async function platformSetClinicModuleStatusAction(
   );
 
   safeRevalidatePath(
-    `/dashboard/clinics/${clinicId}`
-  );
-  safeRevalidatePath(
-    "/dashboard/modules"
+    `/dashboard/empresas/${clinicId}`
   );
 }

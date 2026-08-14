@@ -1,13 +1,14 @@
 "use client";
 
+import { useRef } from "react";
+
 import {
+  Activity,
   CircleOff,
-  Eye,
-  Pencil,
+  MoreHorizontal,
+  Plus,
   RotateCcw,
   Trash2,
-  Plus,
-  Activity,
   Users,
 } from "lucide-react";
 
@@ -16,6 +17,13 @@ import { toast } from "sonner";
 import { PatientKind } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
@@ -27,6 +35,7 @@ import { PatientDialog } from "./patient-dialog";
 import { SubscriptionDialog } from "@/features/subscriptions/components/subscription-dialog";
 import { ConsumeBenefitDialog } from "@/features/benefit-usage/components/consume-benefit-dialog";
 import { useTranslations } from "@/i18n/provider";
+import { clienteUrl } from "@/lib/company-routes";
 
 type PatientBenefitBalance = {
   subscriptionId: string;
@@ -79,6 +88,8 @@ type Props = {
     kind: PatientKind;
     status: "ACTIVE" | "INACTIVE";
   }>;
+  hasActiveSubscription?: boolean;
+  returnTo?: string;
   canManagePatients?: boolean;
   canDeletePatientsPermanently?: boolean;
   canManageSubscriptions?: boolean;
@@ -90,12 +101,30 @@ export function PatientRowActions({
   plans = [],
   benefitBalances = [],
   responsibleOptions = [],
+  hasActiveSubscription = false,
+  returnTo,
   canManagePatients = true,
   canDeletePatientsPermanently = true,
   canManageSubscriptions = true,
   canManageBenefitUsage = true,
 }: Props) {
   const t = useTranslations();
+
+  const editTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const addDependentTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const subscriptionTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const consumeBenefitTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const deactivateTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const reactivateTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const deleteTriggerRef =
+    useRef<HTMLButtonElement>(null);
+
   async function handleSuspend({
     detailsValue,
   }: {
@@ -164,241 +193,318 @@ export function PatientRowActions({
     }
   }
 
-  const canShowActions =
+  const canShowMenu =
     canManagePatients ||
     canManageSubscriptions ||
     canManageBenefitUsage;
 
-  if (!canShowActions) {
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          asChild
-          title={t("shared.actions.view")}
-        >
-          <Link
-            href={`/dashboard/patients/${patient.id}`}
-          >
-            <Eye className="size-4" />
-          </Link>
-        </Button>
-
-        <span className="text-xs text-muted-foreground">
-          {t("shared.states.readOnly")}
-        </span>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       <Button
-        size="icon-sm"
-        variant="ghost"
+        size="sm"
+        variant="outline"
         asChild
-        title={t("shared.actions.view")}
       >
         <Link
-          href={`/dashboard/patients/${patient.id}`}
+          href={clienteUrl(patient.id, {
+            returnTo,
+          })}
         >
-          <Eye className="size-4" />
+          {t("patients.table.viewAction")}
         </Link>
       </Button>
 
-      {patient.status === "ACTIVE" ? (
-        <>
-          {canManagePatients ? (
-            <PatientDialog
-              mode="edit"
-              initialData={patient}
-              responsibleOptions={responsibleOptions}
-              trigger={
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  title={t(
-                    "shared.actions.edit"
-                  )}
-                  aria-label={t(
-                    "shared.actions.edit"
-                  )}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-              }
-            />
-          ) : null}
-
-          {canManagePatients &&
-          patient.kind ===
-            PatientKind.TITULAR ? (
-            <PatientDialog
-              defaultKind={
-                PatientKind.DEPENDENT
-              }
-              defaultResponsiblePatientId={
-                patient.id
-              }
-              responsibleOptions={
-                responsibleOptions
-              }
-              trigger={
-                <Button
-                  variant="outline"
-                >
-                  <Users className="size-4" />
-                  Adicionar dependente
-                </Button>
-              }
-            />
-          ) : null}
-
-          {canManageSubscriptions &&
-          patient.kind ===
-            PatientKind.TITULAR ? (
-            <SubscriptionDialog
-              patients={[{ id: patient.id, fullName: patient.fullName }]}
-              plans={plans}
-              defaultPatientId={patient.id}
-              trigger={
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  title={t(
-                    "subscriptions.dialog.createTitle"
-                  )}
-                  aria-label={t(
-                    "subscriptions.dialog.createTitle"
-                  )}
-                >
-                  <Plus className="size-4" />
-                </Button>
-              }
-            />
-          ) : null}
-
-          {canManageBenefitUsage ? (
-            <ConsumeBenefitDialog
-              balances={benefitBalances}
+      {canShowMenu ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon-sm"
+              variant="ghost"
               title={t(
-                "patients.rowActions.consumeTitle",
-                { name: patient.fullName }
+                "shared.labels.actions"
               )}
-              trigger={
-                <Button variant="outline">
-                  <Activity className="size-4" />
-                  {t("patients.rowActions.useBenefit")}
-                </Button>
-              }
-            />
-          ) : null}
+              aria-label={t(
+                "shared.labels.actions"
+              )}
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
 
-          {canManagePatients ? (
-            <ConfirmDialog
-              title={t(
-                "patients.rowActions.deactivateTitle"
-              )}
-              description={t(
-                "patients.rowActions.deactivateDescription"
-              )}
-              onConfirm={handleSuspend}
-              actionLabel={t(
-                "patients.rowActions.deactivateAction"
-              )}
-              detailsLabel={t("shared.labels.reason")}
-              detailsPlaceholder={t(
-                "patients.rowActions.deactivatePlaceholder"
-              )}
-              detailsRequired
-              detailsInput="textarea"
-              trigger={
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
-                  title={t(
-                    "patients.rowActions.deactivateAction"
-                  )}
-                  aria-label={t(
-                    "patients.rowActions.deactivateAction"
-                  )}
-                >
-                  <CircleOff className="size-4" />
-                </Button>
-              }
-            />
-          ) : null}
-        </>
-      ) : (
-        <>
-          {canManagePatients ? (
-            <>
-              <ConfirmDialog
-                title={t(
-                  "patients.rowActions.reactivateTitle"
-                )}
-                description={t(
-                  "patients.rowActions.reactivateDescription"
-                )}
-                onConfirm={() =>
-                  handleReactivate()
-                }
-                actionLabel={t(
-                  "patients.rowActions.reactivateAction"
-                )}
-                trigger={
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    title={t(
-                      "patients.rowActions.reactivateAction"
+          <DropdownMenuContent align="end">
+            {patient.status === "ACTIVE" ? (
+              <>
+                {canManagePatients ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      editTriggerRef.current?.click()
+                    }
+                  >
+                    {t("shared.actions.edit")}
+                  </DropdownMenuItem>
+                ) : null}
+
+                {canManagePatients &&
+                patient.kind ===
+                  PatientKind.TITULAR ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      addDependentTriggerRef.current?.click()
+                    }
+                  >
+                    <Users className="size-4" />
+                    Adicionar dependente
+                  </DropdownMenuItem>
+                ) : null}
+
+                {canManageSubscriptions &&
+                patient.kind ===
+                  PatientKind.TITULAR &&
+                !hasActiveSubscription ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      subscriptionTriggerRef.current?.click()
+                    }
+                  >
+                    <Plus className="size-4" />
+                    {t(
+                      "subscriptions.dialog.createTitle"
                     )}
-                    aria-label={t(
-                      "patients.rowActions.reactivateAction"
+                  </DropdownMenuItem>
+                ) : null}
+
+                {canManageBenefitUsage ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      consumeBenefitTriggerRef.current?.click()
+                    }
+                  >
+                    <Activity className="size-4" />
+                    {t(
+                      "patients.rowActions.useBenefit"
                     )}
+                  </DropdownMenuItem>
+                ) : null}
+
+                {canManagePatients ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onSelect={() =>
+                        deactivateTriggerRef.current?.click()
+                      }
+                    >
+                      <CircleOff className="size-4" />
+                      {t(
+                        "patients.rowActions.deactivateAction"
+                      )}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {canManagePatients ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      reactivateTriggerRef.current?.click()
+                    }
                   >
                     <RotateCcw className="size-4" />
-                  </Button>
-                }
-              />
+                    {t(
+                      "patients.rowActions.reactivateAction"
+                    )}
+                  </DropdownMenuItem>
+                ) : null}
 
-              {canDeletePatientsPermanently ? (
-                <ConfirmDialog
-                  title={t(
-                    "patients.rowActions.deleteTitle"
-                  )}
-                  description={t(
-                    "patients.rowActions.deleteDescription"
-                  )}
-                  onConfirm={() =>
-                    handleDelete()
-                  }
-                  actionLabel={t(
-                    "shared.actions.deletePermanently"
-                  )}
-                  trigger={
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
-                      title={t(
-                        "shared.actions.deletePermanently"
-                      )}
-                      aria-label={t(
-                        "shared.actions.deletePermanently"
-                      )}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  }
+                {canManagePatients &&
+                canDeletePatientsPermanently ? (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={() =>
+                      deleteTriggerRef.current?.click()
+                    }
+                  >
+                    <Trash2 className="size-4" />
+                    {t(
+                      "shared.actions.deletePermanently"
+                    )}
+                  </DropdownMenuItem>
+                ) : null}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+
+      {/* Hidden triggers keep every dialog's existing behavior (validation,
+          confirmation, toasts) while the visible surface is just the menu
+          above — no icon bar to memorize (UI-061). */}
+      {canManagePatients ? (
+        <PatientDialog
+          mode="edit"
+          initialData={patient}
+          responsibleOptions={responsibleOptions}
+          trigger={
+            <button
+              ref={editTriggerRef}
+              type="button"
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          }
+        />
+      ) : null}
+
+      {canManagePatients &&
+      patient.kind === PatientKind.TITULAR ? (
+        <PatientDialog
+          defaultKind={PatientKind.DEPENDENT}
+          defaultResponsiblePatientId={
+            patient.id
+          }
+          responsibleOptions={
+            responsibleOptions
+          }
+          trigger={
+            <button
+              ref={addDependentTriggerRef}
+              type="button"
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          }
+        />
+      ) : null}
+
+      {canManageSubscriptions &&
+      patient.kind === PatientKind.TITULAR ? (
+        <SubscriptionDialog
+          patients={[
+            {
+              id: patient.id,
+              fullName: patient.fullName,
+            },
+          ]}
+          plans={plans}
+          defaultPatientId={patient.id}
+          trigger={
+            <button
+              ref={subscriptionTriggerRef}
+              type="button"
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          }
+        />
+      ) : null}
+
+      {canManageBenefitUsage ? (
+        <ConsumeBenefitDialog
+          balances={benefitBalances}
+          title={t(
+            "patients.rowActions.consumeTitle",
+            { name: patient.fullName }
+          )}
+          trigger={
+            <button
+              ref={consumeBenefitTriggerRef}
+              type="button"
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          }
+        />
+      ) : null}
+
+      {canManagePatients &&
+      patient.status === "ACTIVE" ? (
+        <ConfirmDialog
+          title={t(
+            "patients.rowActions.deactivateTitle"
+          )}
+          description={t(
+            "patients.rowActions.deactivateDescription"
+          )}
+          onConfirm={handleSuspend}
+          actionLabel={t(
+            "patients.rowActions.deactivateAction"
+          )}
+          detailsLabel={t("shared.labels.reason")}
+          detailsPlaceholder={t(
+            "patients.rowActions.deactivatePlaceholder"
+          )}
+          detailsRequired
+          detailsInput="textarea"
+          trigger={
+            <button
+              ref={deactivateTriggerRef}
+              type="button"
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          }
+        />
+      ) : null}
+
+      {canManagePatients &&
+      patient.status !== "ACTIVE" ? (
+        <>
+          <ConfirmDialog
+            title={t(
+              "patients.rowActions.reactivateTitle"
+            )}
+            description={t(
+              "patients.rowActions.reactivateDescription"
+            )}
+            onConfirm={() =>
+              handleReactivate()
+            }
+            actionLabel={t(
+              "patients.rowActions.reactivateAction"
+            )}
+            trigger={
+              <button
+                ref={reactivateTriggerRef}
+                type="button"
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+            }
+          />
+
+          {canDeletePatientsPermanently ? (
+            <ConfirmDialog
+              title={t(
+                "patients.rowActions.deleteTitle"
+              )}
+              description={t(
+                "patients.rowActions.deleteDescription"
+              )}
+              onConfirm={() => handleDelete()}
+              actionLabel={t(
+                "shared.actions.deletePermanently"
+              )}
+              trigger={
+                <button
+                  ref={deleteTriggerRef}
+                  type="button"
+                  className="hidden"
+                  aria-hidden="true"
+                  tabIndex={-1}
                 />
-              ) : null}
-            </>
+              }
+            />
           ) : null}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

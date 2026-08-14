@@ -21,6 +21,8 @@ const TONE_DOT_CLASS: Record<StatusTone, string> = {
   neutral: "bg-muted-foreground",
 }
 
+export { TONE_DOT_CLASS }
+
 type Props = {
   tone: StatusTone
   label: string

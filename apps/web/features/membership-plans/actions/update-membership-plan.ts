@@ -101,4 +101,5 @@ export async function updateMembershipPlan(
   );
 
   revalidatePath("/dashboard/plans");
+  revalidatePath("/dashboard/planos");
 }

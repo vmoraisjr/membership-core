@@ -26,6 +26,8 @@ export function getClinicSubscriptionStatusTone(
       return "neutral";
     case ClinicSubscriptionStatus.PAST_DUE:
       return "warning";
+    case ClinicSubscriptionStatus.PAUSED:
+      return "warning";
     case ClinicSubscriptionStatus.SUSPENDED:
     case ClinicSubscriptionStatus.CANCELED:
       return "danger";

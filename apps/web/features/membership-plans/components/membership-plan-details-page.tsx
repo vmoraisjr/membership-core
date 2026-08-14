@@ -22,6 +22,15 @@ import { getCurrentUserRole } from "@/features/auth/services/get-current-user-ro
 import { hasPermission } from "@/features/rbac/permissions";
 import { getTranslations } from "@/i18n/messages";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import { clienteUrl, planosUrl, planoUrl } from "@/lib/company-routes";
+import { MembershipBenefitDialog } from "@/features/membership-benefits/components/membership-benefit-dialog";
+import { MembershipBenefitRowActions } from "@/features/membership-benefits/components/membership-benefit-row-actions";
+import { SubscriptionStatusBadge } from "@/features/subscriptions/components/subscription-status-badge";
+import {
+  legendSection,
+  BENEFIT_STATUS_LEGEND,
+  SUBSCRIPTION_STATUS_LEGEND,
+} from "@/lib/legend-content";
 
 import { getMembershipPlanById } from "../services/get-membership-plan-by-id";
 
@@ -59,6 +68,21 @@ export async function MembershipPlanDetailsPage({
     timeline,
   } = await getMembershipPlanById(planId);
 
+  const canManageBenefits = hasPermission(
+    role,
+    "benefits",
+    "manage"
+  );
+  const canDeleteBenefitsPermanently =
+    hasPermission(
+      role,
+      "benefits",
+      "deletePermanent"
+    );
+  const planOption = [
+    { id: plan.id, name: plan.name },
+  ];
+
   return (
     <DashboardPage>
       <PageHeader
@@ -86,7 +110,7 @@ export async function MembershipPlanDetailsPage({
         }
         action={
           <Button asChild variant="outline">
-            <Link href="/dashboard/plans">
+            <Link href={planosUrl()}>
               <ArrowLeft className="size-4" />
               {t(
                 "plans.details.backToList"
@@ -173,6 +197,28 @@ export async function MembershipPlanDetailsPage({
         description={t(
           "plans.details.benefitsDescription"
         )}
+        helpLegend={[
+          legendSection(
+            "Status do benefício",
+            BENEFIT_STATUS_LEGEND
+          ),
+        ]}
+        action={
+          canManageBenefits &&
+          plan.active ? (
+            <MembershipBenefitDialog
+              plans={planOption}
+              defaultMembershipPlanId={
+                plan.id
+              }
+              trigger={
+                <Button size="sm">
+                  {t("benefits.new")}
+                </Button>
+              }
+            />
+          ) : undefined
+        }
       >
         {plan.benefits.length === 0 ? (
           <EmptyState
@@ -195,6 +241,9 @@ export async function MembershipPlanDetailsPage({
                   {t(
                     "shared.labels.quantity"
                   )}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t("shared.labels.actions")}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -227,6 +276,42 @@ export async function MembershipPlanDetailsPage({
                       {benefit.usageLimit ??
                         "—"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <MembershipBenefitRowActions
+                        benefit={{
+                          id: benefit.id,
+                          membershipPlanId:
+                            benefit.membershipPlanId,
+                          active:
+                            benefit.active,
+                          type: benefit.type,
+                          title: benefit.title,
+                          description:
+                            benefit.description,
+                          discountPercentage:
+                            benefit.discountPercentage,
+                          discountAmount:
+                            benefit.discountAmount,
+                          usageLimit:
+                            benefit.usageLimit,
+                          resetPeriod:
+                            benefit.resetPeriod,
+                          membershipPlan: {
+                            active: plan.active,
+                          },
+                        }}
+                        plans={planOption}
+                        planIsActive={
+                          plan.active
+                        }
+                        canManageBenefits={
+                          canManageBenefits
+                        }
+                        canDeleteBenefitsPermanently={
+                          canDeleteBenefitsPermanently
+                        }
+                      />
+                    </TableCell>
                   </TableRow>
                 )
               )}
@@ -242,6 +327,12 @@ export async function MembershipPlanDetailsPage({
         description={t(
           "plans.details.subscribersDescription"
         )}
+        helpLegend={[
+          legendSection(
+            "Status da assinatura",
+            SUBSCRIPTION_STATUS_LEGEND
+          ),
+        ]}
       >
         {activeSubscriptions.length === 0 ? (
           <EmptyState
@@ -275,7 +366,15 @@ export async function MembershipPlanDetailsPage({
                   >
                     <TableCell>
                       <Link
-                        href={`/dashboard/patients/${subscription.patient.id}`}
+                        href={clienteUrl(
+                          subscription.patient
+                            .id,
+                          {
+                            tab: "membership",
+                            returnTo:
+                              planoUrl(planId),
+                          }
+                        )}
                         className="text-primary underline-offset-4 hover:underline"
                       >
                         {
@@ -285,7 +384,11 @@ export async function MembershipPlanDetailsPage({
                       </Link>
                     </TableCell>
                     <TableCell>
-                      {subscription.status}
+                      <SubscriptionStatusBadge
+                        status={
+                          subscription.status
+                        }
+                      />
                     </TableCell>
                     <TableCell>
                       {formatDate(

@@ -33,7 +33,7 @@ export function AttentionList({ items }: Props) {
 
         return (
           <Link
-            key={item.href}
+            key={item.title}
             href={item.href}
             className="flex items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-[color:var(--color-surface-subtle)] md:px-5"
           >

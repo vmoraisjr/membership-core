@@ -162,4 +162,7 @@ export async function updatePlatformUserStatusAction(
   safeRevalidatePath(
     "/dashboard/users"
   );
+  safeRevalidatePath(
+    "/dashboard/administracao"
+  );
 }

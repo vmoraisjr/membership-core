@@ -17,10 +17,14 @@ import { AuditLogTable } from "./audit-log-table";
 
 type Props = {
   filters: AuditLogFilters;
+  basePath?: string;
+  extraParams?: Record<string, string>;
 };
 
 export async function AuditLogPage({
   filters,
+  basePath = "/dashboard/audit-logs",
+  extraParams = {},
 }: Props) {
   const t = getTranslations();
   const [role, currentUser] =
@@ -78,6 +82,9 @@ export async function AuditLogPage({
 
   const {
     logs,
+    total,
+    page,
+    pageSize,
     actorOptions,
     entityOptions,
     actionOptions,
@@ -104,12 +111,17 @@ export async function AuditLogPage({
 
       <AuditLogTable
         logs={logs}
+        total={total}
+        page={page}
+        pageSize={pageSize}
         filters={filters}
         actorOptions={actorOptions}
         entityOptions={entityOptions}
         actionOptions={actionOptions}
         clinicOptions={clinicOptions}
         isPlatformView={isPlatformView}
+        basePath={basePath}
+        extraParams={extraParams}
       />
     </DashboardPage>
   );

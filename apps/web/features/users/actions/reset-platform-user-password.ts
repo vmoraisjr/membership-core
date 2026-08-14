@@ -118,6 +118,9 @@ export async function resetPlatformUserPasswordAction(
   safeRevalidatePath(
     "/dashboard/users"
   );
+  safeRevalidatePath(
+    "/dashboard/administracao"
+  );
 
   return {
     userId: targetUser.id,

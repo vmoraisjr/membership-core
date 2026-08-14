@@ -1,12 +1,19 @@
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
+import { chamadosUrl, empresaUrl } from "@/lib/owner-routes";
 
 import { DashboardPage } from "@/components/layout/dashboard-page";
+import { MyCompanyTabs } from "@/features/clinic/components/my-company-tabs";
+import {
+  legendSection,
+  SUPPORT_THREAD_STATUS_LEGEND,
+} from "@/lib/legend-content";
 import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,6 +37,16 @@ import { createSupportThreadAction } from "../actions/create-support-thread";
 import { updateSupportThreadStatusAction } from "../actions/update-support-thread-status";
 import { getSupportThreadsOverview } from "../services/get-support-threads-overview";
 import { getSupportThreadStatusTone } from "../utils/support-status";
+import { withThreadId } from "../utils/support-navigation";
+
+type Scope =
+  | { type: "global" }
+  | {
+      type: "company";
+      clinicId: string;
+      clinicName: string;
+      returnBase: string;
+    };
 
 type Props = {
   filters: {
@@ -38,6 +55,7 @@ type Props = {
     status?: string;
     clinicId?: string;
   };
+  scope?: Scope;
 };
 
 function formatDate(
@@ -50,9 +68,12 @@ function formatDate(
 
 export async function SupportThreadsPage({
   filters,
+  scope = { type: "global" },
 }: Props) {
   const t = getTranslations();
   const role = await getCurrentUserRole();
+  const isCompanyScope =
+    scope.type === "company";
 
   if (
     !hasPermission(
@@ -61,16 +82,22 @@ export async function SupportThreadsPage({
       "view"
     )
   ) {
-    return (
+    const accessDenied = (
+      <AccessDenied
+        title={t(
+          "support.accessDeniedTitle"
+        )}
+        description={t(
+          "support.accessDeniedDescription"
+        )}
+      />
+    );
+
+    return isCompanyScope ? (
+      accessDenied
+    ) : (
       <DashboardPage>
-        <AccessDenied
-          title={t(
-            "support.accessDeniedTitle"
-          )}
-          description={t(
-            "support.accessDeniedDescription"
-          )}
-        />
+        {accessDenied}
       </DashboardPage>
     );
   }
@@ -83,36 +110,64 @@ export async function SupportThreadsPage({
 
   const overview =
     await getSupportThreadsOverview(
-      filters
+      isCompanyScope
+        ? {
+            ...filters,
+            clinicId: scope.clinicId,
+          }
+        : filters
     );
   const isPlatformView =
     overview.workspace.type ===
     "platform";
 
-  return (
-    <DashboardPage>
-      <PageHeader
-        eyebrow={
-          isPlatformView
-            ? t("support.platformEyebrow")
-            : t("support.clinicEyebrow")
-        }
-        title={
-          isPlatformView
-            ? t("support.platformTitle")
-            : t("support.clinicTitle")
-        }
-        description={
-          isPlatformView
-            ? t(
-                "support.platformDescription"
-              )
-            : t(
-                "support.clinicDescription"
-              )
-        }
-      />
+  const globalBase = (() => {
+    const params = new URLSearchParams();
 
+    if (filters.category) {
+      params.set(
+        "category",
+        filters.category
+      );
+    }
+
+    if (filters.status) {
+      params.set(
+        "status",
+        filters.status
+      );
+    }
+
+    if (
+      isPlatformView &&
+      filters.clinicId
+    ) {
+      params.set(
+        "clinicId",
+        filters.clinicId
+      );
+    }
+
+    if (!isPlatformView) {
+      params.set("tab", "support");
+    }
+
+    const query = params.toString();
+    const base = isPlatformView
+      ? "/dashboard/chamados"
+      : "/dashboard/minha-empresa";
+
+    return query
+      ? `${base}?${query}`
+      : base;
+  })();
+
+  const returnToBase = isCompanyScope
+    ? scope.returnBase
+    : globalBase;
+
+  const content = (
+    <>
       <div className="page-section-grid xl:grid-cols-[360px_minmax(0,1fr)]">
         <div className="space-y-6">
           <SectionCard
@@ -122,6 +177,12 @@ export async function SupportThreadsPage({
             description={t(
               "support.list.description"
             )}
+            helpLegend={[
+              legendSection(
+                "Status do chamado",
+                SUPPORT_THREAD_STATUS_LEGEND
+              ),
+            ]}
             action={
               canManageThreads ? (
                 <Dialog>
@@ -153,7 +214,22 @@ export async function SupportThreadsPage({
                       }
                       className="grid gap-4"
                     >
-                      {isPlatformView ? (
+                      <input
+                        type="hidden"
+                        name="returnTo"
+                        value={
+                          returnToBase
+                        }
+                      />
+                      {isCompanyScope ? (
+                        <input
+                          type="hidden"
+                          name="clinicId"
+                          value={
+                            scope.clinicId
+                          }
+                        />
+                      ) : isPlatformView ? (
                         <label className="grid gap-2 text-sm">
                           <span className="font-medium">
                             {t(
@@ -215,7 +291,10 @@ export async function SupportThreadsPage({
                         </span>
                         <Select
                           name="category"
-                          defaultValue="REQUEST"
+                          defaultValue={
+                            filters.category ??
+                            "REQUEST"
+                          }
                         >
                           {overview.categoryOptions.map(
                             (
@@ -269,7 +348,16 @@ export async function SupportThreadsPage({
               method="get"
               className="grid gap-3 border-b p-5"
             >
-              {isPlatformView ? (
+              {isCompanyScope ? (
+                <input
+                  type="hidden"
+                  name="tab"
+                  value="chamados"
+                />
+              ) : null}
+
+              {isPlatformView &&
+              !isCompanyScope ? (
                 <label className="grid gap-2 text-sm">
                   <span className="font-medium">
                     {t(
@@ -393,14 +481,18 @@ export async function SupportThreadsPage({
                   (thread) => (
                     <Link
                       key={thread.id}
-                      href={`/dashboard/messages?threadId=${thread.id}`}
+                      href={withThreadId(
+                        returnToBase,
+                        thread.id
+                      )}
                       className="block px-5 py-4 transition-colors duration-150 hover:bg-[color:var(--color-surface-subtle)]"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3">
                           <CompanyAvatarMark
                             name={
-                              isPlatformView
+                              isPlatformView &&
+                              !isCompanyScope
                                 ? (thread.clinic.brandName ?? thread.clinic.name)
                                 : thread.subject
                             }
@@ -417,7 +509,8 @@ export async function SupportThreadsPage({
                               {t(
                                 `support.category.${thread.category}`
                               )}
-                              {isPlatformView
+                              {isPlatformView &&
+                              !isCompanyScope
                                 ? ` · ${thread.clinic.brandName ?? thread.clinic.name}`
                                 : ""}
                             </p>
@@ -483,10 +576,46 @@ export async function SupportThreadsPage({
                         .selectedThread
                         .clinic.name}
                   </p>
+                  {isPlatformView &&
+                  !isCompanyScope ? (
+                    <Link
+                      href={empresaUrl(
+                        overview
+                          .selectedThread
+                          .clinic.id,
+                        {
+                          tab: "chamados",
+                          threadId:
+                            overview
+                              .selectedThread
+                              .id,
+                        }
+                      )}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Abrir empresa →
+                    </Link>
+                  ) : null}
+                  {isCompanyScope ? (
+                    <Link
+                      href={chamadosUrl({
+                        threadId:
+                          overview
+                            .selectedThread
+                            .id,
+                        clinicId:
+                          scope.clinicId,
+                      })}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Ver na fila global →
+                    </Link>
+                  ) : null}
                 </div>
 
                 {canManageThreads ? (
                   <form
+                    id="update-support-thread-status-form"
                     action={
                       updateSupportThreadStatusAction
                     }
@@ -500,6 +629,11 @@ export async function SupportThreadsPage({
                           .selectedThread
                           .id
                       }
+                    />
+                    <input
+                      type="hidden"
+                      name="returnTo"
+                      value={returnToBase}
                     />
                     <label className="sr-only">
                       {t(
@@ -530,15 +664,23 @@ export async function SupportThreadsPage({
                         )
                       )}
                     </Select>
-                    <Button
-                      type="submit"
+                    <ConfirmSubmitButton
+                      formId="update-support-thread-status-form"
                       size="sm"
                       variant="outline"
-                    >
-                      {t(
+                      label={t(
                         "support.conversation.updateStatusAction"
                       )}
-                    </Button>
+                      title={t(
+                        "support.conversation.updateStatusConfirmTitle"
+                      )}
+                      description={t(
+                        "support.conversation.updateStatusConfirmDescription"
+                      )}
+                      actionLabel={t(
+                        "support.conversation.updateStatusAction"
+                      )}
+                    />
                   </form>
                 ) : (
                   <StatusIndicator
@@ -627,6 +769,11 @@ export async function SupportThreadsPage({
                         .selectedThread.id
                     }
                   />
+                  <input
+                    type="hidden"
+                    name="returnTo"
+                    value={returnToBase}
+                  />
                   <label className="sr-only">
                     {t(
                       "support.conversation.replyLabel"
@@ -658,6 +805,43 @@ export async function SupportThreadsPage({
           )}
         </SectionCard>
       </div>
+    </>
+  );
+
+  if (isCompanyScope) {
+    return content;
+  }
+
+  return (
+    <DashboardPage>
+      <PageHeader
+        eyebrow={
+          isPlatformView
+            ? t("support.platformEyebrow")
+            : t("support.clinicEyebrow")
+        }
+        title={
+          isPlatformView
+            ? t("support.platformTitle")
+            : t("support.clinicTitle")
+        }
+        description={
+          isPlatformView
+            ? t(
+                "support.platformDescription"
+              )
+            : t(
+                "support.clinicDescription"
+              )
+        }
+      />
+      {!isPlatformView ? (
+        <MyCompanyTabs
+          activeTab="support"
+          role={role}
+        />
+      ) : null}
+      {content}
     </DashboardPage>
   );
 }

@@ -5,12 +5,21 @@ import { getCurrentUserRole } from "@/features/auth/services/get-current-user-ro
 import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { hasPermission } from "@/features/rbac/permissions";
 
-import { getClinics } from "../services/get-clinics";
+import {
+  getClinicBillingPlanOptions,
+  getClinics,
+} from "../services/get-clinics";
 
 import { ClinicDialog } from "./clinic-dialog";
 import { ClinicTable } from "./clinic-table";
 
-export async function ClinicPage() {
+type Props = {
+  planId?: string;
+};
+
+export async function ClinicPage({
+  planId,
+}: Props = {}) {
   const [role, currentUser] =
     await Promise.all([
       getCurrentUserRole(),
@@ -30,7 +39,11 @@ export async function ClinicPage() {
     );
   }
 
-  const clinics = await getClinics();
+  const [clinics, planOptions] =
+    await Promise.all([
+      getClinics(),
+      getClinicBillingPlanOptions(),
+    ]);
   const canManageClinic =
     hasPermission(
       role,
@@ -71,6 +84,8 @@ export async function ClinicPage() {
         isPlatformView={
           !currentUser.clinicId
         }
+        plans={planOptions}
+        initialPlanId={planId}
       />
     </DashboardPage>
   );

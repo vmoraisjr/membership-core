@@ -1,4 +1,6 @@
-import { PlatformCommercialCatalogPage } from "@/features/billing/components/platform-commercial-catalog-page";
+import { redirect } from "next/navigation";
+
+import { planosComerciaisUrl } from "@/lib/owner-routes";
 
 type Props = {
   searchParams: Promise<{
@@ -7,18 +9,18 @@ type Props = {
   }>;
 };
 
-export default async function Page({
+// Legacy route — canonical is /dashboard/planos-comerciais?tab=plans (UI-049).
+export default async function BillingCatalogRoute({
   searchParams,
 }: Props) {
-  const params = await searchParams;
+  const { query, availability } =
+    await searchParams;
 
-  return (
-    <PlatformCommercialCatalogPage
-      filters={{
-        query: params.query,
-        availability:
-          params.availability,
-      }}
-    />
+  redirect(
+    planosComerciaisUrl({
+      tab: "plans",
+      query,
+      availability,
+    })
   );
 }

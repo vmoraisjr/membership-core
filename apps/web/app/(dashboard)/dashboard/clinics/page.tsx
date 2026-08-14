@@ -1,5 +1,8 @@
-import { ClinicPage } from "@/features/clinic/components/clinic-page";
+import { redirect } from "next/navigation";
 
+import { empresasUrl } from "@/lib/owner-routes";
+
+// Legacy route — canonical is /dashboard/empresas (UI-049).
 export default function ClinicsRoute() {
-  return <ClinicPage />;
+  redirect(empresasUrl());
 }

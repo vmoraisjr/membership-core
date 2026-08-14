@@ -204,4 +204,10 @@ export async function saveClinicBillingPlanAction(
   safeRevalidatePath(
     "/dashboard/clinics"
   );
+  safeRevalidatePath(
+    "/dashboard/planos-comerciais"
+  );
+  safeRevalidatePath(
+    "/dashboard/empresas"
+  );
 }

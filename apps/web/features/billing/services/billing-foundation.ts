@@ -2,6 +2,7 @@ import {
   AuditAction,
   AuditEntity,
   BillingCycle,
+  BillingSyncStatus,
   ClinicStatus,
   ClinicSubscriptionStatus,
   PaymentStatus,
@@ -18,6 +19,12 @@ import {
 } from "@/lib/auth/tenant";
 import { createAuditLog } from "@/features/audit-log/services/create-audit-log";
 import { requireCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import { BILLING_POLICY } from "@/features/billing/constants/billing-policy";
+import { getBillingGateway } from "@/features/billing/gateway/get-billing-gateway";
+import type {
+  BillingGatewaySubscription,
+  BillingGatewaySubscriptionState,
+} from "@/features/billing/gateway/billing-gateway.types";
 
 type BillingClient =
   | typeof prisma
@@ -33,6 +40,7 @@ const CLINIC_SUBSCRIPTION_REUSABLE_STATUSES = [
   ClinicSubscriptionStatus.TRIAL,
   ClinicSubscriptionStatus.ACTIVE,
   ClinicSubscriptionStatus.PAST_DUE,
+  ClinicSubscriptionStatus.PAUSED,
   ClinicSubscriptionStatus.SUSPENDED,
   ClinicSubscriptionStatus.CANCELED,
 ] as const;
@@ -49,17 +57,24 @@ const CLINIC_SUBSCRIPTION_TRANSITIONS: Record<
   TRIAL: [
     ClinicSubscriptionStatus.ACTIVE,
     ClinicSubscriptionStatus.PAST_DUE,
+    ClinicSubscriptionStatus.PAUSED,
     ClinicSubscriptionStatus.SUSPENDED,
     ClinicSubscriptionStatus.CANCELED,
   ],
   ACTIVE: [
     ClinicSubscriptionStatus.PAST_DUE,
+    ClinicSubscriptionStatus.PAUSED,
     ClinicSubscriptionStatus.SUSPENDED,
     ClinicSubscriptionStatus.CANCELED,
   ],
   PAST_DUE: [
     ClinicSubscriptionStatus.ACTIVE,
+    ClinicSubscriptionStatus.PAUSED,
     ClinicSubscriptionStatus.SUSPENDED,
+    ClinicSubscriptionStatus.CANCELED,
+  ],
+  PAUSED: [
+    ClinicSubscriptionStatus.ACTIVE,
     ClinicSubscriptionStatus.CANCELED,
   ],
   SUSPENDED: [
@@ -107,6 +122,8 @@ function deriveAutomatedClinicSubscriptionStatus(
     status: ClinicSubscriptionStatus;
     trialEndsAt?: Date | null;
     expiresAt?: Date | null;
+    cancelAtPeriodEnd?: boolean;
+    providerKind?: string;
     invoices?: Array<{
       dueDate: Date;
       status: PaymentStatus;
@@ -122,6 +139,19 @@ function deriveAutomatedClinicSubscriptionStatus(
     return subscription.status;
   }
 
+  // A customer-requested cancellation only takes effect once the paid
+  // period actually ends — never mid-period (PAY-002 "não surpreende o
+  // cliente"). This check must win over the invoice-based heuristics
+  // below, which would otherwise keep nudging the status around.
+  if (
+    subscription.cancelAtPeriodEnd &&
+    subscription.expiresAt &&
+    subscription.expiresAt.getTime() <=
+      now.getTime()
+  ) {
+    return ClinicSubscriptionStatus.CANCELED;
+  }
+
   const latestInvoice =
     subscription.invoices?.[0];
 
@@ -129,7 +159,12 @@ function deriveAutomatedClinicSubscriptionStatus(
     latestInvoice?.status ===
       PaymentStatus.OVERDUE &&
     latestInvoice.dueDate.getTime() <
-      now.getTime() - 1000 * 60 * 60 * 24 * 30
+      now.getTime() -
+        1000 *
+          60 *
+          60 *
+          24 *
+          BILLING_POLICY.paymentRetryToleranceDays
   ) {
     return ClinicSubscriptionStatus.SUSPENDED;
   }
@@ -150,7 +185,19 @@ function deriveAutomatedClinicSubscriptionStatus(
     subscription.trialEndsAt.getTime() <=
       now.getTime()
   ) {
-    return ClinicSubscriptionStatus.ACTIVE;
+    // Legacy manually-administered subscriptions have no automated
+    // billing behind them — ending the trial just means "treat as
+    // active", same as always. A gateway-linked subscription's first
+    // charge is the gateway's job (PAY-003 webhook); until that webhook
+    // confirms payment, the trial ending without one is itself a
+    // failure to charge, so it starts the same retry/tolerance clock a
+    // declined card would — never a silent, unpaid "ACTIVE".
+    return subscription.providerKind ===
+      "MANUAL" ||
+      subscription.providerKind ==
+        null
+      ? ClinicSubscriptionStatus.ACTIVE
+      : ClinicSubscriptionStatus.PAST_DUE;
   }
 
   if (
@@ -168,15 +215,20 @@ function deriveAutomatedClinicSubscriptionStatus(
   return subscription.status;
 }
 
-async function reconcileClinicSubscriptionAutomation(
+export async function reconcileClinicSubscriptionAutomation(
   client: BillingClient = prisma
 ) {
   const subscriptions =
     await client.clinicSubscription.findMany({
       where: {
         status: {
-          not:
+          notIn: [
             ClinicSubscriptionStatus.CANCELED,
+            // Paused is customer-controlled (PAY-002): billing/invoice
+            // heuristics must not silently move it, only an explicit
+            // "Retomar" action (or its own cancellation) does.
+            ClinicSubscriptionStatus.PAUSED,
+          ],
         },
       },
       include: {
@@ -225,7 +277,13 @@ export function canClinicOperate(
     status ===
       ClinicSubscriptionStatus.ACTIVE ||
     status ===
-      ClinicSubscriptionStatus.TRIAL
+      ClinicSubscriptionStatus.TRIAL ||
+    // A failed charge does not cut access immediately — the company
+    // keeps operating through the retry/tolerance window (PAY-003) and
+    // only loses access once that window expires and the automated
+    // reconciliation escalates to SUSPENDED.
+    status ===
+      ClinicSubscriptionStatus.PAST_DUE
   );
 }
 
@@ -297,7 +355,7 @@ export async function ensureDefaultClinicBillingPlan(
           "Plano comercial padrão da plataforma Sheep para contas clientes.",
         monthlyPrice: 249,
         annualPrice: 2490,
-        trialDays: 14,
+        trialDays: BILLING_POLICY.trialDays,
         active: true,
       },
     });
@@ -311,7 +369,7 @@ export async function ensureDefaultClinicBillingPlan(
         "Plano comercial padrão da plataforma Sheep para contas clientes.",
       monthlyPrice: 249,
       annualPrice: 2490,
-      trialDays: 14,
+      trialDays: BILLING_POLICY.trialDays,
       active: true,
     },
   });
@@ -368,9 +426,17 @@ export async function createClinicInvoiceForSubscription(
   return invoice;
 }
 
+/**
+ * Idempotent: a clinic with any pre-existing subscription (including a
+ * CANCELED one) reuses it rather than provisioning a new gateway
+ * customer/subscription — this is what keeps a company from ever getting a
+ * second automatic trial (PAY-001). Granting a second trial is a deliberate
+ * owner action, not something this function will do on its own.
+ */
 export async function ensureClinicBillingFoundation(
   clinicId: string,
-  client: BillingClient = prisma
+  client: BillingClient = prisma,
+  audit?: AuditContext
 ) {
   const existing =
     await client.clinicSubscription.findFirst(
@@ -400,14 +466,49 @@ export async function ensureClinicBillingFoundation(
       client
     );
 
+  const clinic =
+    await client.clinic.findUniqueOrThrow({
+      where: {
+        id: clinicId,
+      },
+      select: {
+        email: true,
+        name: true,
+        brandName: true,
+      },
+    });
+
+  const gateway = getBillingGateway();
+  const customer =
+    await gateway.createCustomer({
+      clinicId,
+      email: clinic.email,
+      name:
+        clinic.brandName ?? clinic.name,
+    });
+  const gatewaySubscription =
+    await gateway.createTrialSubscription(
+      {
+        clinicId,
+        externalCustomerId:
+          customer.externalCustomerId,
+        trialDays: defaultPlan.trialDays,
+      }
+    );
+
   const startedAt = new Date();
-  const trialEndsAt = new Date(
-    startedAt
-  );
-  trialEndsAt.setDate(
-    trialEndsAt.getDate() +
-      defaultPlan.trialDays
-  );
+  const trialEndsAt =
+    gatewaySubscription.trialEndsAt ??
+    (() => {
+      const fallback = new Date(
+        startedAt
+      );
+      fallback.setDate(
+        fallback.getDate() +
+          defaultPlan.trialDays
+      );
+      return fallback;
+    })();
 
   const clinicSubscription =
     await client.clinicSubscription.create({
@@ -416,10 +517,18 @@ export async function ensureClinicBillingFoundation(
         clinicBillingPlanId:
           defaultPlan.id,
         status:
-          ClinicSubscriptionStatus.PENDING,
+          ClinicSubscriptionStatus.TRIAL,
         startedAt,
         trialEndsAt,
         expiresAt: trialEndsAt,
+        providerKind: gateway.kind,
+        externalCustomerId:
+          customer.externalCustomerId,
+        externalSubscriptionId:
+          gatewaySubscription.externalSubscriptionId,
+        syncStatus:
+          BillingSyncStatus.SYNCED,
+        lastSyncedAt: startedAt,
       },
       include: {
         clinicBillingPlan: true,
@@ -445,6 +554,29 @@ export async function ensureClinicBillingFoundation(
     client
   );
 
+  await createAuditLog(client, {
+    clinicId,
+    actor: audit?.actor ?? "System",
+    actorUserId:
+      audit?.actorUserId ?? null,
+    action: AuditAction.CREATE,
+    entity:
+      AuditEntity.CLINIC_SUBSCRIPTION,
+    entityId: clinicSubscription.id,
+    entityLabel: defaultPlan.name,
+    metadata: {
+      providerKind: gateway.kind,
+      externalCustomerId:
+        customer.externalCustomerId,
+      externalSubscriptionId:
+        gatewaySubscription.externalSubscriptionId,
+      status: clinicSubscription.status,
+      trialDays: defaultPlan.trialDays,
+      trialEndsAt:
+        trialEndsAt.toISOString(),
+    },
+  });
+
   return client.clinicSubscription.findUnique(
     {
       where: {
@@ -456,6 +588,471 @@ export async function ensureClinicBillingFoundation(
       },
     }
   );
+}
+
+const GATEWAY_STATE_TO_LOCAL_STATUS: Record<
+  BillingGatewaySubscriptionState,
+  ClinicSubscriptionStatus
+> = {
+  trialing: ClinicSubscriptionStatus.TRIAL,
+  active: ClinicSubscriptionStatus.ACTIVE,
+  past_due:
+    ClinicSubscriptionStatus.PAST_DUE,
+  paused: ClinicSubscriptionStatus.PAUSED,
+  canceled:
+    ClinicSubscriptionStatus.CANCELED,
+};
+
+/**
+ * Single place that turns "what the gateway just told us" into local
+ * state. Never trust an optimistic local-only flip for pause/resume/
+ * cancel/checkout — always come back through here with the gateway's own
+ * response (PAY-002's checkout-return verification, PAY-003's webhooks,
+ * PAY-004's manual resync all call this same function).
+ */
+export async function syncClinicSubscriptionFromGateway(
+  subscriptionId: string,
+  gatewaySubscription: BillingGatewaySubscription,
+  client: BillingClient = prisma,
+  audit?: AuditContext
+) {
+  const current =
+    await client.clinicSubscription.findUniqueOrThrow(
+      {
+        where: {
+          id: subscriptionId,
+        },
+      }
+    );
+
+  const nextStatus =
+    GATEWAY_STATE_TO_LOCAL_STATUS[
+      gatewaySubscription.state
+    ];
+  const now = new Date();
+
+  const updated =
+    await client.clinicSubscription.update({
+      where: {
+        id: subscriptionId,
+      },
+      data: {
+        status: nextStatus,
+        expiresAt:
+          gatewaySubscription.currentPeriodEndsAt ??
+          current.expiresAt,
+        canceledAt:
+          gatewaySubscription.canceledAt ??
+          current.canceledAt,
+        syncStatus:
+          BillingSyncStatus.SYNCED,
+        lastSyncedAt: now,
+      },
+    });
+
+  if (nextStatus !== current.status) {
+    await createAuditLog(client, {
+      clinicId: current.clinicId,
+      actor: audit?.actor ?? "System",
+      actorUserId:
+        audit?.actorUserId ?? null,
+      action: AuditAction.UPDATE,
+      entity:
+        AuditEntity.CLINIC_SUBSCRIPTION,
+      entityId: subscriptionId,
+      metadata: {
+        previousStatus: current.status,
+        nextStatus,
+        source: "gateway_sync",
+        externalSubscriptionId:
+          gatewaySubscription.externalSubscriptionId,
+      },
+    });
+    await syncClinicModulesForSubscription(
+      subscriptionId,
+      client
+    );
+  }
+
+  return updated;
+}
+
+function addOneMonth(date: Date) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + 1);
+  return next;
+}
+
+/**
+ * A gateway payment succeeded (PAY-003 webhook: invoice.paid /
+ * payment.succeeded). Reconciles the current invoice, creates the next
+ * period's invoice, extends the subscription, and resets the retry
+ * counter — all idempotent against re-delivery: every write here first
+ * checks whether it already happened (same invoice already PAID, next
+ * invoice already exists for that due date) before creating anything.
+ */
+export async function recordSuccessfulGatewayPayment(
+  subscriptionId: string,
+  gatewaySubscription: BillingGatewaySubscription,
+  client: BillingClient = prisma,
+  audit?: AuditContext
+) {
+  const subscription =
+    await client.clinicSubscription.findUniqueOrThrow(
+      {
+        where: {
+          id: subscriptionId,
+        },
+        include: {
+          clinicBillingPlan: true,
+          invoices: {
+            orderBy: {
+              dueDate: "desc",
+            },
+            take: 1,
+          },
+        },
+      }
+    );
+
+  const actor = audit?.actor ?? "System";
+  const actorUserId =
+    audit?.actorUserId ?? null;
+  const now = new Date();
+  const periodAmount =
+    subscription.clinicBillingPlan
+      .monthlyPrice ??
+    subscription.clinicBillingPlan
+      .annualPrice ??
+    0;
+
+  let invoice =
+    subscription.invoices[0] ?? null;
+
+  if (
+    !invoice ||
+    invoice.status ===
+      PaymentStatus.PAID
+  ) {
+    invoice =
+      await client.clinicInvoice.create(
+        {
+          data: {
+            clinicId:
+              subscription.clinicId,
+            clinicSubscriptionId:
+              subscription.id,
+            amount: periodAmount,
+            description:
+              "Cobrança recorrente da plataforma Sheep",
+            dueDate: now,
+            status:
+              PaymentStatus.PENDING,
+          },
+        }
+      );
+  }
+
+  if (
+    invoice.status !==
+    PaymentStatus.PAID
+  ) {
+    await client.clinicInvoice.update({
+      where: {
+        id: invoice.id,
+      },
+      data: {
+        status: PaymentStatus.PAID,
+        paidAt: now,
+      },
+    });
+
+    const existingPayment =
+      await client.clinicPayment.findFirst(
+        {
+          where: {
+            clinicInvoiceId: invoice.id,
+            status: PaymentStatus.PAID,
+          },
+          select: {
+            id: true,
+          },
+        }
+      );
+
+    if (!existingPayment) {
+      await client.clinicPayment.create({
+        data: {
+          clinicId:
+            subscription.clinicId,
+          clinicInvoiceId: invoice.id,
+          amount: invoice.amount,
+          status: PaymentStatus.PAID,
+          paidAt: now,
+        },
+      });
+    }
+  }
+
+  // Anchor the next period off the invoice we just paid, not off
+  // whatever the gateway reports as its own current period — a fake (or
+  // even a real) gateway's period field can lag a webhook by a beat, and
+  // trusting it blindly here risks computing a "next period" that
+  // collides with the invoice date we just marked PAID. Only let the
+  // gateway push the date later than our own computation, never earlier.
+  const localNextPeriodEnd =
+    addOneMonth(invoice.dueDate);
+  const nextPeriodEnd =
+    gatewaySubscription.currentPeriodEndsAt &&
+    gatewaySubscription.currentPeriodEndsAt.getTime() >
+      localNextPeriodEnd.getTime()
+      ? gatewaySubscription.currentPeriodEndsAt
+      : localNextPeriodEnd;
+
+  const existingNextInvoice =
+    await client.clinicInvoice.findFirst(
+      {
+        where: {
+          clinicSubscriptionId:
+            subscription.id,
+          dueDate: nextPeriodEnd,
+        },
+      }
+    );
+
+  if (!existingNextInvoice) {
+    await client.clinicInvoice.create({
+      data: {
+        clinicId: subscription.clinicId,
+        clinicSubscriptionId:
+          subscription.id,
+        amount: periodAmount,
+        description:
+          "Próxima cobrança recorrente da plataforma Sheep",
+        dueDate: nextPeriodEnd,
+        status: PaymentStatus.PENDING,
+      },
+    });
+  }
+
+  await client.clinicSubscription.update({
+    where: {
+      id: subscription.id,
+    },
+    data: {
+      status:
+        ClinicSubscriptionStatus.ACTIVE,
+      expiresAt: nextPeriodEnd,
+      paymentRetryCount: 0,
+      nextPaymentAttemptAt: null,
+      syncStatus:
+        BillingSyncStatus.SYNCED,
+      lastSyncedAt: now,
+    },
+  });
+
+  await syncClinicModulesForSubscription(
+    subscription.id,
+    client
+  );
+
+  await createAuditLog(client, {
+    clinicId: subscription.clinicId,
+    actor,
+    actorUserId,
+    action: AuditAction.MARK_INVOICE_PAID,
+    entity: AuditEntity.CLINIC_INVOICE,
+    entityId: invoice.id,
+    entityLabel: invoice.description,
+    metadata: {
+      source: "webhook",
+      event: "payment_succeeded",
+      nextPeriodEnd:
+        nextPeriodEnd.toISOString(),
+      externalSubscriptionId:
+        gatewaySubscription.externalSubscriptionId,
+    },
+  });
+}
+
+/**
+ * A gateway payment failed (PAY-003 webhook: invoice.payment_failed /
+ * payment.failed). Marks the invoice OVERDUE and bumps the retry
+ * counter — access stays open (`canClinicOperate` allows PAST_DUE) until
+ * the tolerance window in `BILLING_POLICY` elapses, at which point the
+ * existing time-based reconciliation (`deriveAutomatedClinicSubscriptionStatus`)
+ * escalates to SUSPENDED on its own the next time it runs.
+ */
+export async function recordFailedGatewayPayment(
+  subscriptionId: string,
+  client: BillingClient = prisma,
+  audit?: AuditContext
+) {
+  const subscription =
+    await client.clinicSubscription.findUniqueOrThrow(
+      {
+        where: {
+          id: subscriptionId,
+        },
+        include: {
+          invoices: {
+            orderBy: {
+              dueDate: "desc",
+            },
+            take: 1,
+          },
+        },
+      }
+    );
+
+  const actor = audit?.actor ?? "System";
+  const actorUserId =
+    audit?.actorUserId ?? null;
+  const invoice =
+    subscription.invoices[0] ?? null;
+
+  if (
+    invoice &&
+    invoice.status !==
+      PaymentStatus.PAID &&
+    invoice.status !==
+      PaymentStatus.OVERDUE
+  ) {
+    await client.clinicInvoice.update({
+      where: {
+        id: invoice.id,
+      },
+      data: {
+        status: PaymentStatus.OVERDUE,
+      },
+    });
+  }
+
+  const nextAttemptCount =
+    subscription.paymentRetryCount + 1;
+  const withinAttempts =
+    nextAttemptCount <
+    BILLING_POLICY.maxPaymentRetryAttempts;
+  const intervalDays = Math.max(
+    1,
+    Math.floor(
+      BILLING_POLICY.paymentRetryToleranceDays /
+        BILLING_POLICY.maxPaymentRetryAttempts
+    )
+  );
+  const nextPaymentAttemptAt =
+    withinAttempts
+      ? new Date(
+          Date.now() +
+            intervalDays *
+              24 *
+              60 *
+              60 *
+              1000
+        )
+      : null;
+
+  await client.clinicSubscription.update({
+    where: {
+      id: subscription.id,
+    },
+    data: {
+      status:
+        ClinicSubscriptionStatus.PAST_DUE,
+      paymentRetryCount:
+        nextAttemptCount,
+      nextPaymentAttemptAt,
+      syncStatus:
+        BillingSyncStatus.SYNCED,
+      lastSyncedAt: new Date(),
+    },
+  });
+
+  await syncClinicModulesForSubscription(
+    subscription.id,
+    client
+  );
+
+  await createAuditLog(client, {
+    clinicId: subscription.clinicId,
+    actor,
+    actorUserId,
+    action:
+      AuditAction.MARK_INVOICE_OVERDUE,
+    entity:
+      AuditEntity.CLINIC_SUBSCRIPTION,
+    entityId: subscription.id,
+    metadata: {
+      source: "webhook",
+      event: "payment_failed",
+      attempt: nextAttemptCount,
+      nextPaymentAttemptAt:
+        nextPaymentAttemptAt?.toISOString() ??
+        null,
+    },
+  });
+}
+
+/**
+ * Self-service data for the company's own "Assinatura" tab (PAY-002).
+ * `verifyWithGateway` re-asks the gateway for the live subscription state
+ * before returning — this is what makes a checkout/portal return trip
+ * trustworthy on its own (never just believing a `?checkout=success`
+ * query string), and it's a plain read-through-then-sync, safe to call on
+ * every page load.
+ */
+export async function getCompanySubscriptionOverview(
+  input: {
+    verifyWithGateway?: boolean;
+  } = {}
+) {
+  const clinicId =
+    await getCurrentClinicId();
+
+  let subscription =
+    await ensureClinicBillingFoundation(
+      clinicId
+    );
+
+  if (!subscription) {
+    throw new Error(
+      "Billing foundation is missing for this clinic."
+    );
+  }
+
+  if (
+    input.verifyWithGateway &&
+    subscription.providerKind !==
+      "MANUAL" &&
+    subscription.externalSubscriptionId
+  ) {
+    const gateway = getBillingGateway();
+    const live =
+      await gateway.getSubscription(
+        subscription.externalSubscriptionId
+      );
+
+    if (live) {
+      await syncClinicSubscriptionFromGateway(
+        subscription.id,
+        live
+      );
+      subscription =
+        await prisma.clinicSubscription.findUnique(
+          {
+            where: {
+              id: subscription.id,
+            },
+            include: {
+              clinicBillingPlan: true,
+              invoices: true,
+            },
+          }
+        );
+    }
+  }
+
+  return subscription;
 }
 
 export async function createPatientInvoiceForSubscription(
@@ -554,6 +1151,7 @@ export async function getBillingOverview() {
       include: {
         patient: {
           select: {
+            id: true,
             fullName: true,
           },
         },
@@ -728,6 +1326,7 @@ export async function getPlatformClinicBillingOverview() {
             brandName: true,
             email: true,
             status: true,
+            logoUrl: true,
           },
         },
         clinicBillingPlan: true,
@@ -810,6 +1409,53 @@ export async function getPlatformClinicBillingOverview() {
   };
 }
 
+/**
+ * Full (uncapped) subscription/invoice/payment history for a single clinic
+ * — used by the "Plano e cobrança" tab of the empresa workspace. Unlike
+ * `getPlatformClinicBillingOverview`, this does not fetch or reconcile the
+ * whole platform on every call.
+ */
+export async function getClinicBillingDetail(
+  clinicId: string
+) {
+  const [subscriptions, allPlans] =
+    await Promise.all([
+      prisma.clinicSubscription.findMany({
+        where: {
+          clinicId,
+        },
+        include: {
+          clinicBillingPlan: true,
+          invoices: {
+            include: {
+              payments: {
+                orderBy: {
+                  paidAt: "desc",
+                },
+              },
+            },
+            orderBy: {
+              dueDate: "desc",
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      prisma.clinicBillingPlan.findMany({
+        orderBy: {
+          createdAt: "asc",
+        },
+      }),
+    ]);
+
+  return {
+    subscriptions,
+    allPlans,
+  };
+}
+
 export async function syncClinicSubscriptionStatusFromInvoice(
   clinicInvoiceId: string,
   status: PaymentStatus,
@@ -875,6 +1521,7 @@ export async function updateClinicSubscriptionStatus(
     clinicId: string;
     subscriptionId: string;
     status: ClinicSubscriptionStatus;
+    trialEndsAt?: Date;
   },
   client: BillingClient = prisma,
   audit?: AuditContext
@@ -918,6 +1565,10 @@ export async function updateClinicSubscriptionStatus(
   }
 
   const now = new Date();
+  const isActivatingTrial =
+    input.status ===
+      ClinicSubscriptionStatus.TRIAL &&
+    Boolean(input.trialEndsAt);
   const updated =
     await client.clinicSubscription.update({
       where: {
@@ -930,12 +1581,43 @@ export async function updateClinicSubscriptionStatus(
           ClinicSubscriptionStatus.CANCELED
             ? now
             : null,
+        ...(isActivatingTrial
+          ? {
+              trialEndsAt:
+                input.trialEndsAt,
+              expiresAt:
+                input.trialEndsAt,
+            }
+          : {}),
       },
       include: {
         clinicBillingPlan: true,
         invoices: true,
       },
     });
+
+  if (isActivatingTrial && input.trialEndsAt) {
+    const nextInstallmentAmount =
+      updated.clinicBillingPlan
+        .monthlyPrice ??
+      updated.clinicBillingPlan
+        .annualPrice ??
+      0;
+
+    await createClinicInvoiceForSubscription(
+      {
+        clinicId: input.clinicId,
+        clinicSubscriptionId:
+          updated.id,
+        amount: nextInstallmentAmount,
+        description:
+          "Cobrança após período de testes",
+        dueDate: input.trialEndsAt,
+      },
+      client,
+      audit
+    );
+  }
 
   await createAuditLog(client, {
     clinicId: input.clinicId,

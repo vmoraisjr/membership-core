@@ -1,4 +1,6 @@
-import { PlatformClinicDetailsPage } from "@/features/clinic/components/platform-clinic-details-page";
+import { redirect } from "next/navigation";
+
+import { empresaUrl } from "@/lib/owner-routes";
 
 type Props = {
   params: Promise<{
@@ -12,6 +14,7 @@ type Props = {
   }>;
 };
 
+// Legacy route — canonical is /dashboard/empresas/[empresaId] (UI-049).
 export default async function ClinicDetailsRoute({
   params,
   searchParams,
@@ -24,15 +27,12 @@ export default async function ClinicDetailsRoute({
     auditTo,
   } = await searchParams;
 
-  return (
-    <PlatformClinicDetailsPage
-      clinicId={clinicId}
-      activeTab={tab}
-      auditFilters={{
-        actor: auditActor,
-        from: auditFrom,
-        to: auditTo,
-      }}
-    />
+  redirect(
+    empresaUrl(clinicId, {
+      tab,
+      auditActor,
+      auditFrom,
+      auditTo,
+    })
   );
 }

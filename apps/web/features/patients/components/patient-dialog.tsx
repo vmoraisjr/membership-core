@@ -55,6 +55,7 @@ import {
 import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { SubscriptionDialog } from "@/features/subscriptions/components/subscription-dialog";
 import { useTranslations } from "@/i18n/provider";
 import {
   formatBrazilianCpf,
@@ -103,6 +104,14 @@ type Props = {
     kind: PatientKind;
     status: "ACTIVE" | "INACTIVE";
   }>;
+  /** Enables the post-registration "adicionar assinatura agora" step. */
+  plans?: Array<{
+    id: string;
+    name: string;
+    monthlyPrice?: number | null;
+    activeBenefitsCount?: number;
+  }>;
+  canManageSubscriptions?: boolean;
 };
 
 export function PatientDialog({
@@ -112,6 +121,8 @@ export function PatientDialog({
   defaultKind = PatientKind.TITULAR,
   defaultResponsiblePatientId,
   responsibleOptions = [],
+  plans = [],
+  canManageSubscriptions = false,
 }: Props) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
@@ -121,6 +132,15 @@ export function PatientDialog({
   ] = useState(false);
   const [editingEnabled, setEditingEnabled] =
     useState(mode === "create");
+  const [createdPatient, setCreatedPatient] =
+    useState<{
+      id: string;
+      fullName: string;
+    } | null>(null);
+  const [
+    subscriptionDialogOpen,
+    setSubscriptionDialogOpen,
+  ] = useState(false);
 
   const form = useForm<PatientSchema>({
     resolver: zodResolver(patientSchema),
@@ -265,17 +285,33 @@ export function PatientDialog({
         toast.success(
           t("patients.dialog.saveSuccess")
         );
+
+        form.reset();
+        setOpen(false);
       } else {
-        await createPatient(values);
+        const created =
+          await createPatient(values);
 
         toast.success(
           t("patients.dialog.createSuccess")
         );
+
+        form.reset();
+
+        if (
+          created.kind ===
+            PatientKind.TITULAR &&
+          canManageSubscriptions &&
+          plans.length > 0
+        ) {
+          setCreatedPatient({
+            id: created.id,
+            fullName: created.fullName,
+          });
+        } else {
+          setOpen(false);
+        }
       }
-
-      form.reset();
-
-      setOpen(false);
     } catch {
       toast.error(
         t("patients.dialog.saveError")
@@ -298,8 +334,8 @@ export function PatientDialog({
       toast.success(
         nextStatus ===
           PatientStatus.ACTIVE
-          ? "Dependência removida e paciente convertido em titular ativo."
-          : "Dependência removida. O paciente ficou inativo até nova regularização."
+          ? "Dependência removida e cliente convertido em titular ativo."
+          : "Dependência removida. O cliente ficou inativo até nova regularização."
       );
       setOpen(false);
     } catch (error) {
@@ -313,7 +349,7 @@ export function PatientDialog({
 
   function onInvalid() {
     toast.error(
-      "Revise os campos destacados do paciente antes de continuar."
+      "Revise os campos destacados do cliente antes de continuar."
     );
   }
 
@@ -333,12 +369,17 @@ export function PatientDialog({
   function handleOpenChange(
     nextOpen: boolean
   ) {
-    if (!nextOpen && isDirty) {
+    if (
+      !nextOpen &&
+      isDirty &&
+      !createdPatient
+    ) {
       setDiscardConfirmOpen(true);
       return;
     }
 
     setOpen(nextOpen);
+    setCreatedPatient(null);
 
     if (nextOpen) {
       setEditingEnabled(mode === "create");
@@ -349,10 +390,22 @@ export function PatientDialog({
   function confirmDiscard() {
     setDiscardConfirmOpen(false);
     setOpen(false);
+    setCreatedPatient(null);
     form.reset(getInitialFormValues());
   }
 
+  function handleAddSubscriptionNow() {
+    setOpen(false);
+    setSubscriptionDialogOpen(true);
+  }
+
+  function handleFinishLater() {
+    setOpen(false);
+    setCreatedPatient(null);
+  }
+
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={handleOpenChange}
@@ -367,6 +420,42 @@ export function PatientDialog({
         className="sm:max-w-xl"
         aria-describedby={undefined}
       >
+        {createdPatient ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>
+                Cliente cadastrado
+              </DialogTitle>
+              <DialogDescription>
+                {createdPatient.fullName} foi
+                cadastrado com sucesso. Adicione uma
+                assinatura agora ou conclua depois
+                pela lista de clientes.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+              <Button
+                type="button"
+                className="w-full"
+                onClick={
+                  handleAddSubscriptionNow
+                }
+              >
+                Adicionar assinatura agora
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleFinishLater}
+              >
+                Concluir depois
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
         <DialogHeader>
           <DialogTitle>
             {mode === "edit"
@@ -937,6 +1026,8 @@ export function PatientDialog({
             )}
           </div>
         </form>
+          </>
+        )}
       </DialogContent>
 
       <AlertDialog
@@ -965,5 +1056,32 @@ export function PatientDialog({
         </AlertDialogContent>
       </AlertDialog>
     </Dialog>
+
+    {canManageSubscriptions &&
+    plans.length > 0 ? (
+      <SubscriptionDialog
+        trigger={null}
+        open={subscriptionDialogOpen}
+        onOpenChange={
+          setSubscriptionDialogOpen
+        }
+        patients={
+          createdPatient
+            ? [
+                {
+                  id: createdPatient.id,
+                  fullName:
+                    createdPatient.fullName,
+                },
+              ]
+            : []
+        }
+        plans={plans}
+        defaultPatientId={
+          createdPatient?.id
+        }
+      />
+    ) : null}
+    </>
   );
 }

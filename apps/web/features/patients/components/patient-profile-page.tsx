@@ -24,13 +24,79 @@ import { AccessDenied } from "@/features/rbac/components/access-denied";
 import { getCurrentUserRole } from "@/features/auth/services/get-current-user-role";
 import { hasPermission } from "@/features/rbac/permissions";
 import { getTranslations } from "@/i18n/messages";
-import { formatCurrency } from "@/lib/formatters";
 
+import { PatientKind, PatientStatus } from "@prisma/client";
+
+import prisma from "@/lib/prisma";
 import { getPatientProfile } from "../services/get-patient-profile";
+import { getMembershipPlans } from "@/features/membership-plans/services/get-membership-plans";
+import { getPatientBenefitBalance } from "@/features/benefit-usage/services/get-patient-benefit-balance";
+import { PatientDialog } from "./patient-dialog";
+import { SubscriptionDialog } from "@/features/subscriptions/components/subscription-dialog";
+import { SubscriptionRowActions } from "@/features/subscriptions/components/subscription-row-actions";
+import { SubscriptionStatusBadge } from "@/features/subscriptions/components/subscription-status-badge";
+import { ConsumeBenefitDialog } from "@/features/benefit-usage/components/consume-benefit-dialog";
+import { PatientPaymentsTable } from "@/features/billing/components/patient-payments-table";
+import { clienteUrl, clientesUrl, type CustomerTab } from "@/lib/company-routes";
+import {
+  legendSection,
+  SUBSCRIPTION_STATUS_LEGEND,
+  PATIENT_INVOICE_STATUS_LEGEND,
+  BENEFIT_USAGE_STATUS_LEGEND,
+} from "@/lib/legend-content";
 
 type Props = {
   patientId: string;
+  tab?: string;
+  returnTo?: string;
 };
+
+const CUSTOMER_TABS: CustomerTab[] = [
+  "overview",
+  "membership",
+  "benefits",
+  "billing",
+  "history",
+];
+
+function resolveTab(
+  tab: string | undefined
+): CustomerTab {
+  return CUSTOMER_TABS.some(
+    (candidate) => candidate === tab
+  )
+    ? (tab as CustomerTab)
+    : "overview";
+}
+
+function resolveReturnTo(returnTo?: string) {
+  return returnTo &&
+    returnTo.startsWith("/dashboard/")
+    ? returnTo
+    : clientesUrl();
+}
+
+function resolveBackLabelKey(
+  backHref: string
+) {
+  if (
+    backHref.startsWith(
+      "/dashboard/cobrancas"
+    )
+  ) {
+    return "patients.profile.backToBilling";
+  }
+
+  if (
+    backHref.startsWith(
+      "/dashboard/atendimentos"
+    )
+  ) {
+    return "patients.profile.backToService";
+  }
+
+  return "patients.profile.backToList";
+}
 
 function formatDateTime(
   value: Date | null | undefined
@@ -56,10 +122,14 @@ function formatDateOnly(
 
 export async function PatientProfilePage({
   patientId,
+  tab,
+  returnTo,
 }: Props) {
   const t = getTranslations();
   const role =
     await getCurrentUserRole();
+  const backHref = resolveReturnTo(returnTo);
+  const activeTab = resolveTab(tab);
 
   if (
     !hasPermission(
@@ -82,14 +152,106 @@ export async function PatientProfilePage({
     );
   }
 
-  const profile =
-    await getPatientProfile(patientId);
+  const [
+    profile,
+    membershipPlans,
+    benefitBalances,
+  ] = await Promise.all([
+    getPatientProfile(patientId),
+    getMembershipPlans(),
+    getPatientBenefitBalance(),
+  ]);
+
+  const isDependent =
+    profile.patient.kind === "DEPENDENT";
+  const canManagePatients = hasPermission(
+    role,
+    "patients",
+    "manage"
+  );
+
+  const responsibleOptions =
+    canManagePatients && isDependent
+      ? await prisma.patient.findMany({
+          where: {
+            clinicId:
+              profile.patient.clinicId,
+            kind: PatientKind.TITULAR,
+            status: PatientStatus.ACTIVE,
+          },
+          select: {
+            id: true,
+            fullName: true,
+            document: true,
+            kind: true,
+            status: true,
+          },
+        })
+      : [];
+  const canManageSubscriptions = hasPermission(
+    role,
+    "subscriptions",
+    "manage"
+  );
+  const canManageBenefitUsage = hasPermission(
+    role,
+    "benefitUsage",
+    "manage"
+  );
+  const canManageBilling = hasPermission(
+    role,
+    "billing",
+    "manage"
+  );
 
   const benefitUsages =
     profile.patient.subscriptions.flatMap(
       (subscription) =>
         subscription.benefitUsages
     );
+
+  const subscriptionPatients = [
+    {
+      id: profile.subscriptionSourcePatient
+        .id,
+      fullName:
+        profile.subscriptionSourcePatient
+          .fullName,
+    },
+  ];
+
+  const planOptions = membershipPlans.map(
+    (plan) => ({
+      id: plan.id,
+      name: plan.name,
+      monthlyPrice: plan.monthlyPrice,
+      activeBenefitsCount:
+        plan.benefits.filter(
+          (benefit) => benefit.active
+        ).length,
+    })
+  );
+
+  const ownBenefitBalances =
+    benefitBalances.filter(
+      (balance) =>
+        balance.patientId ===
+        profile.patient.id
+    );
+
+  const currentSubscription =
+    profile.visibleSubscriptions[0] ??
+    null;
+  const pendingInvoicesCount =
+    profile.visibleInvoices.filter(
+      (invoice) =>
+        invoice.status === "PENDING"
+    ).length;
+  const overdueInvoicesCount =
+    profile.visibleInvoices.filter(
+      (invoice) =>
+        invoice.status === "OVERDUE"
+    ).length;
 
   return (
     <DashboardPage>
@@ -122,22 +284,25 @@ export async function PatientProfilePage({
         }
         action={
           <Button asChild variant="outline">
-            <Link href="/dashboard/patients">
+            <Link href={backHref}>
               <ArrowLeft className="size-4" />
               {t(
-                "patients.profile.backToList"
+                resolveBackLabelKey(backHref)
               )}
             </Link>
           </Button>
         }
       />
 
-      <Tabs defaultValue="overview">
+      <Tabs
+        key={activeTab}
+        defaultValue={activeTab}
+      >
         <TabsList>
           <TabsTrigger value="overview">
             {t("patients.profile.tabs.overview")}
           </TabsTrigger>
-          <TabsTrigger value="subscriptions">
+          <TabsTrigger value="membership">
             {t(
               "patients.profile.tabs.subscriptions"
             )}
@@ -145,7 +310,7 @@ export async function PatientProfilePage({
           <TabsTrigger value="benefits">
             {t("patients.profile.tabs.benefits")}
           </TabsTrigger>
-          <TabsTrigger value="payments">
+          <TabsTrigger value="billing">
             {t("patients.profile.tabs.payments")}
           </TabsTrigger>
           <TabsTrigger value="history">
@@ -159,11 +324,210 @@ export async function PatientProfilePage({
         >
           <SectionCard
             title={t(
+              "patients.profile.currentStatusTitle"
+            )}
+            description={t(
+              "patients.profile.currentStatusDescription"
+            )}
+          >
+            <div className="grid gap-4 p-5 md:grid-cols-3">
+              <div className="detail-field">
+                <p className="detail-field-label">
+                  {t("shared.labels.plan")}
+                </p>
+                {currentSubscription ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="detail-field-value">
+                      {
+                        currentSubscription
+                          .membershipPlan
+                          .name
+                      }
+                    </p>
+                    <SubscriptionStatusBadge
+                      status={
+                        currentSubscription.status
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="detail-field-value text-muted-foreground">
+                      {t(
+                        "patients.profile.noSubscriptionNextStep"
+                      )}
+                    </p>
+                    {!isDependent &&
+                    canManageSubscriptions ? (
+                      <SubscriptionDialog
+                        patients={
+                          subscriptionPatients
+                        }
+                        plans={planOptions}
+                        defaultPatientId={
+                          profile
+                            .subscriptionSourcePatient
+                            .id
+                        }
+                        trigger={
+                          <Button size="sm">
+                            {t(
+                              "patients.profile.newSubscriptionAction"
+                            )}
+                          </Button>
+                        }
+                      />
+                    ) : null}
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-field">
+                <p className="detail-field-label">
+                  {t(
+                    "patients.table.financialStatus"
+                  )}
+                </p>
+                <div className="space-y-2">
+                  <p className="detail-field-value">
+                    {overdueInvoicesCount > 0
+                      ? t(
+                          "patients.table.financialStatusOverdue",
+                          {
+                            count: overdueInvoicesCount,
+                          }
+                        )
+                      : pendingInvoicesCount > 0
+                        ? t(
+                            "patients.table.financialStatusPending",
+                            {
+                              count: pendingInvoicesCount,
+                            }
+                          )
+                        : t(
+                            "patients.table.financialStatusUpToDate"
+                          )}
+                  </p>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Link
+                      href={clienteUrl(
+                        patientId,
+                        {
+                          tab: "billing",
+                          returnTo,
+                        }
+                      )}
+                    >
+                      {t(
+                        "patients.profile.openBillingTabAction"
+                      )}
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="detail-field">
+                <p className="detail-field-label">
+                  {t("shared.labels.benefit")}
+                </p>
+                <div className="space-y-2">
+                  <p className="detail-field-value">
+                    {ownBenefitBalances.length}
+                  </p>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Link
+                      href={clienteUrl(
+                        patientId,
+                        {
+                          tab: "benefits",
+                          returnTo,
+                        }
+                      )}
+                    >
+                      {t(
+                        "patients.profile.openBenefitsTabAction"
+                      )}
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title={t(
               "patients.profile.overviewTitle"
             )}
             description={t(
               "patients.profile.overviewDescription"
             )}
+            action={
+              canManagePatients ? (
+                <PatientDialog
+                  mode="edit"
+                  initialData={{
+                    id: profile.patient.id,
+                    fullName:
+                      profile.patient
+                        .fullName,
+                    email:
+                      profile.patient.email,
+                    phone:
+                      profile.patient.phone,
+                    birthDate:
+                      profile.patient
+                        .birthDate,
+                    document:
+                      profile.patient
+                        .document,
+                    zipCode:
+                      profile.patient
+                        .zipCode,
+                    city: profile.patient
+                      .city,
+                    state:
+                      profile.patient.state,
+                    address:
+                      profile.patient
+                        .address,
+                    kind: profile.patient
+                      .kind,
+                    responsiblePatientId:
+                      profile.patient
+                        .responsiblePatientId,
+                    responsiblePatientDocument:
+                      profile.patient
+                        .responsiblePatient
+                        ?.document ?? null,
+                    responsiblePatientName:
+                      profile.patient
+                        .responsiblePatient
+                        ?.fullName ?? null,
+                  }}
+                  responsibleOptions={
+                    responsibleOptions
+                  }
+                  trigger={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                    >
+                      {t(
+                        "shared.actions.edit"
+                      )}
+                    </Button>
+                  }
+                />
+              ) : undefined
+            }
           >
             <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
               <div className="detail-field">
@@ -318,18 +682,46 @@ export async function PatientProfilePage({
           ) : null}
         </TabsContent>
 
-        <TabsContent value="subscriptions">
+        <TabsContent value="membership">
           <SectionCard
             title={t(
               "patients.profile.subscriptionsTitle"
             )}
             description={
-              profile.patient.kind ===
-              "DEPENDENT"
-                ? `Assinaturas herdadas de ${profile.subscriptionSourcePatient.fullName}.`
+              isDependent
+                ? `Assinatura herdada de ${profile.subscriptionSourcePatient.fullName}. Gerencie pelo cadastro do titular.`
                 : t(
                     "patients.profile.subscriptionsDescription"
                   )
+            }
+            helpLegend={[
+              legendSection(
+                "Status da assinatura",
+                SUBSCRIPTION_STATUS_LEGEND
+              ),
+            ]}
+            action={
+              !isDependent &&
+              canManageSubscriptions ? (
+                <SubscriptionDialog
+                  patients={
+                    subscriptionPatients
+                  }
+                  plans={planOptions}
+                  defaultPatientId={
+                    profile
+                      .subscriptionSourcePatient
+                      .id
+                  }
+                  trigger={
+                    <Button size="sm">
+                      {t(
+                        "patients.profile.newSubscriptionAction"
+                      )}
+                    </Button>
+                  }
+                />
+              ) : undefined
             }
           >
             {profile.visibleSubscriptions
@@ -358,9 +750,13 @@ export async function PatientProfilePage({
                     <TableHead>
                       {t("shared.labels.expires")}
                     </TableHead>
-                    <TableHead>
-                      {t("patients.profile.link")}
-                    </TableHead>
+                    {!isDependent ? (
+                      <TableHead className="text-right">
+                        {t(
+                          "shared.labels.actions"
+                        )}
+                      </TableHead>
+                    ) : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -377,7 +773,11 @@ export async function PatientProfilePage({
                           }
                         </TableCell>
                         <TableCell>
-                          {subscription.status}
+                          <SubscriptionStatusBadge
+                            status={
+                              subscription.status
+                            }
+                          />
                         </TableCell>
                         <TableCell>
                           {formatDateOnly(
@@ -389,16 +789,33 @@ export async function PatientProfilePage({
                             subscription.expiresAt
                           )}
                         </TableCell>
-                        <TableCell>
-                          <Link
-                            href={`/dashboard/subscriptions?patientId=${profile.subscriptionSourcePatient.id}`}
-                            className="text-primary underline-offset-4 hover:underline"
-                          >
-                            {t(
-                              "shared.actions.open"
-                            )}
-                          </Link>
-                        </TableCell>
+                        {!isDependent ? (
+                          <TableCell className="text-right">
+                            <SubscriptionRowActions
+                              subscription={{
+                                id: subscription.id,
+                                patientId:
+                                  subscription.patientId,
+                                membershipPlanId:
+                                  subscription.membershipPlanId,
+                                startedAt:
+                                  subscription.startedAt,
+                                expiresAt:
+                                  subscription.expiresAt ??
+                                  subscription.startedAt,
+                                status:
+                                  subscription.status,
+                              }}
+                              patients={
+                                subscriptionPatients
+                              }
+                              plans={planOptions}
+                              canManageSubscriptions={
+                                canManageSubscriptions
+                              }
+                            />
+                          </TableCell>
+                        ) : null}
                       </TableRow>
                     )
                   )}
@@ -413,9 +830,41 @@ export async function PatientProfilePage({
             title={t(
               "patients.profile.benefitHistoryTitle"
             )}
-            description={t(
-              "patients.profile.benefitHistoryDescription"
-            )}
+            description={
+              isDependent
+                ? `Benefícios herdados de ${profile.subscriptionSourcePatient.fullName}.`
+                : t(
+                    "patients.profile.benefitHistoryDescription"
+                  )
+            }
+            helpLegend={[
+              legendSection(
+                "Status de uso",
+                BENEFIT_USAGE_STATUS_LEGEND
+              ),
+            ]}
+            action={
+              canManageBenefitUsage &&
+              ownBenefitBalances.length > 0 ? (
+                <ConsumeBenefitDialog
+                  balances={ownBenefitBalances}
+                  title={t(
+                    "patients.rowActions.consumeTitle",
+                    {
+                      name: profile.patient
+                        .fullName,
+                    }
+                  )}
+                  trigger={
+                    <Button size="sm">
+                      {t(
+                        "patients.rowActions.useBenefit"
+                      )}
+                    </Button>
+                  }
+                />
+              ) : undefined
+            }
           >
             {benefitUsages.length === 0 ? (
               <EmptyState
@@ -495,19 +944,24 @@ export async function PatientProfilePage({
           </SectionCard>
         </TabsContent>
 
-        <TabsContent value="payments">
+        <TabsContent value="billing">
           <SectionCard
             title={t(
               "patients.profile.paymentHistoryTitle"
             )}
             description={
-              profile.patient.kind ===
-              "DEPENDENT"
+              isDependent
                 ? `Cobranças e vigência refletidas a partir de ${profile.subscriptionSourcePatient.fullName}.`
                 : t(
                     "patients.profile.paymentHistoryDescription"
                   )
             }
+            helpLegend={[
+              legendSection(
+                "Status da cobrança",
+                PATIENT_INVOICE_STATUS_LEGEND
+              ),
+            ]}
           >
             {profile.visibleInvoices.length ===
             0 ? (
@@ -518,102 +972,21 @@ export async function PatientProfilePage({
                 description=""
               />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      {t(
-                        "patients.profile.invoice"
-                      )}
-                    </TableHead>
-                    <TableHead>
-                      {t("shared.labels.plan")}
-                    </TableHead>
-                    <TableHead>
-                      {t("shared.labels.amount")}
-                    </TableHead>
-                    <TableHead>
-                      {t("shared.labels.dueDate")}
-                    </TableHead>
-                    <TableHead>
-                      {t("shared.labels.status")}
-                    </TableHead>
-                    <TableHead>
-                      {t(
-                        "shared.labels.paymentHistory"
-                      )}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {profile.visibleInvoices.map(
-                    (invoice) => (
-                      <TableRow key={invoice.id}>
-                        <TableCell>
-                          {invoice.description ??
-                            invoice.id}
-                        </TableCell>
-                        <TableCell>
-                          {invoice.subscription
-                            ?.membershipPlan
-                            ?.name ??
-                            t(
-                              "patients.profile.detached"
-                            )}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(
-                            invoice.amount
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {formatDateOnly(
-                            invoice.dueDate
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {invoice.status}
-                        </TableCell>
-                        <TableCell>
-                          {invoice.payments
-                            .length === 0 ? (
-                            <span className="text-muted-foreground">
-                              {t(
-                                "patients.profile.noPaymentsRecorded"
-                              )}
-                            </span>
-                          ) : (
-                            <div className="space-y-1">
-                              {invoice.payments.map(
-                                (payment) => (
-                                  <div
-                                    key={
-                                      payment.id
-                                    }
-                                  >
-                                    {
-                                      payment.status
-                                    }
-                                    {" · "}
-                                    {payment.paymentMethod ??
-                                      t(
-                                        "patients.profile.unspecified"
-                                      )}
-                                    {" · "}
-                                    {formatDateTime(
-                                      payment.paidAt
-                                    )}
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  )}
-                </TableBody>
-              </Table>
+              <PatientPaymentsTable
+                invoices={profile.visibleInvoices.map(
+                  (invoice) => ({
+                    ...invoice,
+                    patient: {
+                      fullName:
+                        profile.patient
+                          .fullName,
+                    },
+                  })
+                )}
+                canManageBilling={
+                  canManageBilling
+                }
+              />
             )}
           </SectionCard>
         </TabsContent>

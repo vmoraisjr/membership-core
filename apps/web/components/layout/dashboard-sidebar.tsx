@@ -26,10 +26,12 @@ import {
   ShieldCheck,
   SquareStack,
   Users,
-  WalletCards,
 } from "lucide-react";
 
-import { usePathname } from "next/navigation";
+import {
+  usePathname,
+  useSearchParams,
+} from "next/navigation";
 
 import type { AppRole } from "@/features/auth/constants/roles";
 import { hasPermission, type AppResource } from "@/features/rbac/permissions";
@@ -51,7 +53,7 @@ const items = [
     section: "operation",
     label: "navigation.clinics",
     platformLabel: "Empresas clientes",
-    href: "/dashboard/clinics",
+    href: "/dashboard/empresas",
     icon: Building2,
     resource: "clinic",
     platformOnly: true,
@@ -60,7 +62,7 @@ const items = [
   {
     section: "operation",
     label: "navigation.membershipPlans",
-    href: "/dashboard/plans",
+    href: "/dashboard/planos",
     icon: SquareStack,
     resource: "plans",
   },
@@ -68,7 +70,7 @@ const items = [
   {
     section: "operation",
     label: "navigation.patients",
-    href: "/dashboard/patients",
+    href: "/dashboard/clientes",
     icon: Users,
     resource: "patients",
   },
@@ -76,31 +78,33 @@ const items = [
   {
     section: "operation",
     label: "navigation.subscriptions",
-    href: "/dashboard/subscriptions",
+    href: "/dashboard/clientes",
     icon: CreditCard,
     resource: "subscriptions",
+    clinicLegacyHidden: true,
   },
 
   {
     section: "operation",
     label: "navigation.benefits",
-    href: "/dashboard/benefits",
+    href: "/dashboard/planos",
     icon: BadgePercent,
     resource: "benefits",
+    clinicLegacyHidden: true,
   },
 
   {
     section: "operation",
     label: "navigation.benefitUsage",
-    href: "/dashboard/benefit-usage",
+    href: "/dashboard/atendimentos",
     icon: History,
     resource: "benefitUsage",
   },
 
   {
     section: "operation",
-    label: "navigation.payments",
-    href: "/dashboard/payments",
+    label: "Cobranças",
+    href: "/dashboard/cobrancas",
     icon: ReceiptText,
     resource: "billing",
     clinicOnly: true,
@@ -108,49 +112,35 @@ const items = [
 
   {
     section: "operation",
-    label: "Catálogo comercial",
-    platformLabel: "Catálogo comercial",
-    href: "/dashboard/billing/catalog",
+    label: "Planos comerciais",
+    platformLabel: "Planos comerciais",
+    href: "/dashboard/planos-comerciais",
     icon: BookCopy,
     resource: "billing",
     platformOnly: true,
   },
 
   {
-    section: "operation",
-    label: "Assinaturas SaaS",
-    platformLabel: "Assinaturas SaaS",
-    href: "/dashboard/billing/subscriptions",
-    icon: CreditCard,
-    resource: "billing",
-    platformOnly: true,
-  },
-
-  {
-    section: "operation",
-    label: "Pagamentos SaaS",
-    platformLabel: "Pagamentos SaaS",
-    href: "/dashboard/billing/payments",
-    icon: WalletCards,
-    resource: "billing",
-    platformOnly: true,
-  },
-
-  {
-    section: "operation",
+    section: "administracao",
     label: "navigation.myCompany",
-    href: "/dashboard/company",
+    href: "/dashboard/minha-empresa",
     icon: Building2,
     resource: "clinic",
     clinicOnly: true,
+    // A clinic must always be able to reach its own subscription tab to
+    // fix whatever is blocking operation (pause, past due, suspended) —
+    // never hide the one way out (PAY-002).
+    alwaysVisible: true,
   },
 
   {
     section: "operation",
     label: "navigation.modules",
-    href: "/dashboard/modules",
+    href: "/dashboard/minha-empresa?tab=resources",
     icon: Blocks,
     resource: "modules",
+    clinicOnly: true,
+    clinicLegacyHidden: true,
   },
 
   {
@@ -158,38 +148,53 @@ const items = [
     label: "navigation.messages",
     platformLabel: "Chamados",
     href: "/dashboard/messages",
+    platformHref: "/dashboard/chamados",
     icon: MessageSquareMore,
     resource: "messages",
-  },
-
-  {
-    section: "operation",
-    label: "navigation.auditLog",
-    platformLabel: "Auditoria global",
-    href: "/dashboard/audit-logs",
-    icon: ClipboardList,
-    resource: "auditLogs",
     platformOnly: true,
   },
 
   {
-    section: "operation",
+    section: "administracao",
+    label: "navigation.messages",
+    href: "/dashboard/minha-empresa?tab=support",
+    icon: MessageSquareMore,
+    resource: "messages",
+    clinicOnly: true,
+    alwaysVisible: true,
+  },
+
+  {
+    section: "administracao",
     label: "navigation.users",
     platformLabel: "Equipe Sheep",
-    href: "/dashboard/users",
+    href: "/dashboard/administracao?tab=team",
     icon: ShieldCheck,
     resource: "users",
+    platformOnly: true,
+  },
+
+  {
+    section: "administracao",
+    label: "navigation.auditLog",
+    platformLabel: "Auditoria global",
+    href: "/dashboard/administracao?tab=audit",
+    icon: ClipboardList,
+    resource: "auditLogs",
     platformOnly: true,
   },
 ].map((item) => item as {
   label: string;
   platformLabel?: string;
   href: string;
+  platformHref?: string;
   icon: typeof LayoutDashboard;
   resource: AppResource;
-  section: "operation";
+  section: "operation" | "administracao";
   clinicOnly?: boolean;
   platformOnly?: boolean;
+  alwaysVisible?: boolean;
+  clinicLegacyHidden?: boolean;
 });
 
 type CurrentUser = {
@@ -231,9 +236,11 @@ function getVisibleItems({
     (item) =>
       (item.section !== "operation" ||
         isPlatformView ||
-        hasOperationalAccess) &&
+        hasOperationalAccess ||
+        item.alwaysVisible) &&
       (!item.clinicOnly || hasClinicAssignment) &&
       (!item.platformOnly || isPlatformView) &&
+      (isPlatformView || !item.clinicLegacyHidden) &&
       (hasClinicAssignment ||
         item.platformOnly ||
         !CLINIC_SCOPED_RESOURCES.includes(item.resource)) &&
@@ -260,8 +267,10 @@ function SidebarNavContent({
 }: NavContentProps) {
   const t = useTranslations();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [expandedSections, setExpandedSections] = useState({
     operation: true,
+    administracao: hasClinicAssignment,
   });
   const isPlatformView = !hasClinicAssignment;
 
@@ -269,10 +278,23 @@ function SidebarNavContent({
     expandedSections.operation ||
     items.some(
       (item) =>
+        item.section === "operation" &&
         item.href !== "/dashboard" &&
         (pathname === item.href || pathname.startsWith(`${item.href}/`))
     ) ||
     pathname === "/dashboard";
+
+  const administracaoExpanded =
+    expandedSections.administracao ||
+    items.some(
+      (item) =>
+        item.section === "administracao" &&
+        (pathname === item.href ||
+          pathname.startsWith(
+            item.href.split("?")[0] + "/"
+          ) ||
+          pathname === item.href.split("?")[0])
+    );
 
   const visibleItems = getVisibleItems({
     role,
@@ -304,6 +326,13 @@ function SidebarNavContent({
             title: "Operação",
             expanded: operationExpanded,
           },
+          {
+            id: "administracao",
+            title: isPlatformView
+              ? "Administração"
+              : "Minha empresa",
+            expanded: administracaoExpanded,
+          },
         ].map((section) => {
           const sectionItems = visibleItems.filter(
             (item) => item.section === section.id
@@ -314,7 +343,15 @@ function SidebarNavContent({
           }
 
           return (
-            <div key={section.id} className="flex flex-col gap-1.5">
+            <div
+              key={section.id}
+              className={cn(
+                "flex flex-col gap-1.5",
+                section.id === "administracao" &&
+                  !isPlatformView &&
+                  "mt-auto"
+              )}
+            >
               {section.title && !collapsed ? (
                 <button
                   type="button"
@@ -322,7 +359,11 @@ function SidebarNavContent({
                     setExpandedSections((current) => ({
                       ...current,
                       [section.id]:
-                        !current[section.id as "operation"],
+                        !current[
+                          section.id as
+                            | "operation"
+                            | "administracao"
+                        ],
                     }))
                   }
                   className="sidebar-section-button"
@@ -335,10 +376,29 @@ function SidebarNavContent({
               ) : null}
               {(collapsed || section.expanded) &&
                 sectionItems.map((item) => {
+                  const resolvedHref =
+                    isPlatformView && item.platformHref
+                      ? item.platformHref
+                      : item.href;
+                  const [itemPath, itemQuery] =
+                    resolvedHref.split("?");
                   const active =
-                    pathname === item.href ||
-                    (item.href !== "/dashboard" &&
-                      pathname.startsWith(`${item.href}/`));
+                    pathname === itemPath
+                      ? !itemQuery ||
+                        Array.from(
+                          new URLSearchParams(
+                            itemQuery
+                          ).entries()
+                        ).every(
+                          ([key, value]) =>
+                            searchParams.get(
+                              key
+                            ) === value
+                        )
+                      : itemPath !== "/dashboard" &&
+                        pathname.startsWith(
+                          `${itemPath}/`
+                        );
 
                   const Icon = item.icon;
                   const label =
@@ -349,7 +409,7 @@ function SidebarNavContent({
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={resolvedHref}
                       title={label}
                       onClick={onNavigate}
                       className={cn(
@@ -416,7 +476,7 @@ export function DashboardSidebar({
                 : "Recolher menu lateral"
             }
           >
-            <PanelLeftClose className="size-3.5" />
+            <PanelLeftClose className="size-4.5" />
           </button>
         </div>
       </aside>

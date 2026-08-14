@@ -36,18 +36,14 @@ import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_LABELS,
 } from "@/features/audit-log/services/get-audit-logs";
-import {
-  getUserStatusLabel,
-  getUserStatusTone,
-} from "@/features/users/utils/user-display";
 import { isModuleV1Active } from "@/features/modules/services/module-policy";
 import { getModuleKeyLabel } from "@/features/modules/utils/module-labels";
 import { platformSetClinicModuleStatusAction } from "@/features/modules/actions/platform-set-clinic-module-status";
 
-import {
-  getClinicSubscriptionStatusTone,
-  getPaymentStatusTone,
-} from "../utils/clinic-status";
+import { getClinicSubscriptionStatusTone } from "../utils/clinic-status";
+import { CompanyBillingTab } from "@/features/billing/components/company-billing-tab";
+import { CompanyPeopleTab } from "./company-people-tab";
+import { CompanyChamadosTab } from "./company-chamados-tab";
 import { getPlatformClinicDetails } from "../services/get-platform-clinic-details";
 
 type Props = {
@@ -58,12 +54,18 @@ type Props = {
     from?: string;
     to?: string;
   };
+  chamadosFilters?: {
+    threadId?: string;
+    category?: string;
+    status?: string;
+  };
 };
 
 export async function PlatformClinicDetailsPage({
   clinicId,
   activeTab = "overview",
   auditFilters = {},
+  chamadosFilters = {},
 }: Props) {
   const t = getTranslations();
   const {
@@ -93,15 +95,23 @@ export async function PlatformClinicDetailsPage({
   const tabs = [
     {
       id: "overview",
-      label: "Visão geral",
+      label: "Resumo",
+    },
+    {
+      id: "billing",
+      label: "Plano e cobrança",
     },
     {
       id: "users",
-      label: "Usuários",
+      label: "Pessoas",
     },
     {
       id: "modules",
       label: "Módulos",
+    },
+    {
+      id: "chamados",
+      label: "Chamados",
     },
     {
       id: "audit",
@@ -110,7 +120,7 @@ export async function PlatformClinicDetailsPage({
   ] as const;
 
   function tabHref(tab: string) {
-    return `/dashboard/clinics/${clinicId}?tab=${tab}`;
+    return `/dashboard/empresas/${clinicId}?tab=${tab}`;
   }
 
   const latestSubscription =
@@ -160,20 +170,30 @@ export async function PlatformClinicDetailsPage({
       {activeTab === "overview" ? (
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
-              label="Plano atual"
-              value={metrics.platformPlan}
-              hint={`Status atual: ${t(`billing.status.${metrics.platformStatus}`)}`}
-              icon={<CreditCard className="size-5" />}
-            />
-            <MetricCard
-              label="Próximo vencimento"
-              value={formatDate(
-                metrics.nextDueDate
-              )}
-              hint="Baseado na cobrança SaaS mais recente."
-              icon={<WalletCards className="size-5" />}
-            />
+            <Link
+              href={tabHref("billing")}
+              className="rounded-[0.875rem] transition-opacity hover:opacity-90"
+            >
+              <MetricCard
+                label="Plano atual"
+                value={metrics.platformPlan}
+                hint={`Status atual: ${t(`billing.status.${metrics.platformStatus}`)}`}
+                icon={<CreditCard className="size-5" />}
+              />
+            </Link>
+            <Link
+              href={tabHref("billing")}
+              className="rounded-[0.875rem] transition-opacity hover:opacity-90"
+            >
+              <MetricCard
+                label="Próximo vencimento"
+                value={formatDate(
+                  metrics.nextDueDate
+                )}
+                hint="Baseado na cobrança SaaS mais recente."
+                icon={<WalletCards className="size-5" />}
+              />
+            </Link>
             <MetricCard
               label="Pacientes"
               value={String(metrics.patients)}
@@ -249,155 +269,50 @@ export async function PlatformClinicDetailsPage({
             </div>
           </SectionCard>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <SectionCard
-              title="Assinatura SaaS"
-              description="Plano e status comercial vigente."
-            >
-              <div className="flex flex-col gap-3 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {metrics.platformPlan}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Expira:{" "}
-                      {formatDate(
-                        latestSubscription?.expiresAt
-                      )}
-                    </p>
-                  </div>
-                  <StatusIndicator
-                    tone={getClinicSubscriptionStatusTone(
-                      metrics.platformStatus
-                    )}
-                    label={t(
-                      `billing.status.${metrics.platformStatus}`
-                    )}
-                  />
-                </div>
-                <Link
-                  href={`/dashboard/billing/subscriptions?clinicId=${clinicId}`}
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  Gerenciar assinatura SaaS →
-                </Link>
+          <SectionCard
+            title="Cobrança"
+            description="Resumo rápido — o histórico completo de assinatura e faturas vive na aba Plano e cobrança."
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                <StatusIndicator
+                  tone={getClinicSubscriptionStatusTone(
+                    metrics.platformStatus
+                  )}
+                  label={t(
+                    `billing.status.${metrics.platformStatus}`
+                  )}
+                />
+                <span>
+                  {latestInvoice
+                    ? `Última cobrança: ${formatCurrency(latestInvoice.amount)} · ${t(`billing.status.${latestInvoice.status}`)}`
+                    : "Nenhuma cobrança registrada."}
+                </span>
               </div>
-            </SectionCard>
-
-            <SectionCard
-              title="Pagamentos"
-              description="Última cobrança registrada."
-            >
-              <div className="flex flex-col gap-3 p-4">
-                {latestInvoice ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {formatCurrency(
-                          latestInvoice.amount
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Vencimento:{" "}
-                        {formatDate(
-                          latestInvoice.dueDate
-                        )}
-                      </p>
-                    </div>
-                    <StatusIndicator
-                      tone={getPaymentStatusTone(
-                        latestInvoice.status
-                      )}
-                      label={t(
-                        `billing.status.${latestInvoice.status}`
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhuma cobrança registrada.
-                  </p>
-                )}
-                <Link
-                  href={`/dashboard/billing/payments?clinicId=${clinicId}`}
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  Ver pagamentos →
-                </Link>
-              </div>
-            </SectionCard>
-          </div>
+              <Link
+                href={tabHref("billing")}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Ver plano e cobrança →
+              </Link>
+            </div>
+          </SectionCard>
         </>
       ) : null}
 
+      {activeTab === "billing" ? (
+        <CompanyBillingTab
+          clinicId={clinicId}
+          clinicName={
+            clinic.brandName ?? clinic.name
+          }
+        />
+      ) : null}
+
       {activeTab === "users" ? (
-        <SectionCard
-          title="Master da empresa"
-          description="Acompanhe o usuário principal e eventos de credencial."
-        >
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  {t(
-                    "shared.labels.fullName"
-                  )}
-                </TableHead>
-                <TableHead>
-                  {t("shared.labels.email")}
-                </TableHead>
-                <TableHead>
-                  {t(
-                    "shared.labels.status"
-                  )}
-                </TableHead>
-                <TableHead>
-                  {t(
-                    "shared.labels.lastLogin"
-                  )}
-                </TableHead>
-                <TableHead>
-                  {t(
-                    "clinics.details.mustChangePassword"
-                  )}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clinic.appUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    {user.name}
-                  </TableCell>
-                  <TableCell>
-                    {user.email}
-                  </TableCell>
-                  <TableCell>
-                    <StatusIndicator
-                      tone={getUserStatusTone(
-                        user.status
-                      )}
-                      label={getUserStatusLabel(
-                        user.status
-                      )}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {formatDate(
-                      user.lastLoginAt
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {user.mustChangePassword
-                      ? "Sim"
-                      : "Não"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </SectionCard>
+        <CompanyPeopleTab
+          clinicId={clinicId}
+        />
       ) : null}
 
       {activeTab === "modules" ? (
@@ -610,6 +525,16 @@ export async function PlatformClinicDetailsPage({
             </TableBody>
           </Table>
         </SectionCard>
+      ) : null}
+
+      {activeTab === "chamados" ? (
+        <CompanyChamadosTab
+          clinicId={clinicId}
+          clinicName={
+            clinic.brandName ?? clinic.name
+          }
+          filters={chamadosFilters}
+        />
       ) : null}
 
       {activeTab === "audit" ? (

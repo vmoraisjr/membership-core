@@ -90,4 +90,5 @@ export async function deleteMembershipBenefitPermanently(
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/plans");
   revalidatePath("/dashboard/benefits");
+  revalidatePath("/dashboard/planos");
 }

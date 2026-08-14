@@ -1,9 +1,10 @@
 "use client";
 
+import { useRef } from "react";
+
 import {
   Copy,
-  Eye,
-  Pencil,
+  MoreHorizontal,
   Plus,
   RotateCcw,
   Trash2,
@@ -14,6 +15,13 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 
@@ -23,6 +31,7 @@ import { reactivateMembershipPlan } from "../actions/reactivate-membership-plan"
 import { deleteMembershipPlanPermanently } from "../actions/delete-membership-plan-permanently";
 import { MembershipBenefitDialog } from "@/features/membership-benefits/components/membership-benefit-dialog";
 import { useTranslations } from "@/i18n/provider";
+import { planoUrl } from "@/lib/company-routes";
 
 import { MembershipPlanDialog } from "./membership-plan-dialog";
 
@@ -58,6 +67,17 @@ export function MembershipPlanRowActions({
   canManageBenefits = true,
 }: Props) {
   const t = useTranslations();
+
+  const editTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const addBenefitTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const deactivateTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const reactivateTriggerRef =
+    useRef<HTMLButtonElement>(null);
+  const deleteTriggerRef =
+    useRef<HTMLButtonElement>(null);
 
   async function handleDeactivate({
     typedValue,
@@ -148,22 +168,19 @@ export function MembershipPlanRowActions({
 
   const viewButton = (
     <Button
-      size="icon-sm"
-      variant="ghost"
+      size="sm"
+      variant="outline"
       asChild
-      title={t("shared.actions.view")}
     >
-      <Link
-        href={`/dashboard/plans/${plan.id}`}
-      >
-        <Eye className="size-4" />
+      <Link href={planoUrl(plan.id)}>
+        {t("plans.table.viewAction")}
       </Link>
     </Button>
   );
 
   if (!canManagePlans) {
     return (
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {viewButton}
         <span className="text-xs text-muted-foreground">
           {t("shared.states.readOnly")}
@@ -173,175 +190,221 @@ export function MembershipPlanRowActions({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {viewButton}
 
-      {plan.active ? (
-        <>
-          <MembershipPlanDialog
-            mode="edit"
-            initialData={{
-              id: plan.id,
-              name: plan.name,
-              description:
-                plan.description,
-              monthlyPrice: Number(
-                plan.monthlyPrice
-              ),
-              annualPrice:
-                plan.annualPrice ?? null,
-              active: plan.active,
-            }}
-            trigger={
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                title={t("shared.actions.edit")}
-                aria-label={t(
-                  "shared.actions.edit"
-                )}
-              >
-                <Pencil className="size-4" />
-              </Button>
-            }
-          />
-
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button
             size="icon-sm"
             variant="ghost"
             title={t(
-              "plans.rowActions.clone"
+              "shared.labels.actions"
             )}
             aria-label={t(
-              "plans.rowActions.clone"
+              "shared.labels.actions"
             )}
-            onClick={() =>
-              void handleClone()
-            }
           >
-            <Copy className="size-4" />
+            <MoreHorizontal className="size-4" />
           </Button>
+        </DropdownMenuTrigger>
 
-          {canManageBenefits ? (
-            <MembershipBenefitDialog
-              plans={benefitPlans}
-              defaultMembershipPlanId={
-                plan.id
-              }
-              trigger={
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  title={t(
-                    "benefits.dialog.createTitle"
-                  )}
-                  aria-label={t(
-                    "benefits.dialog.createTitle"
-                  )}
+        <DropdownMenuContent align="end">
+          {plan.active ? (
+            <>
+              <DropdownMenuItem
+                onSelect={() =>
+                  editTriggerRef.current?.click()
+                }
+              >
+                {t("shared.actions.edit")}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onSelect={() =>
+                  void handleClone()
+                }
+              >
+                <Copy className="size-4" />
+                {t(
+                  "plans.rowActions.clone"
+                )}
+              </DropdownMenuItem>
+
+              {canManageBenefits ? (
+                <DropdownMenuItem
+                  onSelect={() =>
+                    addBenefitTriggerRef.current?.click()
+                  }
                 >
                   <Plus className="size-4" />
-                </Button>
-              }
-            />
-          ) : null}
+                  {t(
+                    "benefits.dialog.createTitle"
+                  )}
+                </DropdownMenuItem>
+              ) : null}
 
-          <ConfirmDialog
-            title={t(
-              "plans.rowActions.deactivateTitle"
-            )}
-            description={t(
-              "plans.rowActions.deactivateDescription"
-            )}
-            confirmValue={plan.name}
-            confirmLabel={t(
-              "plans.rowActions.confirmName"
-            )}
-            confirmPlaceholder={plan.name}
-            actionLabel={t(
-              "plans.rowActions.deactivateAction"
-            )}
-            onConfirm={handleDeactivate}
-            trigger={
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
-                title={t(
-                  "plans.rowActions.deactivateAction"
-                )}
-                aria-label={t(
-                  "plans.rowActions.deactivateAction"
-                )}
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() =>
+                  deactivateTriggerRef.current?.click()
+                }
               >
                 <XCircle className="size-4" />
-              </Button>
-            }
-          />
-        </>
-      ) : (
-        <>
-          <ConfirmDialog
-            title={t(
-              "plans.rowActions.reactivateTitle"
-            )}
-            description={t(
-              "plans.rowActions.reactivateDescription"
-            )}
-            onConfirm={() =>
-              handleReactivate()
-            }
-            actionLabel={t(
-              "plans.rowActions.reactivateAction"
-            )}
-            trigger={
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                title={t(
-                  "plans.rowActions.reactivateAction"
+                {t(
+                  "plans.rowActions.deactivateAction"
                 )}
-                aria-label={t(
-                  "plans.rowActions.reactivateAction"
-                )}
+              </DropdownMenuItem>
+            </>
+          ) : (
+            <>
+              <DropdownMenuItem
+                onSelect={() =>
+                  reactivateTriggerRef.current?.click()
+                }
               >
                 <RotateCcw className="size-4" />
-              </Button>
-            }
-          />
+                {t(
+                  "plans.rowActions.reactivateAction"
+                )}
+              </DropdownMenuItem>
 
-          {canDeletePlansPermanently ? (
-            <ConfirmDialog
-              title={t(
-                "plans.rowActions.deleteTitle"
-              )}
-              description={t(
-                "plans.rowActions.deleteDescription"
-              )}
-              onConfirm={() =>
-                handleDelete()
-              }
-              actionLabel={t(
-                "shared.actions.deletePermanently"
-              )}
-              trigger={
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  className="text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger-soft)] hover:text-[color:var(--color-danger)]"
-                  title={t(
-                    "shared.actions.deletePermanently"
-                  )}
-                  aria-label={t(
-                    "shared.actions.deletePermanently"
-                  )}
+              {canDeletePlansPermanently ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() =>
+                    deleteTriggerRef.current?.click()
+                  }
                 >
                   <Trash2 className="size-4" />
-                </Button>
-              }
+                  {t(
+                    "shared.actions.deletePermanently"
+                  )}
+                </DropdownMenuItem>
+              ) : null}
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Hidden triggers: same dialogs/confirmations as before, surfaced
+          only through the "Ações" menu above (UI-063). */}
+      <MembershipPlanDialog
+        mode="edit"
+        initialData={{
+          id: plan.id,
+          name: plan.name,
+          description: plan.description,
+          monthlyPrice: Number(
+            plan.monthlyPrice
+          ),
+          annualPrice:
+            plan.annualPrice ?? null,
+          active: plan.active,
+        }}
+        trigger={
+          <button
+            ref={editTriggerRef}
+            type="button"
+            className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+        }
+      />
+
+      {canManageBenefits ? (
+        <MembershipBenefitDialog
+          plans={benefitPlans}
+          defaultMembershipPlanId={
+            plan.id
+          }
+          trigger={
+            <button
+              ref={addBenefitTriggerRef}
+              type="button"
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
             />
-          ) : null}
-        </>
-      )}
+          }
+        />
+      ) : null}
+
+      <ConfirmDialog
+        title={t(
+          "plans.rowActions.deactivateTitle"
+        )}
+        description={t(
+          "plans.rowActions.deactivateDescription"
+        )}
+        confirmValue={plan.name}
+        confirmLabel={t(
+          "plans.rowActions.confirmName"
+        )}
+        confirmPlaceholder={plan.name}
+        actionLabel={t(
+          "plans.rowActions.deactivateAction"
+        )}
+        onConfirm={handleDeactivate}
+        trigger={
+          <button
+            ref={deactivateTriggerRef}
+            type="button"
+            className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+        }
+      />
+
+      <ConfirmDialog
+        title={t(
+          "plans.rowActions.reactivateTitle"
+        )}
+        description={t(
+          "plans.rowActions.reactivateDescription"
+        )}
+        onConfirm={() => handleReactivate()}
+        actionLabel={t(
+          "plans.rowActions.reactivateAction"
+        )}
+        trigger={
+          <button
+            ref={reactivateTriggerRef}
+            type="button"
+            className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+        }
+      />
+
+      {canDeletePlansPermanently ? (
+        <ConfirmDialog
+          title={t(
+            "plans.rowActions.deleteTitle"
+          )}
+          description={t(
+            "plans.rowActions.deleteDescription"
+          )}
+          onConfirm={() => handleDelete()}
+          actionLabel={t(
+            "shared.actions.deletePermanently"
+          )}
+          trigger={
+            <button
+              ref={deleteTriggerRef}
+              type="button"
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          }
+        />
+      ) : null}
     </div>
   );
 }

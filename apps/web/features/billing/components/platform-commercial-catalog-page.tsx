@@ -1,4 +1,5 @@
 import {
+  Building2,
   PencilLine,
   Filter,
   Search,
@@ -18,8 +19,17 @@ import { hasPermission } from "@/features/rbac/permissions";
 import { getTranslations } from "@/i18n/messages";
 import { formatCurrency } from "@/lib/formatters";
 
+import { empresasUrl, planosComerciaisUrl } from "@/lib/owner-routes";
+import { V1_ACTIVE_MODULE_KEYS } from "@/features/modules/services/module-policy";
+import { getModuleKeyLabel } from "@/features/modules/utils/module-labels";
+
 import { getPlatformClinicBillingOverview } from "../services/billing-foundation";
 import { PlatformPlanSidePanel } from "./platform-plan-side-panel";
+import {
+  legendSection,
+  PLAN_STATUS_LEGEND,
+  MODULE_STATUS_LEGEND,
+} from "@/lib/legend-content";
 
 type Props = {
   filters: {
@@ -112,6 +122,11 @@ export async function PlatformCommercialCatalogPage({
       );
     });
 
+  const v1ActiveModuleLabels =
+    V1_ACTIVE_MODULE_KEYS.map((key) =>
+      getModuleKeyLabel(key)
+    ).join(", ");
+
   return (
     <DashboardPage>
       <PageHeader
@@ -173,6 +188,16 @@ export async function PlatformCommercialCatalogPage({
           "billing.catalogPage.metrics.registered"
         )}
         description="Filtre, revise e ajuste rapidamente o catálogo comercial antes de aplicar um plano em clientes."
+        helpLegend={[
+          legendSection(
+            "Status do plano comercial",
+            PLAN_STATUS_LEGEND
+          ),
+          legendSection(
+            "Status do módulo",
+            MODULE_STATUS_LEGEND
+          ),
+        ]}
       >
         <form
           method="get"
@@ -239,7 +264,7 @@ export async function PlatformCommercialCatalogPage({
               asChild
               variant="outline"
             >
-              <a href="/dashboard/billing/catalog">
+              <a href={planosComerciaisUrl({ tab: "plans" })}>
                 {t("shared.actions.clear")}
               </a>
             </Button>
@@ -260,7 +285,7 @@ export async function PlatformCommercialCatalogPage({
                   asChild
                   variant="outline"
                 >
-                  <a href="/dashboard/billing/catalog">
+                  <a href={planosComerciaisUrl({ tab: "plans" })}>
                     {t("shared.actions.clear")}
                   </a>
                 </Button>
@@ -353,6 +378,13 @@ export async function PlatformCommercialCatalogPage({
                     </span>
                     <span>
                       {t(
+                        "billing.catalogPage.includedModulesLabel"
+                      )}
+                      :{" "}
+                      {v1ActiveModuleLabels}
+                    </span>
+                    <span>
+                      {t(
                         "billing.catalogPage.table.referenceRevenue"
                       )}
                       :{" "}
@@ -362,7 +394,7 @@ export async function PlatformCommercialCatalogPage({
                     </span>
                   </div>
 
-                  <div className="flex items-end justify-between gap-3 xl:col-span-2 xl:justify-end">
+                  <div className="flex flex-wrap items-end justify-between gap-3 xl:col-span-2 xl:justify-end">
                     <StatusIndicator
                       tone={
                         plan.active
@@ -375,6 +407,23 @@ export async function PlatformCommercialCatalogPage({
                           : t("shared.states.inactive")
                       }
                     />
+                    <Button
+                      type="button"
+                      asChild
+                      variant="outline"
+                      size="sm"
+                    >
+                      <a
+                        href={empresasUrl({
+                          planId: plan.id,
+                        })}
+                      >
+                        <Building2 className="size-4" />
+                        {t(
+                          "billing.catalogPage.viewClinicsOnPlan"
+                        )}
+                      </a>
+                    </Button>
                     <PlatformPlanSidePanel
                       mode="edit"
                       initialData={plan}

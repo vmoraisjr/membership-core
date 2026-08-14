@@ -51,7 +51,7 @@ export function MetricCard({
             <Sparkline data={trend} className="h-5 w-16" />
           ) : null}
 
-          <p className="max-w-[26ch] text-[11px] leading-4 text-muted-foreground">
+          <p className="line-clamp-1 max-w-[26ch] text-[11px] leading-4 text-muted-foreground">
             {hint}
           </p>
 
@@ -63,7 +63,7 @@ export function MetricCard({
         {icon ? (
           <div
             className={cn(
-              "rounded-xl border border-border/70 p-2.5 shadow-[var(--shadow-xs)] [&_svg]:size-4",
+              "rounded-lg p-2 [&_svg]:size-4",
               TONE_ICON_CLASS[tone]
             )}
           >

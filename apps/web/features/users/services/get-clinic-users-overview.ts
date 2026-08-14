@@ -60,8 +60,9 @@ function getInviteStatus(invite: {
   return "PENDING" as const;
 }
 
-export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
-  const clinicId = await getCurrentClinicId();
+async function fetchClinicUsersOverview(
+  clinicId: string
+): Promise<ClinicUsersOverview> {
   const [clinic, users, invites, inviters] =
     await Promise.all([
       prisma.clinic.findUniqueOrThrow({
@@ -156,4 +157,17 @@ export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
       status: getInviteStatus(invite),
     })),
   };
+}
+
+export async function getClinicUsersOverview(): Promise<ClinicUsersOverview> {
+  const clinicId = await getCurrentClinicId();
+
+  return fetchClinicUsersOverview(clinicId);
+}
+
+/** Platform-scoped variant — targets an arbitrary company, not the acting user's own clinic. */
+export async function getPlatformClinicUsersOverview(
+  clinicId: string
+): Promise<ClinicUsersOverview> {
+  return fetchClinicUsersOverview(clinicId);
 }

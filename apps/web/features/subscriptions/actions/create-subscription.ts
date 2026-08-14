@@ -177,4 +177,7 @@ export async function createSubscription(
     "/dashboard/contracts"
   );
   safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/dashboard/clientes");
+  safeRevalidatePath("/dashboard/planos");
+  safeRevalidatePath("/dashboard/cobrancas");
 }

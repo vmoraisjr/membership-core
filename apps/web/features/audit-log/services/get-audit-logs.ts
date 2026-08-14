@@ -10,13 +10,35 @@ import {
   filterByClinic,
 } from "@/lib/auth/tenant";
 
+export type AuditLogPageSize = 5 | 10 | 30 | "all";
+
+export const AUDIT_LOG_PAGE_SIZE_OPTIONS: AuditLogPageSize[] =
+  [5, 10, 30, "all"];
+
+export const AUDIT_LOG_DEFAULT_PAGE_SIZE: AuditLogPageSize = 10;
+
 export type AuditLogFilters = {
   actor?: string;
   entity?: string;
   action?: string;
   date?: string;
   clinicId?: string;
+  page?: number;
+  pageSize?: AuditLogPageSize;
 };
+
+function resolvePageSize(
+  pageSize: AuditLogPageSize | undefined
+): AuditLogPageSize {
+  if (
+    pageSize &&
+    AUDIT_LOG_PAGE_SIZE_OPTIONS.includes(pageSize)
+  ) {
+    return pageSize;
+  }
+
+  return AUDIT_LOG_DEFAULT_PAGE_SIZE;
+}
 
 function isAuditEntity(
   value: string
@@ -250,8 +272,17 @@ export async function getAuditLogs(
     }
   }
 
+  const pageSize = resolvePageSize(
+    filters.pageSize
+  );
+  const page = Math.max(
+    1,
+    filters.page ?? 1
+  );
+
   const [
     logs,
+    total,
     actors,
     entities,
     actions,
@@ -262,7 +293,13 @@ export async function getAuditLogs(
       orderBy: {
         createdAt: "desc",
       },
-      take: 200,
+      ...(pageSize === "all"
+        ? {}
+        : {
+            skip:
+              (page - 1) * pageSize,
+            take: pageSize,
+          }),
       include: {
         clinic: {
           select: {
@@ -273,6 +310,7 @@ export async function getAuditLogs(
         },
       },
     }),
+    prisma.auditLog.count({ where }),
     prisma.auditLog.findMany({
       where,
       distinct: ["actor"],
@@ -319,6 +357,9 @@ export async function getAuditLogs(
 
   return {
     logs,
+    total,
+    page,
+    pageSize,
     actorOptions: actors.map(
       ({ actor: currentActor }) =>
         currentActor

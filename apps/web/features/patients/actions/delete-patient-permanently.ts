@@ -95,4 +95,5 @@ export async function deletePatientPermanently(
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/patients");
   revalidatePath("/dashboard/subscriptions");
+  revalidatePath("/dashboard/clientes");
 }

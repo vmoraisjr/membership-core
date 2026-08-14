@@ -347,11 +347,41 @@ model ClinicSubscription {
   canceledAt         DateTime?
   createdAt          DateTime                @default(now())
 
+  providerKind          BillingProviderKind @default(MANUAL)
+  externalCustomerId    String?
+  externalSubscriptionId String?            @unique
+  syncStatus            BillingSyncStatus   @default(SYNCED)
+  lastSyncedAt           DateTime?
+  paymentRetryCount      Int                 @default(0)
+  nextPaymentAttemptAt   DateTime?
+  // Customer asked to cancel, but access/billing continues until the
+  // current paid period ends — never surprise-cancels mid-period (PAY-002).
+  cancelAtPeriodEnd      Boolean             @default(false)
+
   clinic             Clinic                  @relation(fields: [clinicId], references: [id])
   clinicBillingPlan  ClinicBillingPlan       @relation(fields: [clinicBillingPlanId], references: [id])
   invoices           ClinicInvoice[]
 
   @@index([clinicId, status])
+}
+
+// Idempotency ledger for gateway webhooks (PAY-003). No FK to Clinic —
+// an event for an unknown tenant must still be recordable for
+// observability. `externalEventId` uniqueness is what makes replays and
+// out-of-order redelivery safe: a second delivery of the same event finds
+// `processedAt` already set and is a no-op.
+model BillingWebhookEvent {
+  id                     String    @id @default(cuid())
+  externalEventId        String    @unique
+  type                   String
+  clinicId               String?
+  externalSubscriptionId String?
+  receivedAt             DateTime  @default(now())
+  processedAt            DateTime?
+  error                  String?
+
+  @@index([clinicId])
+  @@index([externalSubscriptionId])
 }
 
 model ClinicInvoice {
@@ -628,8 +658,31 @@ enum ClinicSubscriptionStatus {
   TRIAL
   ACTIVE
   PAST_DUE
+  // Customer-initiated pause (PAY-002) — distinct from SUSPENDED, which is
+  // a platform/admin action for cause. A paused subscription does not
+  // operate and does not get charged; only the customer's own "Retomar"
+  // action (after a new approved charge) moves it back to ACTIVE.
+  PAUSED
   SUSPENDED
   CANCELED
+}
+
+// Which billing gateway owns this subscription's external identifiers.
+// MANUAL = legacy/pre-gateway subscriptions administered by hand (no
+// external IDs). Real provider kinds (e.g. a future STRIPE) are added here
+// without the UI ever branding against a specific provider name.
+enum BillingProviderKind {
+  MANUAL
+  FAKE
+}
+
+// Whether our local copy of the subscription is known to match the
+// gateway's record. DIVERGED is set by reconciliation when a mismatch is
+// found and cleared once corrected (PAY-004).
+enum BillingSyncStatus {
+  SYNCED
+  PENDING
+  DIVERGED
 }
 
 enum BenefitType {

@@ -109,4 +109,6 @@ export async function markPatientInvoiceOverdueAction(
     "/dashboard/billing"
   );
   safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/dashboard/cobrancas");
+  safeRevalidatePath("/dashboard/clientes");
 }

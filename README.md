@@ -108,3 +108,8 @@ docs/ai-context.md
 docs/codex-workflow.md
 tasks/backlog/006-audit-log.md
 Execute the task.
+
+netstat -ano | grep ":3100" | grep LISTENING
+taskkill //F //PID 3668 2>&1
+sleep 1
+netstat -ano | grep ":3100" || echo "port 3100 is free"

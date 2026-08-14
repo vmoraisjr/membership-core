@@ -1,4 +1,9 @@
-import { PlatformSaasPaymentsPage } from "@/features/billing/components/platform-saas-payments-page";
+import { redirect } from "next/navigation";
+
+import {
+  empresaUrl,
+  empresasUrl,
+} from "@/lib/owner-routes";
 
 type Props = {
   searchParams: Promise<{
@@ -8,18 +13,20 @@ type Props = {
   }>;
 };
 
-export default async function Page({
+// Legacy route. With a company selected, go straight to its billing tab;
+// otherwise land on Empresas (UI-049) — same rationale as billing/subscriptions.
+export default async function BillingPaymentsRoute({
   searchParams,
 }: Props) {
-  const params = await searchParams;
+  const { clinicId } = await searchParams;
 
-  return (
-    <PlatformSaasPaymentsPage
-      filters={{
-        clinicId: params.clinicId,
-        planId: params.planId,
-        status: params.status,
-      }}
-    />
-  );
+  if (clinicId) {
+    redirect(
+      empresaUrl(clinicId, {
+        tab: "billing",
+      })
+    );
+  }
+
+  redirect(empresasUrl());
 }

@@ -73,6 +73,11 @@ type Props = {
   defaultMembershipPlanId?: string;
 
   trigger?: React.ReactNode;
+
+  /** Controlled open state — omit to let the dialog manage it internally. */
+  open?: boolean;
+
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function SubscriptionDialog({
@@ -83,9 +88,13 @@ export function SubscriptionDialog({
   defaultPatientId,
   defaultMembershipPlanId,
   trigger,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
 }: Props) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = setControlledOpen ?? setUncontrolledOpen;
   const [editingEnabled, setEditingEnabled] =
     useState(mode === "create");
 
@@ -268,13 +277,15 @@ export function SubscriptionDialog({
         }
       }}
     >
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button>
-            {t("subscriptions.new")}
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== null ? (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button>
+              {t("subscriptions.new")}
+            </Button>
+          )}
+        </DialogTrigger>
+      ) : null}
 
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>

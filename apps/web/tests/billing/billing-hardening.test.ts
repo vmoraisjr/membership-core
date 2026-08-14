@@ -36,6 +36,31 @@ import { markPatientInvoiceOverdueAction } from "@/features/billing/actions/mark
 import { markPatientInvoicePaidAction } from "@/features/billing/actions/mark-patient-invoice-paid";
 import { updatePatientInvoicePaymentMethodAction } from "@/features/billing/actions/update-patient-invoice-payment-method";
 import { cancelSubscription } from "@/features/subscriptions/actions/cancel-subscription";
+import {
+  canClinicOperate,
+  ensureClinicBillingFoundation,
+  reconcileClinicSubscriptionAutomation,
+} from "@/features/billing/services/billing-foundation";
+import { BILLING_POLICY } from "@/features/billing/constants/billing-policy";
+import {
+  fakeBillingGateway,
+  signFakeWebhookPayload,
+} from "@/features/billing/gateway/fake-billing-gateway";
+import { getBillingGateway } from "@/features/billing/gateway/get-billing-gateway";
+import {
+  pauseCompanySubscriptionAction,
+  requestCompanySubscriptionCancellationAction,
+  resumeCompanySubscriptionAction,
+  undoCompanySubscriptionCancellationAction,
+} from "@/features/billing/actions/company-subscription-actions";
+import { platformResyncClinicSubscriptionAction } from "@/features/billing/actions/platform-resync-clinic-subscription";
+import { platformCheckClinicSubscriptionDivergenceAction } from "@/features/billing/actions/platform-check-clinic-subscription-divergence";
+import {
+  platformMarkClinicInvoicePaidAction,
+  platformUpdateClinicSubscriptionStatusAction,
+} from "@/features/billing/actions/platform-manage-clinic-subscription";
+import { NextRequest } from "next/server";
+import { POST as billingWebhookPOST } from "@/app/api/webhooks/billing/route";
 
 type FixtureState = {
   alphaClinicId: string;
@@ -543,6 +568,27 @@ async function runCase(
 ) {
   await callback();
   console.log(`PASS ${name}`);
+}
+
+async function postSignedBillingWebhook(
+  payload: Record<string, unknown>
+) {
+  const body = JSON.stringify(payload);
+  const signature =
+    signFakeWebhookPayload(body);
+  const request = new NextRequest(
+    "http://localhost/api/webhooks/billing",
+    {
+      method: "POST",
+      headers: {
+        "x-billing-webhook-signature":
+          signature,
+      },
+      body,
+    }
+  );
+
+  return billingWebhookPOST(request);
 }
 
 async function main() {
@@ -1068,6 +1114,1372 @@ async function main() {
           subscription.status,
           ClinicSubscriptionStatus.CANCELED
         );
+      }
+    );
+
+    await runCase(
+      "fake billing gateway is deterministic and its webhook signature verification rejects tampered payloads",
+      async () => {
+        fakeBillingGateway.__reset();
+
+        const customerA =
+          await fakeBillingGateway.createCustomer(
+            {
+              clinicId: "gateway-det-1",
+              email: "a@example.com",
+              name: "Clinic A",
+            }
+          );
+        const customerAAgain =
+          await fakeBillingGateway.createCustomer(
+            {
+              clinicId: "gateway-det-1",
+              email: "a@example.com",
+              name: "Clinic A",
+            }
+          );
+        const customerB =
+          await fakeBillingGateway.createCustomer(
+            {
+              clinicId: "gateway-det-2",
+              email: "b@example.com",
+              name: "Clinic B",
+            }
+          );
+
+        assert.equal(
+          customerA.externalCustomerId,
+          customerAAgain.externalCustomerId
+        );
+        assert.notEqual(
+          customerA.externalCustomerId,
+          customerB.externalCustomerId
+        );
+
+        const gateway =
+          getBillingGateway();
+
+        assert.equal(
+          gateway.kind,
+          "FAKE"
+        );
+
+        const body = JSON.stringify({
+          id: "evt_1",
+          type: "invoice.paid",
+          externalSubscriptionId:
+            "fake_sub_gateway-det-1",
+          data: { amount: 249 },
+        });
+        const validSignature =
+          signFakeWebhookPayload(body);
+
+        const event =
+          gateway.verifyWebhookSignature(
+            {
+              rawBody: body,
+              signatureHeader:
+                validSignature,
+            }
+          );
+
+        assert.equal(
+          event.externalEventId,
+          "evt_1"
+        );
+        assert.equal(
+          event.type,
+          "invoice.paid"
+        );
+
+        assert.throws(() =>
+          gateway.verifyWebhookSignature({
+            rawBody: body,
+            signatureHeader:
+              "0".repeat(
+                validSignature.length
+              ),
+          })
+        );
+        assert.throws(() =>
+          gateway.verifyWebhookSignature({
+            rawBody: body,
+            signatureHeader: null,
+          })
+        );
+
+        fakeBillingGateway.__reset();
+      }
+    );
+
+    await runCase(
+      "provisioning a clinic starts a single gateway trial and is idempotent against a second call",
+      async () => {
+        clearCurrentAppUserForTests();
+
+        const clinic =
+          await prisma.clinic.create({
+            data: {
+              name: "Billing Gateway Co",
+              brandName: "Gateway Co",
+              slug: "billing-gateway",
+              document:
+                "77.777.777/0001-77",
+              email:
+                "gateway@billing.test",
+              phone: "11777777777",
+              zipCode: "07000-000",
+              city: "Sao Paulo",
+              state: "SP",
+              address:
+                "Rua Billing Gateway, 7",
+              status:
+                ClinicStatus.ACTIVE,
+            },
+          });
+
+        try {
+          const firstCall =
+            await ensureClinicBillingFoundation(
+              clinic.id
+            );
+
+          assert.ok(firstCall);
+          assert.equal(
+            firstCall!.status,
+            ClinicSubscriptionStatus.TRIAL
+          );
+          assert.equal(
+            firstCall!.providerKind,
+            "FAKE"
+          );
+          assert.ok(
+            firstCall!.externalCustomerId
+          );
+          assert.ok(
+            firstCall!.externalSubscriptionId
+          );
+
+          const trialLengthMs =
+            firstCall!.trialEndsAt!.getTime() -
+            firstCall!.startedAt.getTime();
+          const trialLengthDays =
+            Math.round(
+              trialLengthMs /
+                (1000 * 60 * 60 * 24)
+            );
+
+          assert.equal(
+            trialLengthDays,
+            BILLING_POLICY.trialDays
+          );
+
+          const secondCall =
+            await ensureClinicBillingFoundation(
+              clinic.id
+            );
+
+          assert.equal(
+            secondCall!.id,
+            firstCall!.id
+          );
+          assert.equal(
+            secondCall!
+              .externalSubscriptionId,
+            firstCall!
+              .externalSubscriptionId
+          );
+
+          const subscriptionCount =
+            await prisma.clinicSubscription.count(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            );
+
+          assert.equal(
+            subscriptionCount,
+            1
+          );
+        } finally {
+          await prisma.$transaction([
+            prisma.auditLog.deleteMany({
+              where: {
+                clinicId: clinic.id,
+              },
+            }),
+            prisma.clinicInvoice.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinicSubscription.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinic.deleteMany({
+              where: {
+                id: clinic.id,
+              },
+            }),
+          ]);
+        }
+      }
+    );
+
+    await runCase(
+      "company self-service pause/resume/cancel act only on the caller's own gateway subscription, staff cannot manage it, and a scheduled cancellation reconciles only after the paid period ends",
+      async () => {
+        clearCurrentAppUserForTests();
+
+        const clinic =
+          await prisma.clinic.create({
+            data: {
+              name: "Billing Selfservice Co",
+              brandName:
+                "Selfservice Co",
+              slug: "billing-selfservice",
+              document:
+                "66.666.666/0001-66",
+              email:
+                "selfservice@billing.test",
+              phone: "11666666666",
+              zipCode: "06000-000",
+              city: "Sao Paulo",
+              state: "SP",
+              address:
+                "Rua Billing Selfservice, 6",
+              status:
+                ClinicStatus.ACTIVE,
+            },
+          });
+
+        try {
+          const subscription =
+            await ensureClinicBillingFoundation(
+              clinic.id
+            );
+
+          assert.ok(subscription);
+
+          const owner =
+            await prisma.appUser.create(
+              {
+                data: {
+                  clinicId: clinic.id,
+                  name: "Selfservice Owner",
+                  email:
+                    "owner@billing-selfservice.test",
+                  role: AppUserRole.OWNER,
+                },
+              }
+            );
+          const staff =
+            await prisma.appUser.create(
+              {
+                data: {
+                  clinicId: clinic.id,
+                  name: "Selfservice Staff",
+                  email:
+                    "staff@billing-selfservice.test",
+                  role: AppUserRole.STAFF,
+                },
+              }
+            );
+
+          // Activate the trial into a paid, active subscription so pause
+          // has something meaningful to act on.
+          await prisma.clinicSubscription.update(
+            {
+              where: {
+                id: subscription!.id,
+              },
+              data: {
+                status:
+                  ClinicSubscriptionStatus.ACTIVE,
+              },
+            }
+          );
+
+          asUser(staff);
+          await assert.rejects(() =>
+            pauseCompanySubscriptionAction()
+          );
+
+          asUser(owner);
+          await pauseCompanySubscriptionAction();
+
+          let current =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            current.status,
+            ClinicSubscriptionStatus.PAUSED
+          );
+          assert.equal(
+            current.syncStatus,
+            "SYNCED"
+          );
+
+          await resumeCompanySubscriptionAction();
+
+          current =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            current.status,
+            ClinicSubscriptionStatus.ACTIVE
+          );
+
+          // Requesting cancellation on an ACTIVE subscription must not
+          // cancel it immediately — access continues until period end.
+          await requestCompanySubscriptionCancellationAction();
+
+          current =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            current.status,
+            ClinicSubscriptionStatus.ACTIVE
+          );
+          assert.equal(
+            current.cancelAtPeriodEnd,
+            true
+          );
+
+          // Reconciliation must not cancel it early, while the period is
+          // still in the future.
+          await reconcileClinicSubscriptionAutomation();
+
+          current =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            current.status,
+            ClinicSubscriptionStatus.ACTIVE
+          );
+
+          // Undo works while the cancellation is still pending.
+          await undoCompanySubscriptionCancellationAction();
+
+          current =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            current.cancelAtPeriodEnd,
+            false
+          );
+
+          // Now request cancellation again and simulate the period
+          // already having ended — only then must reconciliation cancel.
+          await requestCompanySubscriptionCancellationAction();
+          await prisma.clinicSubscription.update(
+            {
+              where: {
+                id: subscription!.id,
+              },
+              data: {
+                expiresAt: new Date(
+                  Date.now() -
+                    1000 * 60 * 60
+                ),
+              },
+            }
+          );
+
+          await reconcileClinicSubscriptionAutomation();
+
+          current =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            current.status,
+            ClinicSubscriptionStatus.CANCELED
+          );
+
+          clearCurrentAppUserForTests();
+        } finally {
+          await prisma.$transaction([
+            prisma.auditLog.deleteMany({
+              where: {
+                clinicId: clinic.id,
+              },
+            }),
+            prisma.clinicInvoice.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinicSubscription.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.appUser.deleteMany({
+              where: {
+                clinicId: clinic.id,
+              },
+            }),
+            prisma.clinic.deleteMany({
+              where: {
+                id: clinic.id,
+              },
+            }),
+          ]);
+        }
+      }
+    );
+
+    await runCase(
+      "billing webhook: invalid signature and unknown-tenant events change nothing; a signed payment_succeeded reconciles the invoice, extends the period, and a replay is a no-op",
+      async () => {
+        clearCurrentAppUserForTests();
+
+        const clinic =
+          await prisma.clinic.create({
+            data: {
+              name: "Billing Webhook Co",
+              brandName: "Webhook Co",
+              slug: "billing-webhook",
+              document:
+                "55.555.555/0001-55",
+              email:
+                "webhook@billing.test",
+              phone: "11555555555",
+              zipCode: "05000-000",
+              city: "Sao Paulo",
+              state: "SP",
+              address:
+                "Rua Billing Webhook, 5",
+              status:
+                ClinicStatus.ACTIVE,
+            },
+          });
+
+        try {
+          const subscription =
+            await ensureClinicBillingFoundation(
+              clinic.id
+            );
+
+          assert.ok(subscription);
+          assert.ok(
+            subscription!
+              .externalSubscriptionId
+          );
+
+          const invalidResponse =
+            await billingWebhookPOST(
+              new NextRequest(
+                "http://localhost/api/webhooks/billing",
+                {
+                  method: "POST",
+                  headers: {
+                    "x-billing-webhook-signature":
+                      "not-a-real-signature",
+                  },
+                  body: JSON.stringify({
+                    id: "evt_bad",
+                    type: "invoice.paid",
+                    externalSubscriptionId:
+                      subscription!
+                        .externalSubscriptionId,
+                  }),
+                }
+              )
+            );
+
+          assert.equal(
+            invalidResponse.status,
+            400
+          );
+
+          const eventAfterInvalid =
+            await prisma.billingWebhookEvent.findUnique(
+              {
+                where: {
+                  externalEventId:
+                    "evt_bad",
+                },
+              }
+            );
+
+          assert.equal(
+            eventAfterInvalid,
+            null
+          );
+
+          const unknownResponse =
+            await postSignedBillingWebhook(
+              {
+                id: "evt_unknown_sub",
+                type: "invoice.paid",
+                externalSubscriptionId:
+                  "fake_sub_does-not-exist",
+              }
+            );
+
+          assert.equal(
+            unknownResponse.status,
+            200
+          );
+
+          const unknownEvent =
+            await prisma.billingWebhookEvent.findUniqueOrThrow(
+              {
+                where: {
+                  externalEventId:
+                    "evt_unknown_sub",
+                },
+              }
+            );
+
+          assert.equal(
+            unknownEvent.clinicId,
+            null
+          );
+          assert.equal(
+            unknownEvent.error,
+            "unknown_subscription"
+          );
+
+          const untouchedSubscription =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            untouchedSubscription.status,
+            ClinicSubscriptionStatus.TRIAL
+          );
+
+          const eventId = `evt_paid_${subscription!.id}`;
+          const paidResponse =
+            await postSignedBillingWebhook(
+              {
+                id: eventId,
+                type: "payment.succeeded",
+                externalSubscriptionId:
+                  subscription!
+                    .externalSubscriptionId,
+              }
+            );
+
+          assert.equal(
+            paidResponse.status,
+            200
+          );
+
+          const afterPaid =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+                include: {
+                  invoices: true,
+                },
+              }
+            );
+
+          assert.equal(
+            afterPaid.status,
+            ClinicSubscriptionStatus.ACTIVE
+          );
+          assert.equal(
+            afterPaid.invoices.filter(
+              (invoice) =>
+                invoice.status ===
+                "PAID"
+            ).length,
+            1
+          );
+          assert.equal(
+            afterPaid.invoices.filter(
+              (invoice) =>
+                invoice.status ===
+                "PENDING"
+            ).length,
+            1
+          );
+
+          const invoiceCountAfterFirstPaid =
+            afterPaid.invoices.length;
+
+          // Replay of the exact same event must not duplicate anything.
+          const replayResponse =
+            await postSignedBillingWebhook(
+              {
+                id: eventId,
+                type: "payment.succeeded",
+                externalSubscriptionId:
+                  subscription!
+                    .externalSubscriptionId,
+              }
+            );
+          const replayBody =
+            await replayResponse.json();
+
+          assert.equal(
+            replayBody.duplicate,
+            true
+          );
+
+          const afterReplay =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+                include: {
+                  invoices: true,
+                },
+              }
+            );
+
+          assert.equal(
+            afterReplay.invoices.length,
+            invoiceCountAfterFirstPaid
+          );
+
+          // A failed charge on the next cycle: access must continue
+          // (PAY-003 tolerance) and only escalate once the tolerance
+          // window has actually elapsed.
+          const failedResponse =
+            await postSignedBillingWebhook(
+              {
+                id: `evt_failed_${subscription!.id}`,
+                type: "payment.failed",
+                externalSubscriptionId:
+                  subscription!
+                    .externalSubscriptionId,
+              }
+            );
+
+          assert.equal(
+            failedResponse.status,
+            200
+          );
+
+          const afterFailed =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            afterFailed.status,
+            ClinicSubscriptionStatus.PAST_DUE
+          );
+          assert.equal(
+            canClinicOperate(
+              afterFailed.status
+            ),
+            true
+          );
+
+          await reconcileClinicSubscriptionAutomation();
+
+          const stillWithinTolerance =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            stillWithinTolerance.status,
+            ClinicSubscriptionStatus.PAST_DUE
+          );
+
+          // Simulate the tolerance window having elapsed.
+          const overdueInvoice =
+            await prisma.clinicInvoice.findFirst(
+              {
+                where: {
+                  clinicSubscriptionId:
+                    subscription!.id,
+                  status: "OVERDUE",
+                },
+              }
+            );
+
+          assert.ok(overdueInvoice);
+
+          const toleranceElapsedDueDate =
+            new Date(
+              Date.now() -
+                1000 *
+                  60 *
+                  60 *
+                  24 *
+                  (BILLING_POLICY.paymentRetryToleranceDays +
+                    1)
+            );
+
+          // `reconcileClinicSubscriptionAutomation` looks at the invoice
+          // with the latest `dueDate` — push every other invoice on this
+          // subscription further into the past first, so the OVERDUE one
+          // stays "latest" once backdated to simulate the tolerance
+          // window having elapsed.
+          await prisma.clinicInvoice.updateMany(
+            {
+              where: {
+                clinicSubscriptionId:
+                  subscription!.id,
+                id: {
+                  not: overdueInvoice!
+                    .id,
+                },
+              },
+              data: {
+                dueDate: new Date(
+                  toleranceElapsedDueDate.getTime() -
+                    1000 *
+                      60 *
+                      60 *
+                      24 *
+                      365
+                ),
+              },
+            }
+          );
+          await prisma.clinicInvoice.update(
+            {
+              where: {
+                id: overdueInvoice!.id,
+              },
+              data: {
+                dueDate:
+                  toleranceElapsedDueDate,
+              },
+            }
+          );
+
+          await reconcileClinicSubscriptionAutomation();
+
+          const afterTolerance =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            afterTolerance.status,
+            ClinicSubscriptionStatus.SUSPENDED
+          );
+          assert.equal(
+            canClinicOperate(
+              afterTolerance.status
+            ),
+            false
+          );
+
+          clearCurrentAppUserForTests();
+        } finally {
+          await prisma.$transaction([
+            prisma.billingWebhookEvent.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.auditLog.deleteMany({
+              where: {
+                clinicId: clinic.id,
+              },
+            }),
+            prisma.clinicInvoice.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinicSubscription.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinic.deleteMany({
+              where: {
+                id: clinic.id,
+              },
+            }),
+          ]);
+        }
+      }
+    );
+
+    await runCase(
+      "platform manual resync applies the gateway's truth and is a no-op when already in sync",
+      async () => {
+        clearCurrentAppUserForTests();
+
+        const clinic =
+          await prisma.clinic.create({
+            data: {
+              name: "Billing Resync Co",
+              brandName: "Resync Co",
+              slug: "billing-resync",
+              document:
+                "44.444.444/0001-44",
+              email:
+                "resync@billing.test",
+              phone: "11444444444",
+              zipCode: "04000-000",
+              city: "Sao Paulo",
+              state: "SP",
+              address:
+                "Rua Billing Resync, 4",
+              status:
+                ClinicStatus.ACTIVE,
+            },
+          });
+
+        let platformOwnerUserId:
+          | string
+          | undefined;
+
+        try {
+          const subscription =
+            await ensureClinicBillingFoundation(
+              clinic.id
+            );
+
+          assert.ok(subscription);
+
+          const platformOwnerUser =
+            await prisma.appUser.create(
+              {
+                data: {
+                  clinicId: null,
+                  name: "Platform Owner Resync",
+                  email:
+                    "owner@platform-resync.test",
+                  role: AppUserRole.OWNER,
+                },
+              }
+            );
+
+          platformOwnerUserId =
+            platformOwnerUser.id;
+
+          asUser(platformOwnerUser);
+
+          const formData = new FormData();
+          formData.set(
+            "subscriptionId",
+            subscription!.id
+          );
+
+          // Gateway and local already agree (both TRIAL) — a resync must
+          // not fabricate a change.
+          await platformResyncClinicSubscriptionAction(
+            formData
+          );
+
+          const unchanged =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            unchanged.status,
+            ClinicSubscriptionStatus.TRIAL
+          );
+
+          // Force the gateway's own record out of sync with local, then
+          // resync must pull local back in line with the gateway.
+          fakeBillingGateway.__setSubscriptionState(
+            subscription!
+              .externalSubscriptionId!,
+            "active"
+          );
+
+          await platformResyncClinicSubscriptionAction(
+            formData
+          );
+
+          const synced =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            synced.status,
+            ClinicSubscriptionStatus.ACTIVE
+          );
+
+          clearCurrentAppUserForTests();
+        } finally {
+          await prisma.$transaction([
+            prisma.billingWebhookEvent.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.auditLog.deleteMany({
+              where: {
+                clinicId: clinic.id,
+              },
+            }),
+            prisma.clinicInvoice.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinicSubscription.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinic.deleteMany({
+              where: {
+                id: clinic.id,
+              },
+            }),
+            ...(platformOwnerUserId
+              ? [
+                  prisma.appUser.deleteMany(
+                    {
+                      where: {
+                        id: platformOwnerUserId,
+                      },
+                    }
+                  ),
+                ]
+              : []),
+          ]);
+        }
+      }
+    );
+
+    await runCase(
+      "platform cannot manually mark a gateway-linked invoice as paid or force its status, but can for a legacy MANUAL subscription",
+      async () => {
+        clearCurrentAppUserForTests();
+
+        const clinic =
+          await prisma.clinic.create({
+            data: {
+              name: "Billing Guard Co",
+              brandName: "Guard Co",
+              slug: "billing-guard",
+              document:
+                "33.333.333/0001-33",
+              email:
+                "guard@billing.test",
+              phone: "11333333333",
+              zipCode: "03000-000",
+              city: "Sao Paulo",
+              state: "SP",
+              address:
+                "Rua Billing Guard, 3",
+              status:
+                ClinicStatus.ACTIVE,
+            },
+          });
+
+        let platformOwnerUserId:
+          | string
+          | undefined;
+
+        try {
+          const subscription =
+            await ensureClinicBillingFoundation(
+              clinic.id
+            );
+
+          assert.ok(subscription);
+          assert.equal(
+            subscription!.providerKind,
+            "FAKE"
+          );
+
+          const platformOwnerUser =
+            await prisma.appUser.create(
+              {
+                data: {
+                  clinicId: null,
+                  name: "Platform Owner Guard",
+                  email:
+                    "owner@platform-guard.test",
+                  role: AppUserRole.OWNER,
+                },
+              }
+            );
+
+          platformOwnerUserId =
+            platformOwnerUser.id;
+          asUser(platformOwnerUser);
+
+          const invoice =
+            subscription!.invoices[0];
+
+          const invoiceForm =
+            new FormData();
+          invoiceForm.set(
+            "invoiceId",
+            invoice.id
+          );
+
+          await assert.rejects(() =>
+            platformMarkClinicInvoicePaidAction(
+              invoiceForm
+            )
+          );
+
+          const statusForm =
+            new FormData();
+          statusForm.set(
+            "clinicId",
+            clinic.id
+          );
+          statusForm.set(
+            "subscriptionId",
+            subscription!.id
+          );
+          statusForm.set(
+            "status",
+            ClinicSubscriptionStatus.ACTIVE
+          );
+
+          await assert.rejects(() =>
+            platformUpdateClinicSubscriptionStatusAction(
+              statusForm
+            )
+          );
+
+          const untouchedInvoice =
+            await prisma.clinicInvoice.findUniqueOrThrow(
+              {
+                where: {
+                  id: invoice.id,
+                },
+              }
+            );
+
+          assert.equal(
+            untouchedInvoice.status,
+            "PENDING"
+          );
+
+          // The legacy MANUAL fixture (alpha) must still work exactly as
+          // before — this guard is additive, not a regression for
+          // clinics with no gateway involved.
+          await platformMarkClinicInvoicePaidAction(
+            (() => {
+              const form =
+                new FormData();
+              form.set(
+                "invoiceId",
+                fixtures.alphaClinicInvoiceId
+              );
+              return form;
+            })()
+          );
+
+          const manualInvoice =
+            await prisma.clinicInvoice.findUniqueOrThrow(
+              {
+                where: {
+                  id: fixtures.alphaClinicInvoiceId,
+                },
+              }
+            );
+
+          assert.equal(
+            manualInvoice.status,
+            "PAID"
+          );
+
+          clearCurrentAppUserForTests();
+        } finally {
+          await prisma.$transaction([
+            prisma.billingWebhookEvent.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.auditLog.deleteMany({
+              where: {
+                clinicId: clinic.id,
+              },
+            }),
+            prisma.clinicInvoice.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinicSubscription.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinic.deleteMany({
+              where: {
+                id: clinic.id,
+              },
+            }),
+            ...(platformOwnerUserId
+              ? [
+                  prisma.appUser.deleteMany(
+                    {
+                      where: {
+                        id: platformOwnerUserId,
+                      },
+                    }
+                  ),
+                ]
+              : []),
+          ]);
+        }
+      }
+    );
+
+    await runCase(
+      "platform divergence check flags but does not correct a mismatch, and resync applies it afterward",
+      async () => {
+        clearCurrentAppUserForTests();
+
+        const clinic =
+          await prisma.clinic.create({
+            data: {
+              name: "Billing Diverge Co",
+              brandName: "Diverge Co",
+              slug: "billing-diverge",
+              document:
+                "22.222.222/0001-22",
+              email:
+                "diverge@billing.test",
+              phone: "11222222222",
+              zipCode: "02000-000",
+              city: "Sao Paulo",
+              state: "SP",
+              address:
+                "Rua Billing Diverge, 2",
+              status:
+                ClinicStatus.ACTIVE,
+            },
+          });
+
+        let platformOwnerUserId:
+          | string
+          | undefined;
+
+        try {
+          const subscription =
+            await ensureClinicBillingFoundation(
+              clinic.id
+            );
+
+          assert.ok(subscription);
+
+          const platformOwnerUser =
+            await prisma.appUser.create(
+              {
+                data: {
+                  clinicId: null,
+                  name: "Platform Owner Diverge",
+                  email:
+                    "owner@platform-diverge.test",
+                  role: AppUserRole.OWNER,
+                },
+              }
+            );
+
+          platformOwnerUserId =
+            platformOwnerUser.id;
+          asUser(platformOwnerUser);
+
+          fakeBillingGateway.__setSubscriptionState(
+            subscription!
+              .externalSubscriptionId!,
+            "active"
+          );
+
+          const checkForm =
+            new FormData();
+          checkForm.set(
+            "subscriptionId",
+            subscription!.id
+          );
+
+          await platformCheckClinicSubscriptionDivergenceAction(
+            checkForm
+          );
+
+          const flagged =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            flagged.syncStatus,
+            "DIVERGED"
+          );
+          // Detect-only: local status must NOT have been auto-corrected.
+          assert.equal(
+            flagged.status,
+            ClinicSubscriptionStatus.TRIAL
+          );
+
+          await platformResyncClinicSubscriptionAction(
+            checkForm
+          );
+
+          const corrected =
+            await prisma.clinicSubscription.findUniqueOrThrow(
+              {
+                where: {
+                  id: subscription!.id,
+                },
+              }
+            );
+
+          assert.equal(
+            corrected.status,
+            ClinicSubscriptionStatus.ACTIVE
+          );
+          assert.equal(
+            corrected.syncStatus,
+            "SYNCED"
+          );
+
+          clearCurrentAppUserForTests();
+        } finally {
+          await prisma.$transaction([
+            prisma.billingWebhookEvent.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.auditLog.deleteMany({
+              where: {
+                clinicId: clinic.id,
+              },
+            }),
+            prisma.clinicInvoice.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinicSubscription.deleteMany(
+              {
+                where: {
+                  clinicId: clinic.id,
+                },
+              }
+            ),
+            prisma.clinic.deleteMany({
+              where: {
+                id: clinic.id,
+              },
+            }),
+            ...(platformOwnerUserId
+              ? [
+                  prisma.appUser.deleteMany(
+                    {
+                      where: {
+                        id: platformOwnerUserId,
+                      },
+                    }
+                  ),
+                ]
+              : []),
+          ]);
+        }
       }
     );
   } finally {

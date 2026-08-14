@@ -1,4 +1,5 @@
 import { getPatients } from "../services/get-patients";
+import { getPatientFinancialSummaries } from "../services/get-patient-financial-summaries";
 import { getMembershipPlans } from "@/features/membership-plans/services/get-membership-plans";
 import { getPatientBenefitBalance } from "@/features/benefit-usage/services/get-patient-benefit-balance";
 
@@ -52,11 +53,16 @@ export async function PatientsPage() {
     );
   }
 
-  const [patients, plans, benefitBalances] =
-    await Promise.all([
+  const [
+    patients,
+    plans,
+    benefitBalances,
+    financialSummaries,
+  ] = await Promise.all([
     getPatients(),
     getMembershipPlans(),
     getPatientBenefitBalance(),
+    getPatientFinancialSummaries(),
   ]);
 
   const canManagePatients =
@@ -117,6 +123,19 @@ export async function PatientsPage() {
                   status:
                     patient.status,
                 }))}
+              plans={plans.map((p) => ({
+                id: p.id,
+                name: p.name,
+                monthlyPrice: p.monthlyPrice,
+                activeBenefitsCount:
+                  p.benefits.filter(
+                    (benefit) =>
+                      benefit.active
+                  ).length,
+              }))}
+              canManageSubscriptions={
+                canManageSubscriptions
+              }
             />
           ) : undefined
         }
@@ -127,6 +146,9 @@ export async function PatientsPage() {
         plans={plans.map((p) => ({ id: p.id, name: p.name }))}
         benefitBalances={
           benefitBalances
+        }
+        financialSummaries={
+          financialSummaries
         }
         responsibleOptions={patients
           .filter(

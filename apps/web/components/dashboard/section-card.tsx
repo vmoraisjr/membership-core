@@ -9,10 +9,17 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+import {
+  ScreenLegend,
+  type LegendSection,
+} from "./screen-legend";
+
 type SectionCardProps = {
   title?: string;
   description?: string;
   action?: ReactNode;
+  /** Sections shown in the discreet "?" legend next to the card title. */
+  helpLegend?: LegendSection[];
   children: ReactNode;
   className?: string;
   contentClassName?: string;
@@ -22,6 +29,7 @@ export function SectionCard({
   title,
   description,
   action,
+  helpLegend,
   children,
   className,
   contentClassName,
@@ -38,9 +46,16 @@ export function SectionCard({
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 space-y-1.5">
               {title ? (
-                <CardTitle className="workspace-section-title">
-                  {title}
-                </CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="workspace-section-title">
+                    {title}
+                  </CardTitle>
+                  {helpLegend ? (
+                    <ScreenLegend
+                      sections={helpLegend}
+                    />
+                  ) : null}
+                </div>
               ) : null}
 
               {description ? (

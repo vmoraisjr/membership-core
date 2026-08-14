@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentAppUser } from "@/features/auth/services/get-current-app-user";
+import { cobrancasUrl } from "@/lib/company-routes";
+import { planosComerciaisUrl } from "@/lib/owner-routes";
 
 export default async function Page() {
   const currentUser =
@@ -8,7 +10,9 @@ export default async function Page() {
 
   redirect(
     currentUser?.clinicId
-      ? "/dashboard/payments"
-      : "/dashboard/billing/catalog"
+      ? cobrancasUrl()
+      : planosComerciaisUrl({
+          tab: "plans",
+        })
   );
 }

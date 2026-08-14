@@ -124,4 +124,6 @@ export async function updatePatientInvoicePaymentMethodAction(
   safeRevalidatePath(
     "/dashboard/payments"
   );
+  safeRevalidatePath("/dashboard/cobrancas");
+  safeRevalidatePath("/dashboard/clientes");
 }

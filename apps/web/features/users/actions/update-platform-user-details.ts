@@ -161,4 +161,7 @@ export async function updatePlatformUserDetailsAction(
   safeRevalidatePath(
     "/dashboard/users"
   );
+  safeRevalidatePath(
+    "/dashboard/administracao"
+  );
 }

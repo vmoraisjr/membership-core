@@ -16,6 +16,7 @@ import {
 import { DashboardPage } from "@/components/layout/dashboard-page";
 import { ClinicAssignmentRequired } from "@/components/dashboard/clinic-assignment-required";
 import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
+import { MyCompanyTabs } from "@/features/clinic/components/my-company-tabs";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { AccessDenied } from "@/features/rbac/components/access-denied";
@@ -24,6 +25,7 @@ import { getCurrentUserRole } from "@/features/auth/services/get-current-user-ro
 import { getBillingOverview } from "@/features/billing/services/billing-foundation";
 import { hasPermission } from "@/features/rbac/permissions";
 import { getTranslations } from "@/i18n/messages";
+import { planosComerciaisUrl } from "@/lib/owner-routes";
 
 import { PlatformSubscriptionSection } from "@/features/billing/components/platform-subscription-section";
 
@@ -36,6 +38,10 @@ import {
   getModuleKeyDescription,
   getModuleKeyLabel,
 } from "../utils/module-labels";
+import {
+  legendSection,
+  MODULE_STATUS_LEGEND,
+} from "@/lib/legend-content";
 
 export async function ModulesPage() {
   const t = getTranslations();
@@ -180,7 +186,7 @@ export async function ModulesPage() {
               )}
             </p>
             <Button asChild variant="outline">
-              <a href="/dashboard/billing/catalog">
+              <a href={planosComerciaisUrl({ tab: "plans" })}>
                 {t(
                   "modules.plansSection.openCatalog"
                 )}
@@ -358,6 +364,11 @@ export async function ModulesPage() {
         )}
       />
 
+      <MyCompanyTabs
+        activeTab="resources"
+        role={role}
+      />
+
       <PlatformSubscriptionSection
         overview={billingOverview}
       />
@@ -365,6 +376,12 @@ export async function ModulesPage() {
       <SectionCard
         title={t("modules.clinicModulesTitle")}
         description={t("modules.clinicModulesDescription")}
+        helpLegend={[
+          legendSection(
+            "Status do módulo",
+            MODULE_STATUS_LEGEND
+          ),
+        ]}
       >
         <Table>
           <TableHeader>

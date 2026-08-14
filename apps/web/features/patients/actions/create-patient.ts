@@ -94,7 +94,7 @@ export async function createPatient(
     );
   }
 
-  await prisma.$transaction(
+  const createdPatient = await prisma.$transaction(
     async (tx) => {
       const patient =
         await tx.patient.create({
@@ -142,11 +142,20 @@ export async function createPatient(
             null,
         },
       });
+
+      return patient;
     }
   );
 
   safeRevalidatePath(
     "/dashboard/patients"
   );
+  safeRevalidatePath("/dashboard/clientes");
   safeRevalidatePath("/dashboard");
+
+  return {
+    id: createdPatient.id,
+    fullName: createdPatient.fullName,
+    kind: parsed.data.kind,
+  };
 }

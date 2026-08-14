@@ -44,6 +44,7 @@ import {
   formatBrazilianState,
   formatBrazilianZipCode,
 } from "@/lib/br-formats";
+import { empresaUrl } from "@/lib/owner-routes";
 
 import {
   getClinicStatusTone,
@@ -337,6 +338,7 @@ export function ClinicDialog({
           <SidePanelBody>
             <div className="form-shell-body grid grid-cols-2 gap-4">
               <FormSection
+                subtle
                 className="col-span-2"
                 title="Identidade da empresa"
                 description="Estes dados definem como a empresa aparece na plataforma e para sua equipe."
@@ -379,7 +381,7 @@ export function ClinicDialog({
                 </p>
               </div>
 
-              <FormSection className="col-span-2 border-dashed">
+              <FormSection subtle className="col-span-2 border-dashed">
                 <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px]">
                   <div className="space-y-3">
                     <div>
@@ -438,32 +440,33 @@ export function ClinicDialog({
               {mode === "create" &&
               isPlatformView ? (
                 <FormSection
+                  subtle
                   className="col-span-2"
                   title="Plano inicial"
                   description="A nova conta cliente nasce com o provisionamento SaaS padrão da plataforma."
                 >
                   <div className="grid gap-4 md:grid-cols-3">
-                    <div className="detail-field">
-                      <p className="detail-field-label">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
                         Plano provisionado
                       </p>
-                      <p className="detail-field-value">
+                      <p className="mt-0.5 text-sm font-medium text-foreground">
                         Sheep Growth
                       </p>
                     </div>
-                    <div className="detail-field">
-                      <p className="detail-field-label">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
                         Ciclo inicial
                       </p>
-                      <p className="detail-field-value">
+                      <p className="mt-0.5 text-sm font-medium text-foreground">
                         Trial de 14 dias
                       </p>
                     </div>
-                    <div className="detail-field">
-                      <p className="detail-field-label">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
                         Observação
                       </p>
-                      <p className="detail-field-value">
+                      <p className="mt-0.5 text-sm font-medium text-foreground">
                         O plano pode ser trocado depois na fila de assinaturas SaaS.
                       </p>
                     </div>
@@ -475,32 +478,35 @@ export function ClinicDialog({
               initialData &&
               isPlatformView ? (
                 <FormSection
+                  subtle
                   className="col-span-2"
                   title="Status, plano e módulos"
                   description="Esta seção é informativa. Status é alterado pela ação Ativar/Desativar na listagem e módulos são geridos no workspace desta empresa."
                 >
                   <div className="grid gap-4 md:grid-cols-3">
-                    <div className="detail-field">
-                      <p className="detail-field-label">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
                         Status da empresa
                       </p>
-                      <StatusIndicator
-                        tone={getClinicStatusTone(
-                          initialData.status
-                        )}
-                        label={t(
-                          `clinics.status.${initialData.status}`
-                        )}
-                      />
+                      <div className="mt-1">
+                        <StatusIndicator
+                          tone={getClinicStatusTone(
+                            initialData.status
+                          )}
+                          label={t(
+                            `clinics.status.${initialData.status}`
+                          )}
+                        />
+                      </div>
                     </div>
-                    <div className="detail-field">
-                      <p className="detail-field-label">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
                         Plano SaaS e assinatura
                       </p>
                       {initialData
                         .clinicSubscriptions?.[0] ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="detail-field-value">
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">
                             {
                               initialData
                                 .clinicSubscriptions[0]
@@ -520,18 +526,18 @@ export function ClinicDialog({
                           />
                         </div>
                       ) : (
-                        <p className="detail-field-value text-muted-foreground">
+                        <p className="mt-0.5 text-sm font-medium text-muted-foreground">
                           Sem plano ativo
                         </p>
                       )}
                     </div>
-                    <div className="detail-field">
-                      <p className="detail-field-label">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
                         Módulos
                       </p>
                       <Link
-                        href={`/dashboard/clinics/${initialData.id}?tab=modules`}
-                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        href={empresaUrl(initialData.id, { tab: "modules" })}
+                        className="mt-0.5 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
                       >
                         Ver módulos desta empresa
                       </Link>
@@ -541,6 +547,7 @@ export function ClinicDialog({
               ) : null}
 
               <FormSection
+                subtle
                 className="col-span-2"
                 title="Cadastro e localização"
                 description="Informações usadas para identificação da conta, contato e governança."
@@ -752,6 +759,7 @@ export function ClinicDialog({
               initialData &&
               isPlatformView ? (
                 <FormSection
+                  subtle
                   className="col-span-2"
                   title="Credencial do master da empresa"
                   description="Redefina a senha temporária e prepare o envio para o e-mail principal da empresa."

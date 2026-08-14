@@ -61,7 +61,6 @@ export default async function DashboardLayout({
           <DashboardHeader
             role={currentUser.role}
             currentUser={currentUser}
-            workspaceBrand={workspaceBrand}
           />
 
           <main className="app-shell-content">

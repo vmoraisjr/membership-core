@@ -179,4 +179,8 @@ export async function updateClinic(
 
   safeRevalidatePath("/dashboard");
   safeRevalidatePath("/dashboard/clinics");
+  safeRevalidatePath("/dashboard/empresas");
+  safeRevalidatePath(
+    `/dashboard/empresas/${id}`
+  );
 }

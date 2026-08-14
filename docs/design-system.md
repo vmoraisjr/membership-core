@@ -33,7 +33,7 @@ Modo escuro (`.dark`) existe no CSS mas **não está conectado a nenhum `ThemePr
 ### Tipografia
 
 - Fonte: `--font-sans` = "Atkinson Hyperlegible Next" com fallback para Inter/system — legibilidade alta, tom técnico-discreto.
-- Escala: `--font-size-xs` (12px) a `--font-size-4xl` (36px), cada um com `--line-height-*` correspondente. Títulos de página usam `--font-size-3xl`/`--line-height-3xl` (`.workspace-title`); títulos de seção usam `--font-size-xl`/`--line-height-xl` (`.workspace-section-title`).
+- Escala: `--font-size-xs` (12px) a `--font-size-4xl` (36px), cada um com `--line-height-*` correspondente. Desde a UI-050 (fundação de densidade objetiva), telas operacionais usam no máximo `--font-size-2xl`/`--line-height-2xl` (21px) para título de página (`.workspace-title`); títulos de seção/card usam `text-base` (16px, `.workspace-section-title`) ou `text-sm`, conforme hierarquia — nunca acima de `--font-size-2xl`.
 
 ### Espaçamento
 

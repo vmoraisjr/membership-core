@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   PaymentMethod,
@@ -8,6 +8,9 @@ import {
   type ClinicSubscriptionStatus,
   type SubscriptionStatus,
 } from "@prisma/client";
+
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { CompanyAvatarMark } from "@/components/dashboard/company-avatar-mark";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -24,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { useTranslations } from "@/i18n/provider";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import { clienteUrl, cobrancasUrl } from "@/lib/company-routes";
 
 import { PatientInvoiceActions } from "./patient-invoice-actions";
 
@@ -34,6 +38,7 @@ type Invoice = {
   dueDate: Date;
   paymentMethod: PaymentMethod | null;
   patient: {
+    id?: string;
     fullName: string;
   };
   subscription: {
@@ -57,6 +62,10 @@ type Invoice = {
 type Props = {
   invoices: Invoice[];
   canManageBilling: boolean;
+  /** Links each row's client name into their own Cobranças tab (fila financeira only). */
+  linkToPatient?: boolean;
+  /** Keeps filters in the address bar so returning from a client preserves the queue (fila financeira only). */
+  syncFiltersToUrl?: boolean;
 };
 
 const PAYMENT_STATUS_TONE: Record<
@@ -113,18 +122,117 @@ function matchesPeriod(
 export function PatientPaymentsTable({
   invoices,
   canManageBilling,
+  linkToPatient = false,
+  syncFiltersToUrl = false,
 }: Props) {
   const t = useTranslations();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [statusFilter, setStatusFilter] =
-    useState("all");
+    useState(
+      () =>
+        (syncFiltersToUrl &&
+          searchParams.get("status")) ||
+        "all"
+    );
   const [methodFilter, setMethodFilter] =
-    useState("all");
+    useState(
+      () =>
+        (syncFiltersToUrl &&
+          searchParams.get("method")) ||
+        "all"
+    );
   const [planFilter, setPlanFilter] =
-    useState("all");
+    useState(
+      () =>
+        (syncFiltersToUrl &&
+          searchParams.get("planId")) ||
+        "all"
+    );
   const [periodFilter, setPeriodFilter] =
-    useState<PeriodFilter>("all");
-  const [search, setSearch] =
-    useState("");
+    useState<PeriodFilter>(() => {
+      const fromUrl =
+        syncFiltersToUrl &&
+        searchParams.get("period");
+      return fromUrl &&
+        PERIOD_OPTIONS.some(
+          (option) => option.value === fromUrl
+        )
+        ? (fromUrl as PeriodFilter)
+        : "all";
+    });
+  const [search, setSearch] = useState(
+    () =>
+      (syncFiltersToUrl &&
+        searchParams.get("query")) ||
+      ""
+  );
+
+  const normalizedSearchForUrl =
+    search.trim();
+
+  const currentQueueUrl = useMemo(
+    () =>
+      cobrancasUrl({
+        query:
+          normalizedSearchForUrl.length > 0
+            ? search
+            : undefined,
+        status:
+          statusFilter !== "all"
+            ? statusFilter
+            : undefined,
+        method:
+          methodFilter !== "all"
+            ? methodFilter
+            : undefined,
+        planId:
+          planFilter !== "all"
+            ? planFilter
+            : undefined,
+        period:
+          periodFilter !== "all"
+            ? periodFilter
+            : undefined,
+      }),
+    [
+      search,
+      normalizedSearchForUrl,
+      statusFilter,
+      methodFilter,
+      planFilter,
+      periodFilter,
+    ]
+  );
+
+  // Skips the initial mount: a soft-navigation replace here would
+  // re-fetch the server component tree and could disrupt any dialog the
+  // user already has open (same issue fixed for the clients hub, UI-061).
+  const didMount = useRef(false);
+
+  useEffect(() => {
+    if (!syncFiltersToUrl) {
+      return;
+    }
+
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
+
+    const handle = setTimeout(() => {
+      router.replace(currentQueueUrl, {
+        scroll: false,
+      });
+    }, 300);
+
+    return () => clearTimeout(handle);
+  }, [
+    syncFiltersToUrl,
+    currentQueueUrl,
+    router,
+  ]);
 
   const planOptions = useMemo(() => {
     const names = new Set<string>();
@@ -397,10 +505,27 @@ export function PatientPaymentsTable({
                           .fullName
                       }
                     />
-                    {
-                      invoice.patient
-                        .fullName
-                    }
+                    {linkToPatient &&
+                    invoice.patient.id ? (
+                      <Link
+                        href={clienteUrl(
+                          invoice.patient.id,
+                          {
+                            tab: "billing",
+                            returnTo:
+                              currentQueueUrl,
+                          }
+                        )}
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        {
+                          invoice.patient
+                            .fullName
+                        }
+                      </Link>
+                    ) : (
+                      invoice.patient.fullName
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="align-top">

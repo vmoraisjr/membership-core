@@ -8,18 +8,28 @@ const SEGMENT_LABELS: Record<
   string
 > = {
   dashboard: "Home",
+  empresas: "Empresas",
   clinics: "Empresas",
+  "planos-comerciais":
+    "Planos comerciais",
+  chamados: "Chamados",
+  administracao: "Administração",
   plans: "Planos",
   patients: "Clientes",
+  clientes: "Clientes",
   subscriptions: "Assinaturas",
   benefits: "Benefícios",
   "benefit-usage":
-    "Uso de benefício",
-  payments: "Pagamentos",
+    "Atendimentos",
+  payments: "Cobranças",
+  cobrancas: "Cobranças",
   billing: "Assinaturas SaaS",
   messages: "Chamados",
   users: "Usuários",
   company: "Empresa",
+  "minha-empresa": "Minha empresa",
+  planos: "Planos",
+  atendimentos: "Atendimentos",
   "audit-logs": "Auditoria",
 };
 

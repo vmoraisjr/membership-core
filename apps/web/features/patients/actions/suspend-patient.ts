@@ -122,4 +122,6 @@ export async function suspendPatient(
   revalidatePath("/dashboard/patients");
   revalidatePath("/dashboard/subscriptions");
   revalidatePath("/dashboard/plans");
+  revalidatePath("/dashboard/clientes");
+  revalidatePath("/dashboard/planos");
 }

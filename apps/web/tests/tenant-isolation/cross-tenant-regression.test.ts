@@ -1325,12 +1325,16 @@ async function main() {
               "CRM"
           );
 
+        // Alpha (ACTIVE), Beta (PAST_DUE) and Gamma (TRIAL) all operate —
+        // PAST_DUE keeps the company running through the payment
+        // retry/tolerance window (PAY-003) instead of blocking access on
+        // the first failed charge, so it counts here same as the others.
         assert.equal(
           membershipModuleMetric?.enabledClinicCount,
           fixtures
             .baselinePlatformMetrics
             .membershipEnabledClinicCount +
-            2
+            3
         );
         assert.equal(
           crmModuleMetric?.enabledClinicCount,

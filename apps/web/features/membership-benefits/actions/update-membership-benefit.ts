@@ -156,4 +156,5 @@ export async function updateMembershipBenefit(
   revalidatePath(
     "/dashboard/benefits"
   );
+  revalidatePath("/dashboard/planos");
 }

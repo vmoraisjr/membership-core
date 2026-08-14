@@ -112,4 +112,6 @@ export async function cancelPatientInvoiceAction(
     "/dashboard/payments"
   );
   safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/dashboard/cobrancas");
+  safeRevalidatePath("/dashboard/clientes");
 }

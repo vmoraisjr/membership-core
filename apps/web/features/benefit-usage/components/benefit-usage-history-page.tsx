@@ -87,6 +87,7 @@ export async function BenefitUsageHistoryPage() {
         canCancelBenefitUsage={
           canCancelBenefitUsage
         }
+        linkToPatient
       />
     </DashboardPage>
   );

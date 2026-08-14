@@ -91,6 +91,10 @@ export async function resetClinicMasterPasswordAction(
     );
 
   safeRevalidatePath("/dashboard/clinics");
+  safeRevalidatePath("/dashboard/empresas");
+  safeRevalidatePath(
+    `/dashboard/empresas/${clinicId}`
+  );
 
   return {
     clinicName: clinic.name,

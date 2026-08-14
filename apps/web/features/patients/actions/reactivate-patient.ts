@@ -104,4 +104,5 @@ export async function reactivatePatient(
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/patients");
   revalidatePath("/dashboard/subscriptions");
+  revalidatePath("/dashboard/clientes");
 }

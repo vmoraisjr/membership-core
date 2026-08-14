@@ -1,21 +1,6 @@
+"use client";
+
 import { cn } from "@/lib/utils";
-
-const GRADIENTS = [
-  "linear-gradient(135deg, var(--color-primary), var(--color-primary-2))",
-  "linear-gradient(135deg, var(--color-accent), var(--color-info))",
-  "linear-gradient(135deg, var(--color-warning), var(--color-primary))",
-  "linear-gradient(135deg, var(--color-info), var(--color-primary-2))",
-];
-
-function hashString(value: string) {
-  let hash = 0;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) | 0;
-  }
-
-  return Math.abs(hash);
-}
 
 function getInitials(name: string) {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -33,25 +18,43 @@ function getInitials(name: string) {
 
 type Props = {
   name: string;
-  /** Stable value (e.g. an id) used to pick the gradient. Defaults to name. */
+  /** Stable value (e.g. an id). Kept for backwards compatibility with call sites; unused visually. */
   seed?: string;
+  /** Company logo URL. Falls back to initials-only when absent or on load failure. */
+  logoUrl?: string | null;
   className?: string;
 };
 
-export function CompanyAvatarMark({ name, seed, className }: Props) {
-  const gradient =
-    GRADIENTS[hashString(seed ?? name) % GRADIENTS.length];
-
+export function CompanyAvatarMark({
+  name,
+  logoUrl,
+  className,
+}: Props) {
   return (
     <div
       className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-xl text-xs font-semibold text-white shadow-[var(--shadow-xs)]",
+        "relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-300 shadow-[var(--shadow-xs)]",
         className
       )}
-      style={{ background: gradient }}
       aria-hidden="true"
     >
       {getInitials(name)}
+      {logoUrl ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-white p-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl}
+            alt=""
+            className="size-full object-contain"
+            onError={(event) => {
+              event.currentTarget.parentElement?.style.setProperty(
+                "display",
+                "none"
+              );
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

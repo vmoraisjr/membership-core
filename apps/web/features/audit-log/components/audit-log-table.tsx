@@ -21,10 +21,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import type { AuditLogFilters } from "../services/get-audit-logs";
+import type {
+  AuditLogFilters,
+  AuditLogPageSize,
+} from "../services/get-audit-logs";
 import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_LABELS,
+  AUDIT_LOG_PAGE_SIZE_OPTIONS,
 } from "../services/get-audit-logs";
 import { humanizeAuditMetadata } from "../utils/humanize-metadata";
 import { getTranslations } from "@/i18n/messages";
@@ -48,6 +52,9 @@ type AuditLogItem = {
 
 type Props = {
   logs: AuditLogItem[];
+  total: number;
+  page: number;
+  pageSize: AuditLogPageSize;
   filters: AuditLogFilters;
   actorOptions: string[];
   entityOptions: AuditEntity[];
@@ -57,6 +64,8 @@ type Props = {
     name: string;
   }>;
   isPlatformView: boolean;
+  basePath?: string;
+  extraParams?: Record<string, string>;
 };
 
 function formatDate(value: Date | string) {
@@ -113,6 +122,68 @@ function buildExportHref(
     : "/dashboard/audit-logs/export";
 }
 
+function buildPageHref(
+  filters: AuditLogFilters,
+  page: number,
+  basePath: string,
+  extraParams: Record<string, string>
+) {
+  const searchParams =
+    new URLSearchParams();
+
+  for (const [key, value] of Object.entries(
+    extraParams
+  )) {
+    searchParams.set(key, value);
+  }
+
+  if (filters.actor) {
+    searchParams.set("actor", filters.actor);
+  }
+
+  if (filters.entity) {
+    searchParams.set(
+      "entity",
+      filters.entity
+    );
+  }
+
+  if (filters.action) {
+    searchParams.set(
+      "action",
+      filters.action
+    );
+  }
+
+  if (filters.date) {
+    searchParams.set("date", filters.date);
+  }
+
+  if (filters.clinicId) {
+    searchParams.set(
+      "clinicId",
+      filters.clinicId
+    );
+  }
+
+  if (filters.pageSize) {
+    searchParams.set(
+      "pageSize",
+      String(filters.pageSize)
+    );
+  }
+
+  if (page > 1) {
+    searchParams.set("page", String(page));
+  }
+
+  const query = searchParams.toString();
+
+  return query.length > 0
+    ? `${basePath}?${query}`
+    : basePath;
+}
+
 function SummaryPreview({
   metadata,
 }: {
@@ -165,14 +236,40 @@ function SummaryPreview({
 
 export function AuditLogTable({
   logs,
+  total,
+  page,
+  pageSize,
   filters,
   actorOptions,
   entityOptions,
   actionOptions,
   clinicOptions,
   isPlatformView,
+  basePath = "/dashboard/audit-logs",
+  extraParams = {},
 }: Props) {
   const t = getTranslations();
+  const totalPages =
+    pageSize === "all"
+      ? 1
+      : Math.max(
+          1,
+          Math.ceil(total / pageSize)
+        );
+  const rangeStart =
+    total === 0
+      ? 0
+      : pageSize === "all"
+        ? 1
+        : (page - 1) * pageSize + 1;
+  const rangeEnd =
+    pageSize === "all"
+      ? total
+      : Math.min(
+          page * pageSize,
+          total
+        );
+
   return (
     <DataTableContainer
       title={t("audit.tableTitle")}
@@ -182,6 +279,17 @@ export function AuditLogTable({
         method="get"
         className={`grid gap-4 border-b p-6 ${isPlatformView ? "lg:grid-cols-6" : "lg:grid-cols-5"}`}
       >
+        {Object.entries(extraParams).map(
+          ([key, value]) => (
+            <input
+              key={key}
+              type="hidden"
+              name={key}
+              value={value}
+            />
+          )
+        )}
+
         <div className="grid gap-2">
           <label
             htmlFor="actor"
@@ -323,7 +431,36 @@ export function AuditLogTable({
           </div>
         ) : null}
 
-        <div className="flex items-end gap-2">
+        <div className="grid gap-2">
+          <label
+            htmlFor="pageSize"
+            className="text-sm text-muted-foreground"
+          >
+            {t("audit.filters.pageSize")}
+          </label>
+          <Select
+            id="pageSize"
+            name="pageSize"
+            defaultValue={String(pageSize)}
+          >
+            {AUDIT_LOG_PAGE_SIZE_OPTIONS.map(
+              (option) => (
+                <option
+                  key={option}
+                  value={option}
+                >
+                  {option === "all"
+                    ? t(
+                        "audit.filters.pageSizeAll"
+                      )
+                    : option}
+                </option>
+              )
+            )}
+          </Select>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2 lg:col-span-full">
           <Button type="submit">
             {t("shared.actions.applyFilters")}
           </Button>
@@ -339,7 +476,14 @@ export function AuditLogTable({
             variant="outline"
             asChild
           >
-            <Link href="/dashboard/audit-logs">
+            <Link
+              href={
+                Object.keys(extraParams)
+                  .length > 0
+                  ? `${basePath}?${new URLSearchParams(extraParams).toString()}`
+                  : basePath
+              }
+            >
               {t("shared.actions.clear")}
             </Link>
           </Button>
@@ -465,6 +609,83 @@ export function AuditLogTable({
           )}
         </TableBody>
       </Table>
+
+      {total > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground">
+          <p>
+            {t("audit.pagination.range", {
+              start: rangeStart,
+              end: rangeEnd,
+              total,
+            })}
+          </p>
+
+          {pageSize !== "all" && totalPages > 1 ? (
+            <div className="flex items-center gap-2">
+              {page <= 1 ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                >
+                  {t("audit.pagination.previous")}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                >
+                  <Link
+                    href={buildPageHref(
+                      filters,
+                      page - 1,
+                      basePath,
+                      extraParams
+                    )}
+                  >
+                    {t(
+                      "audit.pagination.previous"
+                    )}
+                  </Link>
+                </Button>
+              )}
+              <span>
+                {t("audit.pagination.page", {
+                  page,
+                  totalPages,
+                })}
+              </span>
+              {page >= totalPages ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                >
+                  {t("audit.pagination.next")}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                >
+                  <Link
+                    href={buildPageHref(
+                      filters,
+                      page + 1,
+                      basePath,
+                      extraParams
+                    )}
+                  >
+                    {t("audit.pagination.next")}
+                  </Link>
+                </Button>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </DataTableContainer>
   );
 }

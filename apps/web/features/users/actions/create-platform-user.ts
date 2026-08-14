@@ -158,6 +158,9 @@ export async function createPlatformUserAction(
   safeRevalidatePath(
     "/dashboard/users"
   );
+  safeRevalidatePath(
+    "/dashboard/administracao"
+  );
 
   return {
     user: createdUser,

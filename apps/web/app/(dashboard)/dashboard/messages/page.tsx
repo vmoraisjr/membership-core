@@ -1,4 +1,8 @@
-import { SupportThreadsPage } from "@/features/messages/components/support-threads-page";
+import { redirect } from "next/navigation";
+
+import { getCurrentWorkspace } from "@/features/auth/services/get-current-workspace";
+import { minhaEmpresaUrl } from "@/lib/company-routes";
+import { chamadosUrl } from "@/lib/owner-routes";
 
 type PageProps = {
   searchParams: Promise<{
@@ -9,24 +13,29 @@ type PageProps = {
   }>;
 };
 
+// Shared route: platform owners get redirected to the canonical Chamados
+// queue (UI-049); clinic-scoped users keep this URL unchanged.
 export default async function MessagesPage({
   searchParams,
 }: PageProps) {
-  const resolvedSearchParams =
-    await searchParams;
+  const [workspace, resolvedSearchParams] =
+    await Promise.all([
+      getCurrentWorkspace(),
+      searchParams,
+    ]);
 
-  return (
-    <SupportThreadsPage
-      filters={{
-        threadId:
-          resolvedSearchParams.threadId,
-        category:
-          resolvedSearchParams.category,
-        status:
-          resolvedSearchParams.status,
-        clinicId:
-          resolvedSearchParams.clinicId,
-      }}
-    />
+  if (workspace.type === "platform") {
+    redirect(
+      chamadosUrl(resolvedSearchParams)
+    );
+  }
+
+  redirect(
+    minhaEmpresaUrl({
+      tab: "support",
+      threadId: resolvedSearchParams.threadId,
+      category: resolvedSearchParams.category,
+      status: resolvedSearchParams.status,
+    })
   );
 }

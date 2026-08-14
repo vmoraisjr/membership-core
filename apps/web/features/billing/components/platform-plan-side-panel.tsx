@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -44,7 +43,6 @@ export function PlatformPlanSidePanel({
   const t = useTranslations();
   const defaultTrigger = (
     <Button>
-      <Plus className="size-4" />
       {t("billing.catalogPage.newPlan")}
     </Button>
   );

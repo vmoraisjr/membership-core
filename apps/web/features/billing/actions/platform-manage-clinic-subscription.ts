@@ -33,7 +33,9 @@ function assertPlatformOwner(user: {
   }
 }
 
-function revalidatePlatformBillingPaths() {
+function revalidatePlatformBillingPaths(
+  clinicId?: string
+) {
   safeRevalidatePath("/dashboard/billing");
   safeRevalidatePath(
     "/dashboard/billing/catalog"
@@ -45,6 +47,13 @@ function revalidatePlatformBillingPaths() {
     "/dashboard/billing/payments"
   );
   safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/dashboard/empresas");
+
+  if (clinicId) {
+    safeRevalidatePath(
+      `/dashboard/empresas/${clinicId}`
+    );
+  }
 }
 
 export async function platformUpdateClinicSubscriptionStatusAction(
@@ -70,12 +79,51 @@ export async function platformUpdateClinicSubscriptionStatusAction(
   const status = String(
     formData.get("status") ?? ""
   ) as ClinicSubscriptionStatus;
+  const trialEndsAtRaw = String(
+    formData.get("trialEndsAt") ?? ""
+  );
+  const trialEndsAt = trialEndsAtRaw
+    ? new Date(`${trialEndsAtRaw}T00:00:00`)
+    : undefined;
+
+  if (
+    status ===
+      ClinicSubscriptionStatus.TRIAL &&
+    (!trialEndsAt ||
+      Number.isNaN(trialEndsAt.getTime()))
+  ) {
+    throw new Error(
+      "Informe a data de encerramento do período de testes."
+    );
+  }
+
+  const targetSubscription =
+    await prisma.clinicSubscription.findUnique(
+      {
+        where: {
+          id: subscriptionId,
+        },
+        select: {
+          providerKind: true,
+        },
+      }
+    );
+
+  if (
+    targetSubscription?.providerKind !==
+    "MANUAL"
+  ) {
+    throw new Error(
+      "Esta assinatura está vinculada a um provedor de cobrança — mudanças de status manuais poderiam contradizer o provedor. Use \"Solicitar sincronização\" para aplicar o estado real, ou reenvie o cliente ao checkout/portal."
+    );
+  }
 
   await updateClinicSubscriptionStatus(
     {
       clinicId,
       subscriptionId,
       status,
+      trialEndsAt,
     },
     undefined,
     {
@@ -84,7 +132,7 @@ export async function platformUpdateClinicSubscriptionStatusAction(
     }
   );
 
-  revalidatePlatformBillingPaths();
+  revalidatePlatformBillingPaths(clinicId);
 }
 
 export async function platformMarkClinicInvoicePaidAction(
@@ -114,12 +162,26 @@ export async function platformMarkClinicInvoicePaidAction(
         clinicId: true,
         amount: true,
         status: true,
+        clinicSubscription: {
+          select: {
+            providerKind: true,
+          },
+        },
       },
     });
 
   if (!invoice) {
     throw new Error(
       "Clinic invoice not found."
+    );
+  }
+
+  if (
+    invoice.clinicSubscription
+      .providerKind !== "MANUAL"
+  ) {
+    throw new Error(
+      "Esta fatura está vinculada a um provedor de cobrança — use \"Solicitar sincronização\" ou reenvie o cliente ao checkout/portal em vez de marcar como paga manualmente sem evidência do provedor."
     );
   }
 
@@ -172,7 +234,9 @@ export async function platformMarkClinicInvoicePaidAction(
     }
   );
 
-  revalidatePlatformBillingPaths();
+  revalidatePlatformBillingPaths(
+    invoice.clinicId
+  );
 }
 
 export async function platformMarkClinicInvoiceOverdueAction(
@@ -197,12 +261,27 @@ export async function platformMarkClinicInvoiceOverdueAction(
       },
       select: {
         id: true,
+        clinicId: true,
+        clinicSubscription: {
+          select: {
+            providerKind: true,
+          },
+        },
       },
     });
 
   if (!invoice) {
     throw new Error(
       "Clinic invoice not found."
+    );
+  }
+
+  if (
+    invoice.clinicSubscription
+      .providerKind !== "MANUAL"
+  ) {
+    throw new Error(
+      "Esta fatura está vinculada a um provedor de cobrança — o status é conciliado automaticamente pelos webhooks."
     );
   }
 
@@ -225,7 +304,9 @@ export async function platformMarkClinicInvoiceOverdueAction(
     }
   );
 
-  revalidatePlatformBillingPaths();
+  revalidatePlatformBillingPaths(
+    invoice.clinicId
+  );
 }
 
 export async function platformAssignClinicBillingPlanAction(
@@ -247,16 +328,22 @@ export async function platformAssignClinicBillingPlanAction(
     formData.get("clinicBillingPlanId") ?? ""
   );
 
-  await prisma.clinicSubscription.update({
-    where: {
-      id: subscriptionId,
-    },
-    data: {
-      clinicBillingPlanId,
-      status:
-        ClinicSubscriptionStatus.PENDING,
-    },
-  });
+  const updated =
+    await prisma.clinicSubscription.update({
+      where: {
+        id: subscriptionId,
+      },
+      data: {
+        clinicBillingPlanId,
+        status:
+          ClinicSubscriptionStatus.PENDING,
+      },
+      select: {
+        clinicId: true,
+      },
+    });
 
-  revalidatePlatformBillingPaths();
+  revalidatePlatformBillingPaths(
+    updated.clinicId
+  );
 }

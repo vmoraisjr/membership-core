@@ -24,8 +24,13 @@ import {
 } from "@/components/ui/table";
 import { useTranslations } from "@/i18n/provider";
 import { formatCurrency } from "@/lib/formatters";
+import { planoUrl } from "@/lib/company-routes";
 
 import { MembershipPlanRowActions } from "./membership-plan-row-actions";
+import {
+  legendSection,
+  PLAN_STATUS_LEGEND,
+} from "@/lib/legend-content";
 
 type Plan = {
   id: string;
@@ -130,6 +135,24 @@ export function MembershipPlansTable({
         "plans.table.description",
         { count: activePlansCount }
       )}
+      helpLegend={[
+        legendSection(
+          "Status do plano",
+          PLAN_STATUS_LEGEND
+        ),
+        legendSection("Ações da linha", [
+          {
+            label: "Ver plano",
+            description:
+              "Abre o plano com benefícios, assinantes e histórico.",
+          },
+          {
+            label: "Ações",
+            description:
+              "Menu com editar, duplicar, criar benefício e desativar/reativar/excluir.",
+          },
+        ]),
+      ]}
       toolbar={
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="grid gap-2">
@@ -205,7 +228,7 @@ export function MembershipPlansTable({
                   <div className="space-y-1">
                     <div className="font-medium">
                       <Link
-                        href={`/dashboard/plans/${plan.id}`}
+                        href={planoUrl(plan.id)}
                         className="text-primary underline-offset-4 hover:underline"
                       >
                         {plan.name}
@@ -215,12 +238,6 @@ export function MembershipPlansTable({
                       {plan.description ||
                         t("shared.states.noDescription")}
                     </div>
-                    <Link
-                      href={`/dashboard/benefits?planId=${plan.id}`}
-                      className="text-xs text-primary underline-offset-4 hover:underline"
-                    >
-                      {t("plans.table.openBenefitsSupport")}
-                    </Link>
                   </div>
                 </div>
               </TableCell>

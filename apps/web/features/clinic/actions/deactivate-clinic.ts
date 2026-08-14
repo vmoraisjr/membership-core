@@ -79,4 +79,8 @@ export async function deactivateClinic(
 
   safeRevalidatePath("/dashboard");
   safeRevalidatePath("/dashboard/clinics");
+  safeRevalidatePath("/dashboard/empresas");
+  safeRevalidatePath(
+    `/dashboard/empresas/${id}`
+  );
 }

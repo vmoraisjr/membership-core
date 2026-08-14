@@ -40,6 +40,12 @@ type Props = {
 
   detailsInput?: "input" | "textarea";
 
+  /** HTML input type when detailsInput is "input" (e.g. "date"). Defaults to "text". */
+  detailsType?: string;
+
+  /** Pre-fills the details field when the dialog opens. */
+  detailsDefaultValue?: string;
+
   onConfirm: (values: {
     typedValue: string;
     detailsValue: string;
@@ -59,6 +65,8 @@ export function ConfirmDialog({
   detailsPlaceholder,
   detailsRequired = false,
   detailsInput = "input",
+  detailsType,
+  detailsDefaultValue = "",
 }: Props) {
   const t = useTranslations();
   const [open, setOpen] =
@@ -70,7 +78,7 @@ export function ConfirmDialog({
   const [typedValue, setTypedValue] =
     useState("");
   const [detailsValue, setDetailsValue] =
-    useState("");
+    useState(detailsDefaultValue);
 
   const requiresExactMatch =
     Boolean(confirmValue);
@@ -85,10 +93,11 @@ export function ConfirmDialog({
     (!detailsRequired ||
       detailsValue.trim().length > 0);
 
-  const DetailsField =
+  const DetailsField = (
     detailsInput === "textarea"
       ? Textarea
-      : Input;
+      : Input
+  ) as React.ElementType;
 
   function handleOpenChange(
     nextOpen: boolean
@@ -101,7 +110,9 @@ export function ConfirmDialog({
 
     if (!nextOpen) {
       setTypedValue("");
-      setDetailsValue("");
+      setDetailsValue(
+        detailsDefaultValue
+      );
     }
   }
 
@@ -121,7 +132,9 @@ export function ConfirmDialog({
       setIsSubmitting(false);
       setOpen(false);
       setTypedValue("");
-      setDetailsValue("");
+      setDetailsValue(
+        detailsDefaultValue
+      );
     }
   }
 
@@ -177,7 +190,12 @@ export function ConfirmDialog({
 
               <DetailsField
                 value={detailsValue}
-                onChange={(event) =>
+                onChange={(
+                  event: React.ChangeEvent<
+                    | HTMLInputElement
+                    | HTMLTextAreaElement
+                  >
+                ) =>
                   setDetailsValue(
                     event.target.value
                   )
@@ -185,6 +203,10 @@ export function ConfirmDialog({
                 placeholder={
                   detailsPlaceholder
                 }
+                {...(detailsInput === "input" &&
+                detailsType
+                  ? { type: detailsType }
+                  : {})}
               />
             </div>
           )}
